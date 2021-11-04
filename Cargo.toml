@@ -35,6 +35,8 @@ color-auto = ["color", "concolor-control/auto"]
 name = "bin_fixture"
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.5"
 wait-timeout = "0.2.0"
 bstr = "0.2.14"
 yansi = { version = "0.5.0", optional = true }
