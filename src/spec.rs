@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 pub(crate) struct RunnerSpec {
     default_bin: Option<crate::Bin>,
     cases: Vec<CaseSpec>,
+    include: Option<Vec<String>>,
 }
 
 impl RunnerSpec {
@@ -11,11 +12,16 @@ impl RunnerSpec {
         Self {
             default_bin: None,
             cases: Default::default(),
+            include: None,
         }
     }
 
     pub(crate) fn default_bin(&mut self, bin: Option<crate::Bin>) {
         self.default_bin = bin;
+    }
+
+    pub(crate) fn include(&mut self, include: Option<Vec<String>>) {
+        self.include = include;
     }
 
     pub(crate) fn case(&mut self, glob: &std::path::Path) {
@@ -105,10 +111,22 @@ impl RunnerSpec {
         }
 
         for case in cases.into_values() {
-            runner.case(case);
+            if self.is_included(&case) {
+                runner.case(case);
+            }
         }
 
         runner
+    }
+
+    fn is_included(&self, case: &crate::Case) -> bool {
+        if let Some(include) = self.include.as_deref() {
+            include
+                .into_iter()
+                .any(|i| case.path.to_string_lossy().contains(i))
+        } else {
+            true
+        }
     }
 }
 

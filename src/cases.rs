@@ -6,7 +6,11 @@ pub struct TestCases {
 
 impl TestCases {
     pub fn new() -> Self {
-        Default::default()
+        let s = Self::default();
+        s.runner
+            .borrow_mut()
+            .include(parse_include(std::env::args_os()));
+        s
     }
 
     pub fn default_bin_path(&self, path: impl AsRef<std::path::Path>) -> &Self {
@@ -50,5 +54,40 @@ impl Drop for TestCases {
         if !self.has_run.get() && !std::thread::panicking() {
             self.run();
         }
+    }
+}
+
+// Filter which test cases are run by trybuild.
+//
+//     $ cargo test -- ui trybuild=tuple_structs.rs
+//
+// The first argument after `--` must be the trybuild test name i.e. the name of
+// the function that has the #[test] attribute and calls trybuild. That's to get
+// Cargo to run the test at all. The next argument starting with `trybuild=`
+// provides a filename filter. Only test cases whose filename contains the
+// filter string will be run.
+#[allow(clippy::needless_collect)] // false positive https://github.com/rust-lang/rust-clippy/issues/5991
+fn parse_include(args: impl IntoIterator<Item = std::ffi::OsString>) -> Option<Vec<String>> {
+    let filters = args
+        .into_iter()
+        .flat_map(std::ffi::OsString::into_string)
+        .filter_map(|arg| {
+            const PREFIX: &str = "trycmd=";
+            if let Some(remainder) = arg.strip_prefix(PREFIX) {
+                if remainder.is_empty() {
+                    None
+                } else {
+                    Some(remainder.to_owned())
+                }
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>();
+
+    if filters.is_empty() {
+        None
+    } else {
+        Some(filters)
     }
 }
