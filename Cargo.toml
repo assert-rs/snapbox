@@ -43,6 +43,7 @@ wait-timeout = "0.2.0"
 bstr = "0.2.14"
 yansi = { version = "0.5.0", optional = true }
 concolor-control = { version = "0.0.7", optional = true }
+rayon = "1.5.1"
 
 [dev-dependencies]
 escargot = "0.5"

@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 #[derive(Debug)]
 pub(crate) struct Runner {
     cases: Vec<Case>,
@@ -24,16 +26,21 @@ impl Runner {
                     .paint("There are no trybuild tests enabled yet")
             );
         } else {
-            let mut failures = 0;
-            for case in &self.cases {
-                if let Err(err) = case.run() {
-                    failures += 1;
-                    eprintln!("{}", palette.error.paint(err));
-                }
-            }
+            let failures: Vec<_> = self
+                .cases
+                .par_iter()
+                .filter_map(|c| {
+                    if let Err(err) = c.run() {
+                        eprintln!("{}", palette.error.paint(&err));
+                        Some(err)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
 
-            if 0 < failures {
-                panic!("{} of {} tests failed", failures, self.cases.len());
+            if 0 < failures.len() {
+                panic!("{} of {} tests failed", failures.len(), self.cases.len());
             }
         }
     }
