@@ -14,12 +14,8 @@ impl RunnerSpec {
         }
     }
 
-    pub(crate) fn default_bin_path(&mut self, path: &std::path::Path) {
-        self.default_bin = Some(crate::Bin::Path(path.into()));
-    }
-
-    pub(crate) fn default_bin_name(&mut self, name: &str) {
-        self.default_bin = Some(crate::Bin::Name(name.into()));
+    pub(crate) fn default_bin(&mut self, bin: Option<crate::Bin>) {
+        self.default_bin = bin;
     }
 
     pub(crate) fn case(&mut self, glob: &std::path::Path) {

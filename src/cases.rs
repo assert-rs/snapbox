@@ -10,12 +10,14 @@ impl TestCases {
     }
 
     pub fn default_bin_path(&self, path: impl AsRef<std::path::Path>) -> &Self {
-        self.runner.borrow_mut().default_bin_path(path.as_ref());
+        let bin = Some(crate::Bin::Path(path.as_ref().into()));
+        self.runner.borrow_mut().default_bin(bin);
         self
     }
 
-    pub fn default_bin_name(&self, path: impl AsRef<str>) -> &Self {
-        self.runner.borrow_mut().default_bin_name(path.as_ref());
+    pub fn default_bin_name(&self, name: impl AsRef<str>) -> &Self {
+        let bin = Some(crate::Bin::Name(name.as_ref().into()));
+        self.runner.borrow_mut().default_bin(bin);
         self
     }
 
