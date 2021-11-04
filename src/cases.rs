@@ -1,6 +1,7 @@
 #[derive(Debug, Default)]
 pub struct TestCases {
     runner: std::cell::RefCell<crate::RunnerSpec>,
+    has_run: std::cell::Cell<bool>,
 }
 
 impl TestCases {
@@ -34,7 +35,8 @@ impl TestCases {
     }
 
     pub fn run(&self) {
-        self.runner.borrow_mut().run();
+        self.has_run.set(true);
+        self.runner.borrow_mut().prepare().run();
     }
 }
 
@@ -43,7 +45,7 @@ impl std::panic::RefUnwindSafe for TestCases {}
 #[doc(hidden)]
 impl Drop for TestCases {
     fn drop(&mut self) {
-        if !self.runner.borrow().has_run() && !std::thread::panicking() {
+        if !self.has_run.get() && !std::thread::panicking() {
             self.run();
         }
     }
