@@ -47,7 +47,6 @@ impl RunnerSpec {
 
     pub(crate) fn prepare(&mut self) -> crate::Runner {
         let mut runner = crate::Runner::new();
-        runner.default_bin(self.default_bin.clone());
 
         // Both sort and let the last writer win to allow overriding specific cases within a glob
         let mut cases: BTreeMap<std::path::PathBuf, crate::Case> = BTreeMap::new();
@@ -66,6 +65,7 @@ impl RunnerSpec {
                                                 name: name.to_owned(),
                                                 path: path,
                                                 expected: spec.expected,
+                                                default_bin: self.default_bin.clone(),
                                                 error: None,
                                             },
                                         );
@@ -99,6 +99,7 @@ impl RunnerSpec {
                         name: name.into(),
                         path: path.into(),
                         expected: spec.expected,
+                        default_bin: self.default_bin.clone(),
                         error: None,
                     },
                 );

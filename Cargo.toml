@@ -28,6 +28,7 @@ pre-release-replacements = [
 ]
 
 [features]
+default = ["color-auto"]
 color = ["yansi", "concolor-control/std"]
 color-auto = ["color", "concolor-control/auto"]
 
