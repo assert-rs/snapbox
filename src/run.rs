@@ -95,11 +95,11 @@ impl std::str::FromStr for TryCmd {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) struct Env {
-    #[serde(default = "inherit_default")]
-    pub(crate) inherit: bool,
+    #[serde(default)]
+    pub(crate) inherit: Option<bool>,
     #[serde(default)]
     pub(crate) add: BTreeMap<String, String>,
     #[serde(default)]
@@ -107,8 +107,12 @@ pub(crate) struct Env {
 }
 
 impl Env {
+    pub(crate) fn inherit(&self) -> bool {
+        self.inherit.unwrap_or(true)
+    }
+
     pub(crate) fn apply(&self, command: &mut std::process::Command) {
-        if !self.inherit {
+        if !self.inherit() {
             command.env_clear();
         }
         for remove in &self.remove {
@@ -116,20 +120,6 @@ impl Env {
         }
         command.envs(&self.add);
     }
-}
-
-impl Default for Env {
-    fn default() -> Self {
-        Self {
-            inherit: inherit_default(),
-            add: Default::default(),
-            remove: Default::default(),
-        }
-    }
-}
-
-fn inherit_default() -> bool {
-    true
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
@@ -194,7 +184,6 @@ mod test {
     fn parse_toml_minimal_env() {
         let expected = TryCmd {
             env: Some(Env {
-                inherit: true,
                 ..Default::default()
             }),
             ..Default::default()
