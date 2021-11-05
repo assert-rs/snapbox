@@ -11,9 +11,9 @@ impl Palette {
     pub(crate) fn current() -> Self {
         if concolor_control::get(concolor_control::Stream::Either).ansi_color() {
             Self {
-                info: styled::Style(yansi::Style::new(yansi::Color::Blue).bold()),
-                warn: styled::Style(yansi::Style::new(yansi::Color::Yellow).bold()),
-                error: styled::Style(yansi::Style::new(yansi::Color::Red).bold()),
+                info: styled::Style(yansi::Style::new(yansi::Color::Green)),
+                warn: styled::Style(yansi::Style::new(yansi::Color::Yellow)),
+                error: styled::Style(yansi::Style::new(yansi::Color::Red)),
                 hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
             }
         } else {
