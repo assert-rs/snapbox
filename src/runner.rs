@@ -129,7 +129,7 @@ impl Case {
                             .status
                             .code()
                             .map(|c| c.to_string())
-                            .unwrap_or_else(|| "panic".into()),
+                            .unwrap_or_else(|| "interrupted".into()),
                         stdout: output.stdout,
                         stderr: output.stderr,
                     });
@@ -144,7 +144,7 @@ impl Case {
                             .status
                             .code()
                             .map(|c| c.to_string())
-                            .unwrap_or_else(|| "panic".into()),
+                            .unwrap_or_else(|| "interrupted".into()),
                         stdout: output.stdout,
                         stderr: output.stderr,
                     });
@@ -154,7 +154,7 @@ impl Case {
                 if let Some(code) = output.status.code() {
                     return Err(CaseStatus::UnexpectedStatus {
                         path: self.path.clone(),
-                        expected: "panic".into(),
+                        expected: "interrupted".into(),
                         actual: code.to_string(),
                         stdout: output.stdout,
                         stderr: output.stderr,
@@ -177,7 +177,7 @@ impl Case {
                     return Err(CaseStatus::UnexpectedStatus {
                         path: self.path.clone(),
                         expected: expected_code.to_string(),
-                        actual: "panic".into(),
+                        actual: "interrupted".into(),
                         stdout: output.stdout,
                         stderr: output.stderr,
                     });

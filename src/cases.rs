@@ -49,7 +49,7 @@ impl TestCases {
         self
     }
 
-    pub fn should_panic(&self, glob: impl AsRef<std::path::Path>) -> &Self {
+    pub fn interrupted(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
             .case(glob.as_ref(), Some(crate::CommandStatus::Interrupted));

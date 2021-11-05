@@ -1,12 +1,15 @@
 use std::collections::BTreeMap;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub(crate) struct TryCmd {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Vec<String>>,
     pub(crate) env: Option<Env>,
     pub(crate) status: Option<CommandStatus>,
+    #[serde(default)]
     pub(crate) binary: bool,
+    #[serde(default)]
     #[serde(deserialize_with = "humantime_serde::deserialize")]
     pub(crate) timeout: Option<std::time::Duration>,
 }
@@ -16,10 +19,10 @@ impl TryCmd {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-                toml::from_str(&raw).map_err(|e| e.to_string())
+                Self::parse_toml(&raw)
             } else if ext == std::ffi::OsStr::new("trycmd") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-                raw.parse()
+                Self::parse_trycmd(&raw)
             } else {
                 Err(format!("Unsupported extension: {}", ext.to_string_lossy()))
             }
@@ -65,12 +68,12 @@ impl TryCmd {
     pub(crate) fn status(&self) -> CommandStatus {
         self.status.unwrap_or_default()
     }
-}
 
-impl std::str::FromStr for TryCmd {
-    type Err = String;
+    fn parse_toml(s: &str) -> Result<Self, String> {
+        toml_edit::de::from_str(s).map_err(|e| e.to_string())
+    }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn parse_trycmd(s: &str) -> Result<Self, String> {
         let mut iter = shlex::Shlex::new(s.trim());
         let bin = iter
             .next()
@@ -84,11 +87,22 @@ impl std::str::FromStr for TryCmd {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize)]
+impl std::str::FromStr for TryCmd {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse_trycmd(s)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub(crate) struct Env {
     #[serde(default = "inherit_default")]
     pub(crate) inherit: bool,
+    #[serde(default)]
     pub(crate) add: BTreeMap<String, String>,
+    #[serde(default)]
     pub(crate) remove: Vec<String>,
 }
 
@@ -104,17 +118,29 @@ impl Env {
     }
 }
 
+impl Default for Env {
+    fn default() -> Self {
+        Self {
+            inherit: inherit_default(),
+            add: Default::default(),
+            remove: Default::default(),
+        }
+    }
+}
+
 fn inherit_default() -> bool {
     true
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub(crate) enum Bin {
     Path(std::path::PathBuf),
     Name(String),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub(crate) enum CommandStatus {
     Pass,
     Fail,
@@ -126,5 +152,94 @@ pub(crate) enum CommandStatus {
 impl Default for CommandStatus {
     fn default() -> Self {
         CommandStatus::Pass
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn parse_trycmd_command() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            args: Some(vec![]),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("cmd").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_command_line() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            args: Some(vec!["arg1".into(), "arg with space".into()]),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("cmd arg1 'arg with space'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_minimal() {
+        let expected = TryCmd {
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml("").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_minimal_env() {
+        let expected = TryCmd {
+            env: Some(Env {
+                inherit: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml("[env]").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_bin_name() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml("bin.name = 'cmd'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_bin_path() {
+        let expected = TryCmd {
+            bin: Some(Bin::Path("/usr/bin/cmd".into())),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_status_success() {
+        let expected = TryCmd {
+            status: Some(CommandStatus::Pass),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml("status = 'pass'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_status_code() {
+        let expected = TryCmd {
+            status: Some(CommandStatus::Code(42)),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml("status.code = 42").unwrap();
+        assert_eq!(expected, actual);
     }
 }
