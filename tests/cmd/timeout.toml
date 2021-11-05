@@ -1,0 +1,7 @@
+bin.name = "bin-fixture"
+timeout = "1ms"
+# From timeout
+status = "interrupted"
+
+[env.add]
+sleep = "30"

@@ -29,11 +29,13 @@ impl Runner {
                 .par_iter()
                 .filter_map(|c| match c.run(mode) {
                     Ok(status) => {
-                        eprintln!("{}", &status);
+                        // Assuming `status` will print the newline
+                        eprint!("{}", &status);
                         None
                     }
                     Err(status) => {
-                        eprintln!("{}", &status);
+                        // Assuming `status` will print the newline
+                        eprint!("{}", &status);
                         Some(status)
                     }
                 })
@@ -328,7 +330,7 @@ impl std::fmt::Display for CaseStatus {
                     "{} {} ... {}",
                     palette.hint.paint("Testing"),
                     path.display(),
-                    palette.error.paint("ok")
+                    palette.info.paint("ok")
                 )?;
             }
             Self::Skipped { path } => {

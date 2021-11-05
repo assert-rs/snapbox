@@ -1,0 +1,7 @@
+bin.name = "bin-fixture"
+
+[env.add]
+stderr = """
+Hello
+World!
+"""

@@ -1,0 +1,5 @@
+bin.name = "bin-fixture"
+status.code = 30
+
+[env.add]
+exit = "30"
