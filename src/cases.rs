@@ -13,28 +13,13 @@ impl TestCases {
         s
     }
 
-    pub fn default_bin_path(&self, path: impl AsRef<std::path::Path>) -> &Self {
-        let bin = Some(crate::Bin::Path(path.as_ref().into()));
-        self.runner.borrow_mut().default_bin(bin);
-        self
-    }
-
-    pub fn default_bin_name(&self, name: impl AsRef<str>) -> &Self {
-        let bin = Some(crate::Bin::Name(name.as_ref().into()));
-        self.runner.borrow_mut().default_bin(bin);
-        self
-    }
-
-    pub fn timeout(&mut self, time: std::time::Duration) -> &Self {
-        self.runner.borrow_mut().timeout(Some(time));
-        self
-    }
-
+    /// Load tests from `glob`
     pub fn case(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner.borrow_mut().case(glob.as_ref(), None);
         self
     }
 
+    /// Overwrite expected status for a test
     pub fn pass(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
@@ -42,6 +27,7 @@ impl TestCases {
         self
     }
 
+    /// Overwrite expected status for a test
     pub fn fail(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
@@ -49,6 +35,7 @@ impl TestCases {
         self
     }
 
+    /// Overwrite expected status for a test
     pub fn interrupted(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
@@ -56,6 +43,7 @@ impl TestCases {
         self
     }
 
+    /// Overwrite expected status for a test
     pub fn skip(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
@@ -63,6 +51,29 @@ impl TestCases {
         self
     }
 
+    /// Set default bin, by path, for commands
+    pub fn default_bin_path(&self, path: impl AsRef<std::path::Path>) -> &Self {
+        let bin = Some(crate::Bin::Path(path.as_ref().into()));
+        self.runner.borrow_mut().default_bin(bin);
+        self
+    }
+
+    /// Set default bin, by name, for commands
+    pub fn default_bin_name(&self, name: impl AsRef<str>) -> &Self {
+        let bin = Some(crate::Bin::Name(name.as_ref().into()));
+        self.runner.borrow_mut().default_bin(bin);
+        self
+    }
+
+    /// Set default timeout for commands
+    pub fn timeout(&mut self, time: std::time::Duration) -> &Self {
+        self.runner.borrow_mut().timeout(Some(time));
+        self
+    }
+
+    /// Run tests
+    ///
+    /// This will happen on `drop` if not done explicitly
     pub fn run(&self) {
         self.has_run.set(true);
         self.runner.borrow_mut().prepare().run();
