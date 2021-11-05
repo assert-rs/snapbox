@@ -1,12 +1,14 @@
 # trycmd
 
-> Validate commands en-masse
+> Snapshot testing for a herd of CLI tests
 
 [![Documentation](https://img.shields.io/badge/docs-master-blue.svg)][Documentation]
 ![License](https://img.shields.io/crates/l/trycmd.svg)
 [![Crates Status](https://img.shields.io/crates/v/trycmd.svg)](https://crates.io/crates/trycmd)
 
-`trycmd` aims to simplify the process for running a large collection of end-to-end CLI test cases
+`trycmd` aims to simplify the process for running a large collection of
+end-to-end CLI test cases, taking inspiration from
+[trybuild](https://crates.io/crates/trybuild).
 
 ## Example
 
@@ -24,8 +26,8 @@ See the [docs](http://docs.rs/trycmd) for more.
 
 ## Relevant crates
 
-Other crates that might be useful in testing command line programs.
-* [`assert_cmd`][assert_cmd] for test cases that are pets, rather than cattle
+For testing command line programs.
+* [`assert_cmd`][assert_cmd] for test cases that are individual pets, rather than herd of cattle
 * [escargot][escargot] for more control over configuring the crate's binary.
 * [duct][duct] for orchestrating multiple processes.
   * or [commandspec] for easier writing of commands
@@ -33,6 +35,13 @@ Other crates that might be useful in testing command line programs.
 * [`assert_fs`][assert_fs] for filesystem fixtures and assertions.
   * or [tempfile][tempfile] for scratchpad directories.
 * [dir-diff][dir-diff] for testing file side-effects.
+
+For snapshot testing:
+- [insta](https://crates.io/crates/insta)
+- [fn-fixture](https://crates.io/crates/fn-fixture)
+- [runt](https://crates.io/crates/runt)
+  - [turnt](https://github.com/cucapra/turnt)
+  - [cram](https://bitheap.org/cram/)
 
 [escargot]: http://docs.rs/escargot
 [rexpect]: https://crates.io/crates/rexpect

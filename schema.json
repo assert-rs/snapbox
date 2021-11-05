@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TryCmd",
+  "type": "object",
+  "properties": {
+    "bin": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Bin"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "args": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "cwd": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "env": {
+      "default": {
+        "add": {},
+        "inherit": null,
+        "remove": []
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/Env"
+        }
+      ]
+    },
+    "status": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/CommandStatus"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "binary": {
+      "default": false,
+      "type": "boolean"
+    },
+    "timeout": {
+      "default": null,
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Duration"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "Bin": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "path"
+          ],
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Env": {
+      "type": "object",
+      "properties": {
+        "inherit": {
+          "default": null,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "add": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "remove": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CommandStatus": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "interrupted",
+            "skip"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "code"
+          ],
+          "properties": {
+            "code": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Duration": {
+      "type": "object",
+      "required": [
+        "nanos",
+        "secs"
+      ],
+      "properties": {
+        "secs": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "nanos": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}
