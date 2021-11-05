@@ -1,5 +1,9 @@
+/// `cmd.toml` Schema
+///
+/// [`TryCmd`] is the top-level item in the `cmd.toml` files.
 use std::collections::BTreeMap;
 
+/// Top-level data in `cmd.toml` files
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -109,6 +113,7 @@ impl std::str::FromStr for TryCmd {
     }
 }
 
+/// Describe commands environment
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -146,6 +151,7 @@ impl Env {
     }
 }
 
+/// Target under test
 #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
@@ -154,6 +160,7 @@ pub enum Bin {
     Name(String),
 }
 
+/// Expected status for command
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
