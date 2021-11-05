@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 pub(crate) struct TryCmd {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Vec<String>>,
+    pub(crate) cwd: Option<std::path::PathBuf>,
     #[serde(default)]
     pub(crate) env: Env,
     pub(crate) status: Option<CommandStatus>,
@@ -17,7 +18,7 @@ pub(crate) struct TryCmd {
 
 impl TryCmd {
     pub(crate) fn load(path: &std::path::Path) -> Result<Self, String> {
-        if let Some(ext) = path.extension() {
+        let mut run = if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
                 Self::parse_toml(&raw)
@@ -29,7 +30,17 @@ impl TryCmd {
             }
         } else {
             Err("No extension".into())
+        }?;
+
+        if let Some(cwd) = run.cwd.take() {
+            run.cwd = Some(
+                path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join(cwd),
+            );
         }
+
+        Ok(run)
     }
 
     pub(crate) fn to_command(&self) -> Result<std::process::Command, String> {
@@ -41,6 +52,9 @@ impl TryCmd {
         let mut cmd = std::process::Command::new(bin);
         if let Some(args) = self.args.as_deref() {
             cmd.args(args);
+        }
+        if let Some(cwd) = self.cwd.as_deref() {
+            cmd.current_dir(cwd);
         }
         self.env.apply(&mut cmd);
 
