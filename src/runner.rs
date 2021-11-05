@@ -113,9 +113,13 @@ impl Case {
 
         let stdin_path = self.path.with_extension("stdin");
         let stdin = if stdin_path.exists() {
-            Some(read_stdin(&stdin_path, run.binary).map_err(|e| {
-                self.to_err(format!("Failed to read {}: {}", stdin_path.display(), e))
-            })?)
+            Some(
+                File::read_from(&stdin_path, run.binary)
+                    .map_err(|e| {
+                        self.to_err(format!("Failed to read {}: {}", stdin_path.display(), e))
+                    })?
+                    .into_bytes(),
+            )
         } else {
             None
         };
@@ -283,14 +287,28 @@ impl std::fmt::Display for CaseStatus {
     }
 }
 
-fn read_stdin(path: &std::path::Path, binary: bool) -> Result<Vec<u8>, std::io::Error> {
-    let stdin = if binary {
-        let stdin = std::fs::read(&path)?;
-        stdin
-    } else {
-        let stdin = std::fs::read_to_string(&path)?;
-        let stdin = String::from_iter(normalize_line_endings::normalized(stdin.chars()));
-        stdin.into_bytes()
-    };
-    Ok(stdin)
+pub(crate) enum File {
+    Binary(Vec<u8>),
+    Text(String),
+}
+
+impl File {
+    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, std::io::Error> {
+        let data = if binary {
+            let data = std::fs::read(&path)?;
+            Self::Binary(data)
+        } else {
+            let data = std::fs::read_to_string(&path)?;
+            let data = String::from_iter(normalize_line_endings::normalized(data.chars()));
+            Self::Text(data)
+        };
+        Ok(data)
+    }
+
+    pub(crate) fn into_bytes(self) -> Vec<u8> {
+        match self {
+            Self::Binary(data) => data,
+            Self::Text(data) => data.into_bytes(),
+        }
+    }
 }
