@@ -61,6 +61,7 @@ pub(crate) struct Case {
     pub(crate) expected: Option<crate::CommandStatus>,
     pub(crate) timeout: Option<std::time::Duration>,
     pub(crate) default_bin: Option<crate::Bin>,
+    pub(crate) env: crate::Env,
     pub(crate) error: Option<CaseStatus>,
 }
 
@@ -73,6 +74,7 @@ impl Case {
             expected: None,
             timeout: None,
             default_bin: None,
+            env: Default::default(),
             error: Some(CaseStatus::Failure {
                 path,
                 message: error.to_string(),
@@ -107,6 +109,7 @@ impl Case {
         if self.expected.is_some() {
             run.status = self.expected;
         }
+        run.env.update(&self.env);
 
         let stdin_path = self.path.with_extension("stdin");
         let stdin = if stdin_path.exists() {

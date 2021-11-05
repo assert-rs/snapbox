@@ -5,7 +5,8 @@ use std::collections::BTreeMap;
 pub(crate) struct TryCmd {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Vec<String>>,
-    pub(crate) env: Option<Env>,
+    #[serde(default)]
+    pub(crate) env: Env,
     pub(crate) status: Option<CommandStatus>,
     #[serde(default)]
     pub(crate) binary: bool,
@@ -41,9 +42,7 @@ impl TryCmd {
         if let Some(args) = self.args.as_deref() {
             cmd.args(args);
         }
-        if let Some(env) = self.env.as_ref() {
-            env.apply(&mut cmd);
-        }
+        self.env.apply(&mut cmd);
 
         Ok(cmd)
     }
@@ -107,8 +106,13 @@ pub(crate) struct Env {
 }
 
 impl Env {
-    pub(crate) fn inherit(&self) -> bool {
-        self.inherit.unwrap_or(true)
+    pub(crate) fn update(&mut self, other: &Self) {
+        if self.inherit.is_none() {
+            self.inherit = other.inherit;
+        }
+        self.add
+            .extend(other.add.iter().map(|(k, v)| (k.clone(), v.clone())));
+        self.remove.extend(other.remove.iter().cloned());
     }
 
     pub(crate) fn apply(&self, command: &mut std::process::Command) {
@@ -119,6 +123,10 @@ impl Env {
             command.env_remove(&remove);
         }
         command.envs(&self.add);
+    }
+
+    pub(crate) fn inherit(&self) -> bool {
+        self.inherit.unwrap_or(true)
     }
 }
 
@@ -183,9 +191,6 @@ mod test {
     #[test]
     fn parse_toml_minimal_env() {
         let expected = TryCmd {
-            env: Some(Env {
-                ..Default::default()
-            }),
             ..Default::default()
         };
         let actual = TryCmd::parse_toml("[env]").unwrap();

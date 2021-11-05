@@ -11,7 +11,6 @@ pub use cases::TestCases;
 pub(crate) use cargo::cargo_bin;
 pub(crate) use color::Palette;
 pub(crate) use command::wait_with_input_output;
-#[allow(unused_imports)]
 pub(crate) use run::{Bin, CommandStatus, Env, TryCmd};
 pub(crate) use runner::{Case, Runner};
 pub(crate) use spec::RunnerSpec;

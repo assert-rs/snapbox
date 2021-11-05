@@ -66,8 +66,14 @@ impl TestCases {
     }
 
     /// Set default timeout for commands
-    pub fn timeout(&mut self, time: std::time::Duration) -> &Self {
+    pub fn timeout(&self, time: std::time::Duration) -> &Self {
         self.runner.borrow_mut().timeout(Some(time));
+        self
+    }
+
+    /// Set default environment variable
+    pub fn env(&self, key: impl Into<String>, value: impl Into<String>) -> &Self {
+        self.runner.borrow_mut().env(key, value);
         self
     }
 

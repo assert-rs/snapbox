@@ -2,20 +2,33 @@ use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub(crate) struct RunnerSpec {
-    default_bin: Option<crate::Bin>,
-    timeout: Option<std::time::Duration>,
     cases: Vec<CaseSpec>,
     include: Option<Vec<String>>,
+    default_bin: Option<crate::Bin>,
+    timeout: Option<std::time::Duration>,
+    env: crate::Env,
 }
 
 impl RunnerSpec {
     pub(crate) fn new() -> Self {
         Self {
-            default_bin: None,
-            timeout: Default::default(),
             cases: Default::default(),
             include: None,
+            default_bin: None,
+            timeout: Default::default(),
+            env: Default::default(),
         }
+    }
+
+    pub(crate) fn case(&mut self, glob: &std::path::Path, expected: Option<crate::CommandStatus>) {
+        self.cases.push(CaseSpec {
+            glob: glob.into(),
+            expected,
+        });
+    }
+
+    pub(crate) fn include(&mut self, include: Option<Vec<String>>) {
+        self.include = include;
     }
 
     pub(crate) fn default_bin(&mut self, bin: Option<crate::Bin>) {
@@ -26,15 +39,8 @@ impl RunnerSpec {
         self.timeout = time;
     }
 
-    pub(crate) fn include(&mut self, include: Option<Vec<String>>) {
-        self.include = include;
-    }
-
-    pub(crate) fn case(&mut self, glob: &std::path::Path, expected: Option<crate::CommandStatus>) {
-        self.cases.push(CaseSpec {
-            glob: glob.into(),
-            expected,
-        });
+    pub(crate) fn env(&mut self, key: impl Into<String>, value: impl Into<String>) {
+        self.env.add.insert(key.into(), value.into());
     }
 
     pub(crate) fn prepare(&mut self) -> crate::Runner {
@@ -59,6 +65,7 @@ impl RunnerSpec {
                                                 expected: spec.expected,
                                                 default_bin: self.default_bin.clone(),
                                                 timeout: self.timeout,
+                                                env: self.env.clone(),
                                                 error: None,
                                             },
                                         );
@@ -94,6 +101,7 @@ impl RunnerSpec {
                         expected: spec.expected,
                         default_bin: self.default_bin.clone(),
                         timeout: self.timeout,
+                        env: self.env.clone(),
                         error: None,
                     },
                 );
