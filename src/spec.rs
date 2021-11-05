@@ -61,7 +61,7 @@ impl RunnerSpec {
                                             path.clone(),
                                             crate::Case {
                                                 name: name.to_owned(),
-                                                path: path,
+                                                path,
                                                 expected: spec.expected,
                                                 default_bin: self.default_bin.clone(),
                                                 timeout: self.timeout,
@@ -125,7 +125,7 @@ impl RunnerSpec {
     fn is_included(&self, case: &crate::Case) -> bool {
         if let Some(include) = self.include.as_deref() {
             include
-                .into_iter()
+                .iter()
                 .any(|i| case.path.to_string_lossy().contains(i))
         } else {
             true

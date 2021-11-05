@@ -1,5 +1,3 @@
-use std::iter::FromIterator;
-
 use rayon::prelude::*;
 
 #[derive(Debug)]
@@ -41,7 +39,7 @@ impl Runner {
                 })
                 .collect();
 
-            if 0 < failures.len() {
+            if !failures.is_empty() {
                 panic!("{} of {} tests failed", failures.len(), self.cases.len());
             }
         }
@@ -69,7 +67,7 @@ impl Case {
     pub(crate) fn with_error(path: std::path::PathBuf, error: impl std::fmt::Display) -> Self {
         let name = path.display().to_string();
         Self {
-            name: name,
+            name,
             path: path.clone(),
             expected: None,
             timeout: None,
@@ -507,7 +505,7 @@ impl File {
             Self::Binary(data)
         } else {
             let data = std::fs::read_to_string(&path)?;
-            let data = String::from_iter(normalize_line_endings::normalized(data.chars()));
+            let data = normalize_line_endings::normalized(data.chars()).collect();
             Self::Text(data)
         };
         Ok(data)
@@ -519,7 +517,7 @@ impl File {
 
     pub(crate) fn as_bytes(&self) -> &[u8] {
         match self {
-            Self::Binary(data) => &data,
+            Self::Binary(data) => data,
             Self::Text(data) => data.as_bytes(),
         }
     }
@@ -533,7 +531,7 @@ impl File {
 
     pub(crate) fn to_string_lossy(&self) -> String {
         match self {
-            Self::Binary(data) => String::from_utf8_lossy(&data).into_owned(),
+            Self::Binary(data) => String::from_utf8_lossy(data).into_owned(),
             Self::Text(data) => data.clone(),
         }
     }
