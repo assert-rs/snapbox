@@ -1,0 +1,5 @@
+bin.name = "bin-fixture"
+status = "fail"
+
+[env.add]
+exit = "1"
