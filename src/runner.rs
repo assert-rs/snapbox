@@ -127,6 +127,8 @@ impl Case {
         let output = run.to_output(stdin).map_err(|e| self.to_err(e))?;
 
         self.validate_status(&run, &output)?;
+        self.validate_stream(&run, &output, Stdio::Stdout)?;
+        self.validate_stream(&run, &output, Stdio::Stderr)?;
 
         Ok(CaseStatus::Success {
             path: self.path.clone(),
@@ -206,6 +208,50 @@ impl Case {
 
         Ok(())
     }
+
+    fn validate_stream(
+        &self,
+        run: &crate::TryCmd,
+        output: &std::process::Output,
+        stream: Stdio,
+    ) -> Result<(), CaseStatus> {
+        let stdout = match stream {
+            Stdio::Stdout => &output.stdout,
+            Stdio::Stderr => &output.stderr,
+        };
+
+        let stdout = if run.binary {
+            let data = stdout.clone();
+            File::Binary(data)
+        } else {
+            let data = String::from_utf8(stdout.clone()).map_err(|_| CaseStatus::InvalidUtf8 {
+                path: self.path.clone(),
+                stream: Stdio::Stdout,
+                stdout: output.stdout.clone(),
+                stderr: output.stderr.clone(),
+            })?;
+            File::Text(data)
+        };
+
+        let stdout_path = self.path.with_extension(stream.as_str());
+        if stdout_path.exists() {
+            let expected_stdout = File::read_from(&stdout_path, run.binary).map_err(|e| {
+                self.to_err(format!("Failed to read {}: {}", stdout_path.display(), e))
+            })?;
+
+            if stdout != expected_stdout {
+                return Err(CaseStatus::MismatchOutput {
+                    path: self.path.clone(),
+                    stream: Stdio::Stdout,
+                    expected: expected_stdout,
+                    stdout: output.stdout.clone(),
+                    stderr: output.stderr.clone(),
+                });
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -224,6 +270,19 @@ pub(crate) enum CaseStatus {
         path: std::path::PathBuf,
         expected: String,
         actual: String,
+        stdout: Vec<u8>,
+        stderr: Vec<u8>,
+    },
+    InvalidUtf8 {
+        path: std::path::PathBuf,
+        stream: Stdio,
+        stdout: Vec<u8>,
+        stderr: Vec<u8>,
+    },
+    MismatchOutput {
+        path: std::path::PathBuf,
+        stream: Stdio,
+        expected: File,
         stdout: Vec<u8>,
         stderr: Vec<u8>,
     },
@@ -291,12 +350,97 @@ impl std::fmt::Display for CaseStatus {
                     palette.error.paint(String::from_utf8_lossy(stderr))
                 )?;
             }
+            Self::InvalidUtf8 {
+                path,
+                stream,
+                stdout,
+                stderr,
+            } => {
+                writeln!(
+                    f,
+                    "{} {} ... {}",
+                    palette.hint.paint("Testing"),
+                    path.display(),
+                    palette.error.paint("failed")
+                )?;
+                writeln!(
+                    f,
+                    "Expected utf-8 on {}",
+                    match stream {
+                        Stdio::Stdout => palette.info.paint(stream.as_str()),
+                        Stdio::Stderr => palette.error.paint(stream.as_str()),
+                    },
+                )?;
+                writeln!(f, "stdout:")?;
+                writeln!(f, "{}", palette.info.paint(String::from_utf8_lossy(stdout)))?;
+                writeln!(f, "stderr:")?;
+                writeln!(
+                    f,
+                    "{}",
+                    palette.error.paint(String::from_utf8_lossy(stderr))
+                )?;
+            }
+            Self::MismatchOutput {
+                path,
+                stream,
+                expected,
+                stdout,
+                stderr,
+            } => {
+                writeln!(
+                    f,
+                    "{} {} ... {}",
+                    palette.hint.paint("Testing"),
+                    path.display(),
+                    palette.error.paint("failed")
+                )?;
+                writeln!(
+                    f,
+                    "{} didn't match expectations",
+                    match stream {
+                        Stdio::Stdout => palette.info.paint(stream.as_str()),
+                        Stdio::Stderr => palette.error.paint(stream.as_str()),
+                    },
+                )?;
+                writeln!(f, "stdout:")?;
+                writeln!(f, "{}", palette.info.paint(String::from_utf8_lossy(stdout)))?;
+                writeln!(f, "expected {}:", stream)?;
+                writeln!(f, "{}", palette.warn.paint(expected.to_string_lossy()))?;
+                writeln!(f, "stderr:")?;
+                writeln!(
+                    f,
+                    "{}",
+                    palette.error.paint(String::from_utf8_lossy(stderr))
+                )?;
+            }
         }
 
         Ok(())
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Stdio {
+    Stdout,
+    Stderr,
+}
+
+impl Stdio {
+    pub(crate) fn as_str(&self) -> &str {
+        match self {
+            Self::Stdout => "stdout",
+            Self::Stderr => "stderr",
+        }
+    }
+}
+
+impl std::fmt::Display for Stdio {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum File {
     Binary(Vec<u8>),
     Text(String),
@@ -319,6 +463,13 @@ impl File {
         match self {
             Self::Binary(data) => data,
             Self::Text(data) => data.into_bytes(),
+        }
+    }
+
+    pub(crate) fn to_string_lossy(&self) -> String {
+        match self {
+            Self::Binary(data) => String::from_utf8_lossy(&data).into_owned(),
+            Self::Text(data) => data.clone(),
         }
     }
 }
