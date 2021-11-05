@@ -126,6 +126,18 @@ impl Case {
 
         let output = run.to_output(stdin).map_err(|e| self.to_err(e))?;
 
+        self.validate_status(&run, &output)?;
+
+        Ok(CaseStatus::Success {
+            path: self.path.clone(),
+        })
+    }
+
+    fn validate_status(
+        &self,
+        run: &crate::TryCmd,
+        output: &std::process::Output,
+    ) -> Result<(), CaseStatus> {
         match run.status() {
             crate::CommandStatus::Pass => {
                 if !output.status.success() {
@@ -137,8 +149,8 @@ impl Case {
                             .code()
                             .map(|c| c.to_string())
                             .unwrap_or_else(|| "interrupted".into()),
-                        stdout: output.stdout,
-                        stderr: output.stderr,
+                        stdout: output.stdout.clone(),
+                        stderr: output.stderr.clone(),
                     });
                 }
             }
@@ -152,8 +164,8 @@ impl Case {
                             .code()
                             .map(|c| c.to_string())
                             .unwrap_or_else(|| "interrupted".into()),
-                        stdout: output.stdout,
-                        stderr: output.stderr,
+                        stdout: output.stdout.clone(),
+                        stderr: output.stderr.clone(),
                     });
                 }
             }
@@ -163,8 +175,8 @@ impl Case {
                         path: self.path.clone(),
                         expected: "interrupted".into(),
                         actual: code.to_string(),
-                        stdout: output.stdout,
-                        stderr: output.stderr,
+                        stdout: output.stdout.clone(),
+                        stderr: output.stderr.clone(),
                     });
                 }
             }
@@ -176,8 +188,8 @@ impl Case {
                             path: self.path.clone(),
                             expected: expected_code.to_string(),
                             actual: actual_code.to_string(),
-                            stdout: output.stdout,
-                            stderr: output.stderr,
+                            stdout: output.stdout.clone(),
+                            stderr: output.stderr.clone(),
                         });
                     }
                 } else {
@@ -185,16 +197,14 @@ impl Case {
                         path: self.path.clone(),
                         expected: expected_code.to_string(),
                         actual: "interrupted".into(),
-                        stdout: output.stdout,
-                        stderr: output.stderr,
+                        stdout: output.stdout.clone(),
+                        stderr: output.stderr.clone(),
                     });
                 }
             }
         }
 
-        Ok(CaseStatus::Success {
-            path: self.path.clone(),
-        })
+        Ok(())
     }
 }
 
