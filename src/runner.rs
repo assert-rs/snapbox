@@ -18,7 +18,7 @@ impl Runner {
         self.cases.push(case);
     }
 
-    pub(crate) fn run(&self) {
+    pub(crate) fn run(&self, mode: Mode) {
         let palette = crate::Palette::current();
         if self.cases.is_empty() {
             eprintln!(
@@ -29,7 +29,7 @@ impl Runner {
             let failures: Vec<_> = self
                 .cases
                 .par_iter()
-                .filter_map(|c| match c.run() {
+                .filter_map(|c| match c.run(mode) {
                     Ok(status) => {
                         eprintln!("{}", &status);
                         None
@@ -89,7 +89,7 @@ impl Case {
         }
     }
 
-    pub(crate) fn run(&self) -> Result<CaseStatus, CaseStatus> {
+    pub(crate) fn run(&self, mode: Mode) -> Result<CaseStatus, CaseStatus> {
         if self.expected == Some(crate::CommandStatus::Skip) {
             return Ok(CaseStatus::Skipped {
                 path: self.path.clone(),
@@ -127,8 +127,8 @@ impl Case {
         let output = run.to_output(stdin).map_err(|e| self.to_err(e))?;
 
         self.validate_status(&run, &output)?;
-        self.validate_stream(&run, &output, Stdio::Stdout)?;
-        self.validate_stream(&run, &output, Stdio::Stderr)?;
+        self.validate_stream(&run, &output, Stdio::Stdout, mode)?;
+        self.validate_stream(&run, &output, Stdio::Stderr, mode)?;
 
         Ok(CaseStatus::Success {
             path: self.path.clone(),
@@ -214,6 +214,7 @@ impl Case {
         run: &crate::TryCmd,
         output: &std::process::Output,
         stream: Stdio,
+        mode: Mode,
     ) -> Result<(), CaseStatus> {
         let stdout = match stream {
             Stdio::Stdout => &output.stdout,
@@ -240,13 +241,22 @@ impl Case {
             })?;
 
             if stdout != expected_stdout {
-                return Err(CaseStatus::MismatchOutput {
-                    path: self.path.clone(),
-                    stream: Stdio::Stdout,
-                    expected: expected_stdout,
-                    stdout: output.stdout.clone(),
-                    stderr: output.stderr.clone(),
-                });
+                match mode {
+                    Mode::Fail => {
+                        return Err(CaseStatus::MismatchOutput {
+                            path: self.path.clone(),
+                            stream: Stdio::Stdout,
+                            expected: expected_stdout,
+                            stdout: output.stdout.clone(),
+                            stderr: output.stderr.clone(),
+                        });
+                    }
+                    Mode::Overwrite => {
+                        stdout.write_to(&stdout_path).map_err(|e| {
+                            self.to_err(format!("Failed to write {}: {}", stdout_path.display(), e))
+                        })?;
+                    }
+                }
             }
         }
 
@@ -420,6 +430,12 @@ impl std::fmt::Display for CaseStatus {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Mode {
+    Fail,
+    Overwrite,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Stdio {
     Stdout,
     Stderr,
@@ -457,6 +473,17 @@ impl File {
             Self::Text(data)
         };
         Ok(data)
+    }
+
+    pub(crate) fn write_to(self, path: &std::path::Path) -> Result<(), std::io::Error> {
+        std::fs::write(path, self.as_bytes())
+    }
+
+    pub(crate) fn as_bytes(&self) -> &[u8] {
+        match self {
+            Self::Binary(data) => &data,
+            Self::Text(data) => data.as_bytes(),
+        }
     }
 
     pub(crate) fn into_bytes(self) -> Vec<u8> {

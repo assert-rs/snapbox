@@ -82,7 +82,10 @@ impl TestCases {
     /// This will happen on `drop` if not done explicitly
     pub fn run(&self) {
         self.has_run.set(true);
-        self.runner.borrow_mut().prepare().run();
+
+        let mode = parse_mode(std::env::var_os("TRYCMD").as_deref());
+
+        self.runner.borrow_mut().prepare().run(mode);
     }
 }
 
@@ -129,5 +132,13 @@ fn parse_include(args: impl IntoIterator<Item = std::ffi::OsString>) -> Option<V
         None
     } else {
         Some(filters)
+    }
+}
+
+fn parse_mode(var: Option<&std::ffi::OsStr>) -> crate::Mode {
+    if var == Some(std::ffi::OsStr::new("overwrite")) {
+        crate::Mode::Overwrite
+    } else {
+        crate::Mode::Fail
     }
 }
