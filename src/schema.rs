@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub(crate) struct TryCmd {
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct TryCmd {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Vec<String>>,
     pub(crate) cwd: Option<std::path::PathBuf>,
@@ -108,9 +109,10 @@ impl std::str::FromStr for TryCmd {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub(crate) struct Env {
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct Env {
     #[serde(default)]
     pub(crate) inherit: Option<bool>,
     #[serde(default)]
@@ -144,16 +146,18 @@ impl Env {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub(crate) enum Bin {
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub enum Bin {
     Path(std::path::PathBuf),
     Name(String),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub(crate) enum CommandStatus {
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub enum CommandStatus {
     Pass,
     Fail,
     Interrupted,

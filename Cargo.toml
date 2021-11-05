@@ -31,9 +31,14 @@ pre-release-replacements = [
 default = ["color-auto"]
 color = ["yansi", "concolor-control/std"]
 color-auto = ["color", "concolor-control/auto"]
+schema = ["schemars", "serde_json"]
 
 [[bin]]
 name = "bin_fixture"
+
+[[bin]]
+name = "trycmd-schema"
+required-features = ["schema"]
 
 [dependencies]
 yansi = { version = "0.5.0", optional = true }
@@ -51,6 +56,9 @@ toml_edit = { version = "0.8", features = ["serde"] }
 normalize-line-endings = "0.3.0"
 wait-timeout = "0.2.0"
 bstr = "0.2.14"
+
+schemars = { version = "0.8.3", features = ["preserve_order"], optional = true }
+serde_json = { version = "1.0", optional = true }
 
 [dev-dependencies]
 escargot = "0.5"
