@@ -1,7 +1,7 @@
 # These settings are synced to GitHub by https://probot.github.io/apps/settings/
 
 repository:
-  description: Validate a target command en-masse
+  description: Snapshot testing for a herd of CLI tests
   homepage: docs.rs/trycmd
   topics: rust cli test
   has_issues: true

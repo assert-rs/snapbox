@@ -1,7 +1,7 @@
 [package]
 name = "trycmd"
 version = "0.1.0"
-description = "Test CLI Applications."
+description = "Snapshot testing for a herd of CLI tests"
 authors = ["Ed Page <eopage@gmail.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/assert-rs/trycmd.git"
