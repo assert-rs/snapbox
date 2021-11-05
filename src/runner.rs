@@ -330,7 +330,7 @@ impl std::fmt::Display for CaseStatus {
                     "{} {} ... {}",
                     palette.hint.paint("Testing"),
                     path.display(),
-                    palette.error.paint("ok")
+                    palette.info.paint("ok")
                 )?;
             }
             Self::Skipped { path } => {
