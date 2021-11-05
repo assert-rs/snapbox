@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 #[derive(Debug)]
 pub(crate) struct RunnerSpec {
     default_bin: Option<crate::Bin>,
+    timeout: Option<std::time::Duration>,
     cases: Vec<CaseSpec>,
     include: Option<Vec<String>>,
 }
@@ -11,6 +12,7 @@ impl RunnerSpec {
     pub(crate) fn new() -> Self {
         Self {
             default_bin: None,
+            timeout: Default::default(),
             cases: Default::default(),
             include: None,
         }
@@ -20,28 +22,18 @@ impl RunnerSpec {
         self.default_bin = bin;
     }
 
+    pub(crate) fn timeout(&mut self, time: Option<std::time::Duration>) {
+        self.timeout = time;
+    }
+
     pub(crate) fn include(&mut self, include: Option<Vec<String>>) {
         self.include = include;
     }
 
-    pub(crate) fn case(&mut self, glob: &std::path::Path) {
+    pub(crate) fn case(&mut self, glob: &std::path::Path, expected: Option<crate::CommandStatus>) {
         self.cases.push(CaseSpec {
             glob: glob.into(),
-            expected: None,
-        });
-    }
-
-    pub(crate) fn pass(&mut self, glob: &std::path::Path) {
-        self.cases.push(CaseSpec {
-            glob: glob.into(),
-            expected: Some(crate::Expected::Pass),
-        });
-    }
-
-    pub(crate) fn fail(&mut self, glob: &std::path::Path) {
-        self.cases.push(CaseSpec {
-            glob: glob.into(),
-            expected: Some(crate::Expected::Fail),
+            expected,
         });
     }
 
@@ -66,20 +58,21 @@ impl RunnerSpec {
                                                 path: path,
                                                 expected: spec.expected,
                                                 default_bin: self.default_bin.clone(),
+                                                timeout: self.timeout,
                                                 error: None,
                                             },
                                         );
                                     } else {
                                         cases.insert(
                                             path.clone(),
-                                            crate::Case::error(path, "path has no name"),
+                                            crate::Case::with_error(path, "path has no name"),
                                         );
                                     }
                                 }
                                 Err(err) => {
                                     let path = err.path().to_owned();
                                     let err = err.into_error();
-                                    cases.insert(path.clone(), crate::Case::error(path, err));
+                                    cases.insert(path.clone(), crate::Case::with_error(path, err));
                                 }
                             }
                         }
@@ -87,7 +80,7 @@ impl RunnerSpec {
                     Err(err) => {
                         cases.insert(
                             spec.glob.clone(),
-                            crate::Case::error(spec.glob.clone(), err),
+                            crate::Case::with_error(spec.glob.clone(), err),
                         );
                     }
                 }
@@ -100,13 +93,14 @@ impl RunnerSpec {
                         path: path.into(),
                         expected: spec.expected,
                         default_bin: self.default_bin.clone(),
+                        timeout: self.timeout,
                         error: None,
                     },
                 );
             } else {
                 cases.insert(
                     spec.glob.clone(),
-                    crate::Case::error(spec.glob.clone(), "path has no name"),
+                    crate::Case::with_error(spec.glob.clone(), "path has no name"),
                 );
             }
         }
@@ -140,7 +134,7 @@ impl Default for RunnerSpec {
 #[derive(Debug)]
 struct CaseSpec {
     glob: std::path::PathBuf,
-    expected: Option<crate::Expected>,
+    expected: Option<crate::CommandStatus>,
 }
 
 fn get_glob(path: &std::path::Path) -> Option<&str> {

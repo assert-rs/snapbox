@@ -1,7 +1,9 @@
 #[derive(Copy, Clone, Debug, Default)]
 pub(crate) struct Palette {
+    pub(crate) info: styled::Style,
     pub(crate) warn: styled::Style,
     pub(crate) error: styled::Style,
+    pub(crate) hint: styled::Style,
 }
 
 impl Palette {
@@ -9,8 +11,10 @@ impl Palette {
     pub(crate) fn current() -> Self {
         if concolor_control::get(concolor_control::Stream::Either).ansi_color() {
             Self {
+                info: styled::Style(yansi::Style::new(yansi::Color::Blue).bold()),
                 warn: styled::Style(yansi::Style::new(yansi::Color::Yellow).bold()),
                 error: styled::Style(yansi::Style::new(yansi::Color::Red).bold()),
+                hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
             }
         } else {
             Self::default()

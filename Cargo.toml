@@ -36,14 +36,21 @@ color-auto = ["color", "concolor-control/auto"]
 name = "bin_fixture"
 
 [dependencies]
-glob = "0.3.0"
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.5"
-wait-timeout = "0.2.0"
-bstr = "0.2.14"
 yansi = { version = "0.5.0", optional = true }
 concolor-control = { version = "0.0.7", optional = true }
+
+glob = "0.3.0"
 rayon = "1.5.1"
+
+serde = { version = "1.0", features = ["derive"] }
+shlex = "1.1.0"
+humantime = "2"
+humantime-serde = "1"
+toml = "0.5"
+
+normalize-line-endings = "0.3.0"
+wait-timeout = "0.2.0"
+bstr = "0.2.14"
 
 [dev-dependencies]
 escargot = "0.5"

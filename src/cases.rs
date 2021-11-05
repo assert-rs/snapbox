@@ -25,18 +25,41 @@ impl TestCases {
         self
     }
 
+    pub fn timeout(&mut self, time: std::time::Duration) -> &Self {
+        self.runner.borrow_mut().timeout(Some(time));
+        self
+    }
+
     pub fn case(&self, glob: impl AsRef<std::path::Path>) -> &Self {
-        self.runner.borrow_mut().case(glob.as_ref());
+        self.runner.borrow_mut().case(glob.as_ref(), None);
         self
     }
 
     pub fn pass(&self, glob: impl AsRef<std::path::Path>) -> &Self {
-        self.runner.borrow_mut().pass(glob.as_ref());
+        self.runner
+            .borrow_mut()
+            .case(glob.as_ref(), Some(crate::CommandStatus::Pass));
         self
     }
 
     pub fn fail(&self, glob: impl AsRef<std::path::Path>) -> &Self {
-        self.runner.borrow_mut().fail(glob.as_ref());
+        self.runner
+            .borrow_mut()
+            .case(glob.as_ref(), Some(crate::CommandStatus::Fail));
+        self
+    }
+
+    pub fn should_panic(&self, glob: impl AsRef<std::path::Path>) -> &Self {
+        self.runner
+            .borrow_mut()
+            .case(glob.as_ref(), Some(crate::CommandStatus::Interrupted));
+        self
+    }
+
+    pub fn skip(&self, glob: impl AsRef<std::path::Path>) -> &Self {
+        self.runner
+            .borrow_mut()
+            .case(glob.as_ref(), Some(crate::CommandStatus::Skip));
         self
     }
 
