@@ -84,8 +84,9 @@ impl TestCases {
         self.has_run.set(true);
 
         let mode = parse_mode(std::env::var_os("TRYCMD").as_deref());
+        mode.initialize().unwrap();
 
-        self.runner.borrow_mut().prepare().run(mode);
+        self.runner.borrow_mut().prepare().run(&mode);
     }
 }
 
@@ -138,6 +139,8 @@ fn parse_include(args: impl IntoIterator<Item = std::ffi::OsString>) -> Option<V
 fn parse_mode(var: Option<&std::ffi::OsStr>) -> crate::Mode {
     if var == Some(std::ffi::OsStr::new("overwrite")) {
         crate::Mode::Overwrite
+    } else if var == Some(std::ffi::OsStr::new("dump")) {
+        crate::Mode::Dump("dump".into())
     } else {
         crate::Mode::Fail
     }

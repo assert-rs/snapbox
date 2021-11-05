@@ -18,7 +18,7 @@ impl Runner {
         self.cases.push(case);
     }
 
-    pub(crate) fn run(&self, mode: Mode) {
+    pub(crate) fn run(&self, mode: &Mode) {
         let palette = crate::Palette::current();
         if self.cases.is_empty() {
             eprintln!(
@@ -89,7 +89,7 @@ impl Case {
         }
     }
 
-    pub(crate) fn run(&self, mode: Mode) -> Result<CaseStatus, CaseStatus> {
+    pub(crate) fn run(&self, mode: &Mode) -> Result<CaseStatus, CaseStatus> {
         if self.expected == Some(crate::CommandStatus::Skip) {
             return Ok(CaseStatus::Skipped {
                 path: self.path.clone(),
@@ -126,9 +126,13 @@ impl Case {
 
         let output = run.to_output(stdin).map_err(|e| self.to_err(e))?;
 
-        self.validate_status(&run, &output)?;
-        self.validate_stream(&run, &output, Stdio::Stdout, mode)?;
-        self.validate_stream(&run, &output, Stdio::Stderr, mode)?;
+        // For dump mode's sake, allow running all
+        let status_err = self.validate_status(&run, &output);
+        let stdout_err = self.validate_stream(&run, &output, Stdio::Stdout, mode);
+        let stderr_err = self.validate_stream(&run, &output, Stdio::Stderr, mode);
+        status_err?;
+        stdout_err?;
+        stderr_err?;
 
         Ok(CaseStatus::Success {
             path: self.path.clone(),
@@ -214,7 +218,7 @@ impl Case {
         run: &crate::TryCmd,
         output: &std::process::Output,
         stream: Stdio,
-        mode: Mode,
+        mode: &Mode,
     ) -> Result<(), CaseStatus> {
         let stdout = match stream {
             Stdio::Stdout => &output.stdout,
@@ -234,27 +238,44 @@ impl Case {
             File::Text(data)
         };
 
-        let stdout_path = self.path.with_extension(stream.as_str());
-        if stdout_path.exists() {
-            let expected_stdout = File::read_from(&stdout_path, run.binary).map_err(|e| {
-                self.to_err(format!("Failed to read {}: {}", stdout_path.display(), e))
+        if let Mode::Dump(path) = mode {
+            let stdout_path = path.join(
+                self.path
+                    .with_extension(stream.as_str())
+                    .file_name()
+                    .unwrap(),
+            );
+            stdout.write_to(&stdout_path).map_err(|e| {
+                self.to_err(format!("Failed to write {}: {}", stdout_path.display(), e))
             })?;
+        } else {
+            let stdout_path = self.path.with_extension(stream.as_str());
+            if stdout_path.exists() {
+                let expected_stdout = File::read_from(&stdout_path, run.binary).map_err(|e| {
+                    self.to_err(format!("Failed to read {}: {}", stdout_path.display(), e))
+                })?;
 
-            if stdout != expected_stdout {
-                match mode {
-                    Mode::Fail => {
-                        return Err(CaseStatus::MismatchOutput {
-                            path: self.path.clone(),
-                            stream: Stdio::Stdout,
-                            expected: expected_stdout,
-                            stdout: output.stdout.clone(),
-                            stderr: output.stderr.clone(),
-                        });
-                    }
-                    Mode::Overwrite => {
-                        stdout.write_to(&stdout_path).map_err(|e| {
-                            self.to_err(format!("Failed to write {}: {}", stdout_path.display(), e))
-                        })?;
+                if stdout != expected_stdout {
+                    match mode {
+                        Mode::Fail => {
+                            return Err(CaseStatus::MismatchOutput {
+                                path: self.path.clone(),
+                                stream: Stdio::Stdout,
+                                expected: expected_stdout,
+                                stdout: output.stdout.clone(),
+                                stderr: output.stderr.clone(),
+                            });
+                        }
+                        Mode::Overwrite => {
+                            stdout.write_to(&stdout_path).map_err(|e| {
+                                self.to_err(format!(
+                                    "Failed to write {}: {}",
+                                    stdout_path.display(),
+                                    e
+                                ))
+                            })?;
+                        }
+                        Mode::Dump(_) => unreachable!("handled earlier"),
                     }
                 }
             }
@@ -429,10 +450,27 @@ impl std::fmt::Display for CaseStatus {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Mode {
     Fail,
     Overwrite,
+    Dump(std::path::PathBuf),
+}
+
+impl Mode {
+    pub(crate) fn initialize(&self) -> Result<(), std::io::Error> {
+        match self {
+            Self::Fail => {}
+            Self::Overwrite => {}
+            Self::Dump(path) => {
+                std::fs::create_dir_all(path)?;
+                let gitignore_path = path.join(".gitignore");
+                std::fs::write(gitignore_path, "*\n")?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
