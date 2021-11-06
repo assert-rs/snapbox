@@ -68,36 +68,86 @@ impl Default for FilesystemContext {
 }
 
 #[cfg(feature = "filesystem")]
+pub(crate) struct Iterate {
+    inner: walkdir::IntoIter,
+}
+
+#[cfg(feature = "filesystem")]
+impl Iterate {
+    pub(crate) fn new(path: &std::path::Path) -> Self {
+        Self {
+            inner: walkdir::WalkDir::new(path).into_iter(),
+        }
+    }
+}
+
+#[cfg(feature = "filesystem")]
+impl Iterator for Iterate {
+    type Item = Result<std::path::PathBuf, std::io::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|e| {
+            e.map(walkdir::DirEntry::into_path)
+                .map_err(std::io::Error::from)
+        })
+    }
+}
+
+#[cfg(not(feature = "filesystem"))]
+pub(crate) struct Iterate {}
+
+#[cfg(not(feature = "filesystem"))]
+impl Iterate {
+    pub(crate) fn new(_path: &std::path::Path) -> Self {
+        Self {}
+    }
+}
+
+#[cfg(not(feature = "filesystem"))]
+impl Iterator for Iterate {
+    type Item = Result<std::path::PathBuf, std::io::Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
+    }
+}
+
 fn copy_dir(source: &std::path::Path, dest: &std::path::Path) -> Result<(), std::io::Error> {
     let source = source.canonicalize()?;
     let dest = dest.canonicalize()?;
 
-    for entry in walkdir::WalkDir::new(&source) {
-        let entry = entry?;
-        let rel_dest = entry.path().strip_prefix(&source).unwrap();
-        let dest = dest.join(rel_dest);
-        let source = entry.path();
+    for current in Iterate::new(&source) {
+        let current = current?;
+        let rel = current.strip_prefix(&source).unwrap();
+        let target = dest.join(rel);
 
-        let meta = source.symlink_metadata()?;
-        if meta.is_dir() {
-            std::fs::create_dir_all(&dest)?;
-        } else if meta.is_file() {
-            std::fs::copy(source, &dest)?;
-        } else if let Ok(target) = std::fs::read_link(source) {
-            symlink_to_file(&dest, &target)?;
-        }
+        shallow_copy(&current, &target)?;
     }
 
     Ok(())
 }
 
-#[cfg(feature = "filesystem")]
+pub(crate) fn shallow_copy(
+    source: &std::path::Path,
+    dest: &std::path::Path,
+) -> Result<(), std::io::Error> {
+    let meta = source.symlink_metadata()?;
+    if meta.is_dir() {
+        std::fs::create_dir_all(dest)?;
+    } else if meta.is_file() {
+        std::fs::copy(source, dest)?;
+    } else if let Ok(target) = std::fs::read_link(source) {
+        symlink_to_file(dest, &target)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(windows)]
 fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(), std::io::Error> {
     std::os::windows::fs::symlink_file(target, link)
 }
 
-#[cfg(feature = "filesystem")]
 #[cfg(not(windows))]
 fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(), std::io::Error> {
     std::os::unix::fs::symlink(target, link)

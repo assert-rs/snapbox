@@ -152,14 +152,7 @@ impl Case {
         let cmd_output = run
             .to_output(stdin, fs.path())
             .map_err(|e| output.clone().error(e))?;
-        let mut output = output.output(cmd_output);
-
-        if let Err(err) = fs.close() {
-            output.fs.context.push(FileStatus::Failure(format!(
-                "Failed to cleanup sandbox: {}",
-                err
-            )));
-        }
+        let output = output.output(cmd_output);
 
         // For dump mode's sake, allow running all
         let mut ok = output.is_ok();
@@ -199,6 +192,23 @@ impl Case {
                 };
             }
             output.stderr = Some(stderr);
+        }
+        if run.fs.sandbox {
+            output.fs =
+                match self.validate_fs(fs.path().expect("sandbox must be filled"), output.fs, mode)
+                {
+                    Ok(fs) => fs,
+                    Err(fs) => {
+                        ok = false;
+                        fs
+                    }
+                };
+        }
+        if let Err(err) = fs.close() {
+            output.fs.context.push(FileStatus::Failure(format!(
+                "Failed to cleanup sandbox: {}",
+                err
+            )));
         }
 
         if ok {
@@ -298,6 +308,163 @@ impl Case {
         }
 
         Ok(stream)
+    }
+
+    fn validate_fs(
+        &self,
+        actual_root: &std::path::Path,
+        mut fs: Filesystem,
+        mode: &Mode,
+    ) -> Result<Filesystem, Filesystem> {
+        let mut ok = true;
+
+        if let Mode::Dump(_) = mode {
+            // Handled as part of FilesystemContext
+        } else {
+            let fixture_root = self.path.with_extension("out");
+            if fixture_root.exists() {
+                for expected_path in crate::FsIterate::new(&fixture_root) {
+                    if expected_path
+                        .as_deref()
+                        .map(|p| p.is_dir())
+                        .unwrap_or_default()
+                    {
+                        continue;
+                    }
+
+                    match self.validate_path(expected_path, &fixture_root, actual_root) {
+                        Ok(status) => {
+                            fs.context.push(status);
+                        }
+                        Err(status) => {
+                            let mut is_current_ok = false;
+                            if *mode == Mode::Overwrite {
+                                match &status {
+                                    FileStatus::ContentMismatch {
+                                        expected_path,
+                                        actual_path: _actual_path,
+                                        expected_content: _expected_content,
+                                        actual_content,
+                                    } => {
+                                        if actual_content.write_to(expected_path).is_ok() {
+                                            is_current_ok = true;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            fs.context.push(status);
+                            if !is_current_ok {
+                                ok = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ok {
+            Ok(fs)
+        } else {
+            Err(fs)
+        }
+    }
+
+    fn validate_path(
+        &self,
+        expected_path: Result<std::path::PathBuf, std::io::Error>,
+        fixture_root: &std::path::Path,
+        actual_root: &std::path::Path,
+    ) -> Result<FileStatus, FileStatus> {
+        let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string()))?;
+        let expected_meta = expected_path
+            .symlink_metadata()
+            .map_err(|e| FileStatus::Failure(e.to_string()))?;
+        let expected_target = std::fs::read_link(&expected_path).ok();
+
+        let rel = expected_path.strip_prefix(&fixture_root).unwrap();
+        let actual_path = actual_root.join(rel);
+        let actual_meta = actual_path.symlink_metadata().ok();
+        let actual_target = std::fs::read_link(&actual_path).ok();
+
+        let expected_type = if expected_meta.is_dir() {
+            FileType::Dir
+        } else if expected_meta.is_file() {
+            FileType::File
+        } else if expected_target.is_some() {
+            FileType::Symlink
+        } else {
+            FileType::Unknown
+        };
+        let actual_type = if let Some(actual_meta) = actual_meta {
+            if actual_meta.is_dir() {
+                FileType::Dir
+            } else if actual_meta.is_file() {
+                FileType::File
+            } else if actual_target.is_some() {
+                FileType::Symlink
+            } else {
+                FileType::Unknown
+            }
+        } else {
+            FileType::Missing
+        };
+        if expected_type != actual_type {
+            return Err(FileStatus::TypeMismatch {
+                expected_path,
+                actual_path,
+                expected_type,
+                actual_type,
+            });
+        }
+
+        match expected_type {
+            FileType::Symlink => {
+                if expected_target != actual_target {
+                    return Err(FileStatus::LinkMismatch {
+                        expected_path,
+                        actual_path,
+                        expected_target: expected_target.unwrap(),
+                        actual_target: actual_target.unwrap(),
+                    });
+                }
+            }
+            FileType::File => {
+                let expected_content = File::read_from(&expected_path, true)
+                    .map_err(|e| {
+                        FileStatus::Failure(format!(
+                            "Failed to read {}: {}",
+                            expected_path.display(),
+                            e
+                        ))
+                    })?
+                    .try_utf8();
+                let actual_content = File::read_from(&actual_path, true)
+                    .map_err(|e| {
+                        FileStatus::Failure(format!(
+                            "Failed to read {}: {}",
+                            actual_path.display(),
+                            e
+                        ))
+                    })?
+                    .try_utf8();
+
+                if expected_content != actual_content {
+                    return Err(FileStatus::ContentMismatch {
+                        expected_path,
+                        actual_path,
+                        expected_content,
+                        actual_content,
+                    });
+                }
+            }
+            FileType::Dir | FileType::Unknown | FileType::Missing => {}
+        }
+
+        Ok(FileStatus::Ok {
+            expected_path,
+            actual_path,
+        })
     }
 }
 
@@ -408,21 +575,21 @@ impl std::fmt::Display for Spawn {
                     if exit.success() {
                         writeln!(
                             f,
-                            "Expected {}, got {}",
+                            "Expected {}, was {}",
                             palette.info.paint(expected),
                             palette.error.paint("success")
                         )?;
                     } else if let Some(code) = exit.code() {
                         writeln!(
                             f,
-                            "Expected {}, got {}",
+                            "Expected {}, was {}",
                             palette.info.paint(expected),
                             palette.error.paint(code)
                         )?;
                     } else {
                         writeln!(
                             f,
-                            "Expected {}, got {}",
+                            "Expected {}, was {}",
                             palette.info.paint(expected),
                             palette.error.paint("interrupted")
                         )?;
@@ -566,13 +733,39 @@ impl std::fmt::Display for Filesystem {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum FileStatus {
+    Ok {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+    },
     Failure(String),
+    TypeMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_type: FileType,
+        actual_type: FileType,
+    },
+    LinkMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_target: std::path::PathBuf,
+        actual_target: std::path::PathBuf,
+    },
+    ContentMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_content: File,
+        actual_content: File,
+    },
 }
 
 impl FileStatus {
     fn is_ok(&self) -> bool {
         match self {
-            Self::Failure(_) => false,
+            Self::Ok { .. } => true,
+            Self::Failure(_)
+            | Self::TypeMismatch { .. }
+            | Self::LinkMismatch { .. }
+            | Self::ContentMismatch { .. } => false,
         }
     }
 }
@@ -582,12 +775,99 @@ impl std::fmt::Display for FileStatus {
         let palette = crate::Palette::current();
 
         match &self {
+            FileStatus::Ok {
+                expected_path,
+                actual_path: _actual_path,
+            } => {
+                writeln!(
+                    f,
+                    "{}: is {}",
+                    expected_path.display(),
+                    palette.info.paint("good"),
+                )?;
+            }
             FileStatus::Failure(msg) => {
                 writeln!(f, "{}", palette.error.paint(msg))?;
+            }
+            FileStatus::TypeMismatch {
+                expected_path,
+                actual_path: _actual_path,
+                expected_type,
+                actual_type,
+            } => {
+                writeln!(
+                    f,
+                    "{}: Expected {}, was {}",
+                    expected_path.display(),
+                    palette.info.paint(expected_type),
+                    palette.error.paint(actual_type)
+                )?;
+            }
+            FileStatus::LinkMismatch {
+                expected_path,
+                actual_path: _actual_path,
+                expected_target,
+                actual_target,
+            } => {
+                writeln!(
+                    f,
+                    "{}: Expected {}, was {}",
+                    expected_path.display(),
+                    palette.info.paint(expected_target.display()),
+                    palette.error.paint(actual_target.display())
+                )?;
+            }
+            FileStatus::ContentMismatch {
+                expected_path,
+                actual_path,
+                expected_content,
+                actual_content,
+            } => {
+                writeln!(
+                    f,
+                    "{} {}:",
+                    expected_path.display(),
+                    palette.info.paint("(expected)")
+                )?;
+                writeln!(f, "{}", palette.info.paint(&expected_content))?;
+                writeln!(
+                    f,
+                    "{} {}:",
+                    actual_path.display(),
+                    palette.error.paint("(actual)")
+                )?;
+                writeln!(f, "{}", palette.error.paint(&actual_content))?;
             }
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum FileType {
+    Dir,
+    File,
+    Symlink,
+    Unknown,
+    Missing,
+}
+
+impl FileType {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Dir => "dir",
+            Self::File => "file",
+            Self::Symlink => "symlink",
+            Self::Unknown => "unknown",
+            Self::Missing => "missing",
+        }
+    }
+}
+
+impl std::fmt::Display for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_str().fmt(f)
     }
 }
 
@@ -651,6 +931,19 @@ impl File {
                 Ok(())
             }
             Self::Text(_) => Ok(()),
+        }
+    }
+
+    pub(crate) fn try_utf8(self) -> Self {
+        match self {
+            Self::Binary(data) => match String::from_utf8(data.clone()) {
+                Ok(data) => Self::Text(data),
+                Err(err) => {
+                    let data = err.into_bytes();
+                    Self::Binary(data)
+                }
+            },
+            Self::Text(data) => Self::Text(data),
         }
     }
 
