@@ -948,7 +948,9 @@ impl File {
     pub(crate) fn utf8(&mut self) -> Result<(), std::str::Utf8Error> {
         match self {
             Self::Binary(data) => {
-                *self = Self::Text(String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?);
+                let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
+                let data = normalize_line_endings::normalized(data.chars()).collect();
+                *self = Self::Text(data);
                 Ok(())
             }
             Self::Text(_) => Ok(()),
@@ -958,7 +960,10 @@ impl File {
     pub(crate) fn try_utf8(self) -> Self {
         match self {
             Self::Binary(data) => match String::from_utf8(data) {
-                Ok(data) => Self::Text(data),
+                Ok(data) => {
+                    let data = normalize_line_endings::normalized(data.chars()).collect();
+                    Self::Text(data)
+                }
                 Err(err) => {
                     let data = err.into_bytes();
                     Self::Binary(data)
