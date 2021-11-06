@@ -1,0 +1,6 @@
+bin.name = "bin-fixture"
+fs.sandbox = true
+
+[env.add]
+write = "file.txt = Goodbye\nWorld"
+cat = "file.txt"

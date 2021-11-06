@@ -142,8 +142,24 @@ impl Case {
             None
         };
 
-        let cmd_output = run.to_output(stdin).map_err(|e| output.clone().error(e))?;
-        let output = output.output(cmd_output);
+        let fs =
+            crate::FilesystemContext::new(&self.path, run.fs.cwd.as_deref(), run.fs.sandbox, mode)
+                .map_err(|e| {
+                    output
+                        .clone()
+                        .error(format!("Failed to initialize sandbox: {}", e))
+                })?;
+        let cmd_output = run
+            .to_output(stdin, fs.path())
+            .map_err(|e| output.clone().error(e))?;
+        let mut output = output.output(cmd_output);
+
+        if let Err(err) = fs.close() {
+            output.fs.context.push(FileStatus::Failure(format!(
+                "Failed to cleanup sandbox: {}",
+                err
+            )));
+        }
 
         // For dump mode's sake, allow running all
         let mut ok = output.is_ok();
@@ -226,8 +242,8 @@ impl Case {
     }
 
     fn validate_stream(&self, mut stream: Stream, mode: &Mode) -> Result<Stream, Stream> {
-        if let Mode::Dump(path) = mode {
-            let stdout_path = path.join(
+        if let Mode::Dump(root) = mode {
+            let stdout_path = root.join(
                 self.path
                     .with_extension(stream.stream.as_str())
                     .file_name()
@@ -290,6 +306,7 @@ pub(crate) struct Output {
     spawn: Spawn,
     stdout: Option<Stream>,
     stderr: Option<Stream>,
+    fs: Filesystem,
 }
 
 impl Output {
@@ -319,6 +336,7 @@ impl Output {
         self.spawn.is_ok()
             && self.stdout.as_ref().map(|s| s.is_ok()).unwrap_or_default()
             && self.stderr.as_ref().map(|s| s.is_ok()).unwrap_or_default()
+            && self.fs.is_ok()
     }
 }
 
@@ -331,6 +349,7 @@ impl Default for Output {
             },
             stdout: None,
             stderr: None,
+            fs: Default::default(),
         }
     }
 }
@@ -344,6 +363,7 @@ impl std::fmt::Display for Output {
         if let Some(stderr) = &self.stderr {
             stderr.fmt(f)?;
         }
+        self.fs.fmt(f)?;
 
         Ok(())
     }
@@ -519,6 +539,58 @@ impl std::fmt::Display for Stdio {
     }
 }
 
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+struct Filesystem {
+    context: Vec<FileStatus>,
+}
+
+impl Filesystem {
+    fn is_ok(&self) -> bool {
+        if self.context.is_empty() {
+            true
+        } else {
+            self.context.iter().all(FileStatus::is_ok)
+        }
+    }
+}
+
+impl std::fmt::Display for Filesystem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for status in &self.context {
+            status.fmt(f)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum FileStatus {
+    Failure(String),
+}
+
+impl FileStatus {
+    fn is_ok(&self) -> bool {
+        match self {
+            Self::Failure(_) => false,
+        }
+    }
+}
+
+impl std::fmt::Display for FileStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let palette = crate::Palette::current();
+
+        match &self {
+            FileStatus::Failure(msg) => {
+                writeln!(f, "{}", palette.error.paint(msg))?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Mode {
     Fail,
@@ -531,9 +603,9 @@ impl Mode {
         match self {
             Self::Fail => {}
             Self::Overwrite => {}
-            Self::Dump(path) => {
-                std::fs::create_dir_all(path)?;
-                let gitignore_path = path.join(".gitignore");
+            Self::Dump(root) => {
+                std::fs::create_dir_all(root)?;
+                let gitignore_path = root.join(".gitignore");
                 std::fs::write(gitignore_path, "*\n")?;
             }
         }

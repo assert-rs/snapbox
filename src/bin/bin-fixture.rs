@@ -12,6 +12,11 @@ fn run() -> Result<(), Box<dyn Error>> {
         eprintln!("{}", text);
     }
 
+    if let Ok(raw) = env::var("write") {
+        let (path, text) = raw.split_once('=').unwrap_or((raw.as_str(), ""));
+        std::fs::write(path.trim(), text.trim()).unwrap();
+    }
+
     if let Ok(path) = env::var("cat") {
         let text = std::fs::read_to_string(path).unwrap();
         eprintln!("{}", text);

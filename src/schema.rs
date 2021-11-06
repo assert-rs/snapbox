@@ -55,7 +55,10 @@ impl TryCmd {
         Ok(run)
     }
 
-    pub(crate) fn to_command(&self) -> Result<std::process::Command, String> {
+    pub(crate) fn to_command(
+        &self,
+        cwd: Option<&std::path::Path>,
+    ) -> Result<std::process::Command, String> {
         let bin = self.bin()?;
         if !bin.exists() {
             return Err(format!("Bin doesn't exist: {}", bin.display()));
@@ -65,7 +68,7 @@ impl TryCmd {
         if let Some(args) = self.args.as_deref() {
             cmd.args(args);
         }
-        if let Some(cwd) = self.fs.cwd.as_deref() {
+        if let Some(cwd) = cwd {
             cmd.current_dir(cwd);
         }
         self.env.apply(&mut cmd);
@@ -73,8 +76,12 @@ impl TryCmd {
         Ok(cmd)
     }
 
-    pub(crate) fn to_output(&self, stdin: Option<Vec<u8>>) -> Result<std::process::Output, String> {
-        let mut cmd = self.to_command()?;
+    pub(crate) fn to_output(
+        &self,
+        stdin: Option<Vec<u8>>,
+        cwd: Option<&std::path::Path>,
+    ) -> Result<std::process::Output, String> {
+        let mut cmd = self.to_command(cwd)?;
         cmd.stdin(std::process::Stdio::piped());
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
@@ -126,6 +133,8 @@ impl std::str::FromStr for TryCmd {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct Filesystem {
     pub(crate) cwd: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub(crate) sandbox: bool,
 }
 
 /// Describe command's environment

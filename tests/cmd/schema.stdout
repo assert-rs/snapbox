@@ -25,7 +25,8 @@
     },
     "fs": {
       "default": {
-        "cwd": null
+        "cwd": null,
+        "sandbox": false
       },
       "allOf": [
         {
@@ -110,6 +111,10 @@
             "string",
             "null"
           ]
+        },
+        "sandbox": {
+          "default": false,
+          "type": "boolean"
         }
       }
     },
