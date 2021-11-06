@@ -56,6 +56,9 @@ impl TryCmd {
         if run.fs.cwd.is_none() {
             run.fs.cwd = run.fs.base.clone();
         }
+        if run.fs.sandbox.is_none() {
+            run.fs.sandbox = Some(path.with_extension("out").exists());
+        }
 
         Ok(run)
     }
@@ -154,8 +157,13 @@ pub struct Filesystem {
     pub(crate) cwd: Option<std::path::PathBuf>,
     /// Sandbox base
     pub(crate) base: Option<std::path::PathBuf>,
-    #[serde(default)]
-    pub(crate) sandbox: bool,
+    pub(crate) sandbox: Option<bool>,
+}
+
+impl Filesystem {
+    pub(crate) fn sandbox(&self) -> bool {
+        self.sandbox.unwrap_or_default()
+    }
 }
 
 /// Describe command's environment

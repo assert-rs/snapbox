@@ -27,7 +27,7 @@
       "default": {
         "base": null,
         "cwd": null,
-        "sandbox": false
+        "sandbox": null
       },
       "allOf": [
         {
@@ -121,8 +121,10 @@
           ]
         },
         "sandbox": {
-          "default": false,
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     },

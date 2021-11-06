@@ -142,13 +142,17 @@ impl Case {
             None
         };
 
-        let fs =
-            crate::FilesystemContext::new(&self.path, run.fs.base.as_deref(), run.fs.sandbox, mode)
-                .map_err(|e| {
-                    output
-                        .clone()
-                        .error(format!("Failed to initialize sandbox: {}", e))
-                })?;
+        let fs = crate::FilesystemContext::new(
+            &self.path,
+            run.fs.base.as_deref(),
+            run.fs.sandbox(),
+            mode,
+        )
+        .map_err(|e| {
+            output
+                .clone()
+                .error(format!("Failed to initialize sandbox: {}", e))
+        })?;
         let cmd_output = run
             .to_output(stdin, fs.path())
             .map_err(|e| output.clone().error(e))?;
@@ -193,7 +197,7 @@ impl Case {
             }
             output.stderr = Some(stderr);
         }
-        if run.fs.sandbox {
+        if run.fs.sandbox() {
             output.fs =
                 match self.validate_fs(fs.path().expect("sandbox must be filled"), output.fs, mode)
                 {
