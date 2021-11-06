@@ -10,7 +10,8 @@ use std::collections::BTreeMap;
 pub struct TryCmd {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Vec<String>>,
-    pub(crate) cwd: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub(crate) fs: Filesystem,
     #[serde(default)]
     pub(crate) env: Env,
     pub(crate) status: Option<CommandStatus>,
@@ -37,17 +38,17 @@ impl TryCmd {
             Err("No extension".into())
         }?;
 
-        if let Some(cwd) = run.cwd.take() {
-            run.cwd = Some(
+        if let Some(cwd) = run.fs.cwd.take() {
+            run.fs.cwd = Some(
                 path.parent()
                     .unwrap_or_else(|| std::path::Path::new("."))
                     .join(cwd),
             );
         }
-        if run.cwd.is_none() {
+        if run.fs.cwd.is_none() {
             let cwd_path = path.with_extension("in");
             if cwd_path.exists() {
-                run.cwd = Some(cwd_path);
+                run.fs.cwd = Some(cwd_path);
             }
         }
 
@@ -64,7 +65,7 @@ impl TryCmd {
         if let Some(args) = self.args.as_deref() {
             cmd.args(args);
         }
-        if let Some(cwd) = self.cwd.as_deref() {
+        if let Some(cwd) = self.fs.cwd.as_deref() {
             cmd.current_dir(cwd);
         }
         self.env.apply(&mut cmd);
@@ -119,7 +120,15 @@ impl std::str::FromStr for TryCmd {
     }
 }
 
-/// Describe commands environment
+/// Describe command's the filesystem context
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct Filesystem {
+    pub(crate) cwd: Option<std::path::PathBuf>,
+}
+
+/// Describe command's environment
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]

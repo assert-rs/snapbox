@@ -23,10 +23,14 @@
         "type": "string"
       }
     },
-    "cwd": {
-      "type": [
-        "string",
-        "null"
+    "fs": {
+      "default": {
+        "cwd": null
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/Filesystem"
+        }
       ]
     },
     "env": {
@@ -97,8 +101,20 @@
         }
       ]
     },
+    "Filesystem": {
+      "description": "Describe command's the filesystem context",
+      "type": "object",
+      "properties": {
+        "cwd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
     "Env": {
-      "description": "Describe commands environment",
+      "description": "Describe command's environment",
       "type": "object",
       "properties": {
         "inherit": {
