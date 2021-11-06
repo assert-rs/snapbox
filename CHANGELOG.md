@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+- We will now interpret `...` in files as wildcards
+- The TOML `cwd` key is now `fs.cwd`
+
+### Features
+
+- `...\n` in `*.stdout`, `*.stderr`, or `*.out/*` will match multiple lines (non-greedy) 
+- Infer the CWD from a `*.in/`
+- Sandbox in a tempdir tests that mutate the CWD
+- `*.out/` for specifying files to verify in the sandbox
+
+### Fixes
+
+- Show all failures for a command, not just the first
+
 ## [0.1.1] - 2021-11-05
 
 ### Fixes
