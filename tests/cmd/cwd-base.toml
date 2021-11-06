@@ -1,0 +1,5 @@
+bin.name = "bin-fixture"
+fs.cwd = "cwd-base.in/foo"
+
+[env.add]
+cat = "../file.txt"

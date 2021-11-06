@@ -70,6 +70,14 @@
 //! - If not present, we'll not verify the output
 //! - If `binary = false` in `*.toml` (the default), newlines will be normalized before comparing
 //!
+//! #### `*.in/`
+//!
+//! When present, this will automatically be picked as the CWD for the command
+//!
+//! #### `*.out/`
+//!
+//! When present, each file in this directory will be compared to generated or modified files.
+//!
 //! ### Workflow
 //!
 //! To generate snapshots, run
@@ -96,6 +104,7 @@ mod cargo;
 mod cases;
 mod color;
 mod command;
+mod filesystem;
 mod runner;
 pub mod schema;
 mod spec;
@@ -105,6 +114,7 @@ pub use cases::TestCases;
 pub(crate) use cargo::cargo_bin;
 pub(crate) use color::Palette;
 pub(crate) use command::wait_with_input_output;
+pub(crate) use filesystem::{shallow_copy, FilesystemContext, Iterate as FsIterate};
 pub(crate) use runner::{Case, Mode, Runner};
 pub(crate) use schema::{Bin, CommandStatus, Env, TryCmd};
 pub(crate) use spec::RunnerSpec;

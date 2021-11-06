@@ -1,3 +1,5 @@
+use std::io::prelude::*;
+
 use rayon::prelude::*;
 
 #[derive(Debug)]
@@ -29,13 +31,33 @@ impl Runner {
                 .par_iter()
                 .filter_map(|c| match c.run(mode) {
                     Ok(status) => {
-                        // Assuming `status` will print the newline
-                        eprint!("{}", &status);
+                        let stderr = std::io::stderr();
+                        let mut stderr = stderr.lock();
+                        let _ = writeln!(
+                            stderr,
+                            "{} {} ... {}",
+                            palette.hint.paint("Testing"),
+                            c.path.display(),
+                            palette.info.paint("ok")
+                        );
+                        if !status.is_ok() {
+                            // Assuming `status` will print the newline
+                            let _ = write!(stderr, "{}", &status);
+                        }
                         None
                     }
                     Err(status) => {
+                        let stderr = std::io::stderr();
+                        let mut stderr = stderr.lock();
+                        let _ = writeln!(
+                            stderr,
+                            "{} {} ... {}",
+                            palette.hint.paint("Testing"),
+                            c.path.display(),
+                            palette.error.paint("failed")
+                        );
                         // Assuming `status` will print the newline
-                        eprint!("{}", &status);
+                        let _ = write!(stderr, "{}", &status);
                         Some(status)
                     }
                 })
@@ -62,7 +84,7 @@ pub(crate) struct Case {
     pub(crate) timeout: Option<std::time::Duration>,
     pub(crate) default_bin: Option<crate::Bin>,
     pub(crate) env: crate::Env,
-    pub(crate) error: Option<CaseStatus>,
+    pub(crate) error: Option<SpawnStatus>,
 }
 
 impl Case {
@@ -70,36 +92,28 @@ impl Case {
         let name = path.display().to_string();
         Self {
             name,
-            path: path.clone(),
+            path,
             expected: None,
             timeout: None,
             default_bin: None,
             env: Default::default(),
-            error: Some(CaseStatus::Failure {
-                path,
-                message: error.to_string(),
-            }),
+            error: Some(SpawnStatus::Failure(error.to_string())),
         }
     }
 
-    pub(crate) fn to_err(&self, error: impl std::fmt::Display) -> CaseStatus {
-        CaseStatus::Failure {
-            path: self.path.clone(),
-            message: error.to_string(),
-        }
-    }
+    pub(crate) fn run(&self, mode: &Mode) -> Result<Output, Output> {
+        let mut output = Output::default();
 
-    pub(crate) fn run(&self, mode: &Mode) -> Result<CaseStatus, CaseStatus> {
         if self.expected == Some(crate::CommandStatus::Skip) {
-            return Ok(CaseStatus::Skipped {
-                path: self.path.clone(),
-            });
+            assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+            return Ok(output);
         }
         if let Some(err) = self.error.clone() {
-            return Err(err);
+            output.spawn.status = err;
+            return Err(output);
         }
 
-        let mut run = crate::TryCmd::load(&self.path).map_err(|e| self.to_err(e))?;
+        let mut run = crate::TryCmd::load(&self.path).map_err(|e| output.clone().error(e))?;
         if run.bin.is_none() {
             run.bin = self.default_bin.clone()
         }
@@ -116,7 +130,11 @@ impl Case {
             Some(
                 File::read_from(&stdin_path, run.binary)
                     .map_err(|e| {
-                        self.to_err(format!("Failed to read {}: {}", stdin_path.display(), e))
+                        output.clone().error(format!(
+                            "Failed to read {}: {}",
+                            stdin_path.display(),
+                            e
+                        ))
                     })?
                     .into_bytes(),
             )
@@ -124,156 +142,168 @@ impl Case {
             None
         };
 
-        let output = run.to_output(stdin).map_err(|e| self.to_err(e))?;
+        let fs = crate::FilesystemContext::new(
+            &self.path,
+            run.fs.base.as_deref(),
+            run.fs.sandbox(),
+            mode,
+        )
+        .map_err(|e| {
+            output
+                .clone()
+                .error(format!("Failed to initialize sandbox: {}", e))
+        })?;
+        let cmd_output = run
+            .to_output(stdin, fs.path())
+            .map_err(|e| output.clone().error(e))?;
+        let output = output.output(cmd_output);
 
         // For dump mode's sake, allow running all
-        let status_err = self.validate_status(&run, &output);
-        let stdout_err = self.validate_stream(&run, &output, Stdio::Stdout, mode);
-        let stderr_err = self.validate_stream(&run, &output, Stdio::Stderr, mode);
-        status_err?;
-        stdout_err?;
-        stderr_err?;
+        let mut ok = output.is_ok();
+        let mut output = match self.validate_spawn(output, run.status()) {
+            Ok(output) => output,
+            Err(output) => {
+                ok = false;
+                output
+            }
+        };
+        if let Some(mut stdout) = output.stdout {
+            if !run.binary {
+                stdout = stdout.utf8();
+            }
+            if stdout.is_ok() {
+                stdout = match self.validate_stream(stdout, mode) {
+                    Ok(stdout) => stdout,
+                    Err(stdout) => {
+                        ok = false;
+                        stdout
+                    }
+                };
+            }
+            output.stdout = Some(stdout);
+        }
+        if let Some(mut stderr) = output.stderr {
+            if !run.binary {
+                stderr = stderr.utf8();
+            }
+            if stderr.is_ok() {
+                stderr = match self.validate_stream(stderr, mode) {
+                    Ok(stderr) => stderr,
+                    Err(stderr) => {
+                        ok = false;
+                        stderr
+                    }
+                };
+            }
+            output.stderr = Some(stderr);
+        }
+        if run.fs.sandbox() {
+            output.fs =
+                match self.validate_fs(fs.path().expect("sandbox must be filled"), output.fs, mode)
+                {
+                    Ok(fs) => fs,
+                    Err(fs) => {
+                        ok = false;
+                        fs
+                    }
+                };
+        }
+        if let Err(err) = fs.close() {
+            output.fs.context.push(FileStatus::Failure(format!(
+                "Failed to cleanup sandbox: {}",
+                err
+            )));
+        }
 
-        Ok(CaseStatus::Success {
-            path: self.path.clone(),
-        })
+        if ok {
+            Ok(output)
+        } else {
+            Err(output)
+        }
     }
 
-    fn validate_status(
+    fn validate_spawn(
         &self,
-        run: &crate::TryCmd,
-        output: &std::process::Output,
-    ) -> Result<(), CaseStatus> {
-        match run.status() {
+        mut output: Output,
+        expected: crate::CommandStatus,
+    ) -> Result<Output, Output> {
+        let status = output.spawn.exit.expect("bale out before now");
+        match expected {
             crate::CommandStatus::Pass => {
-                if !output.status.success() {
-                    return Err(CaseStatus::UnexpectedStatus {
-                        path: self.path.clone(),
-                        expected: "success".into(),
-                        actual: output
-                            .status
-                            .code()
-                            .map(|c| c.to_string())
-                            .unwrap_or_else(|| "interrupted".into()),
-                        stdout: output.stdout.clone(),
-                        stderr: output.stderr.clone(),
-                    });
+                if !status.success() {
+                    output.spawn.status = SpawnStatus::Expected("success".into());
                 }
             }
             crate::CommandStatus::Fail => {
-                if output.status.success() || output.status.code().is_none() {
-                    return Err(CaseStatus::UnexpectedStatus {
-                        path: self.path.clone(),
-                        expected: "failure".into(),
-                        actual: output
-                            .status
-                            .code()
-                            .map(|c| c.to_string())
-                            .unwrap_or_else(|| "interrupted".into()),
-                        stdout: output.stdout.clone(),
-                        stderr: output.stderr.clone(),
-                    });
+                if status.success() || status.code().is_none() {
+                    output.spawn.status = SpawnStatus::Expected("failure".into());
                 }
             }
             crate::CommandStatus::Interrupted => {
-                if let Some(code) = output.status.code() {
-                    return Err(CaseStatus::UnexpectedStatus {
-                        path: self.path.clone(),
-                        expected: "interrupted".into(),
-                        actual: code.to_string(),
-                        stdout: output.stdout.clone(),
-                        stderr: output.stderr.clone(),
-                    });
+                if status.code().is_some() {
+                    output.spawn.status = SpawnStatus::Expected("interrupted".into());
                 }
             }
             crate::CommandStatus::Skip => unreachable!("handled earlier"),
             crate::CommandStatus::Code(expected_code) => {
-                if let Some(actual_code) = output.status.code() {
-                    if actual_code != expected_code {
-                        return Err(CaseStatus::UnexpectedStatus {
-                            path: self.path.clone(),
-                            expected: expected_code.to_string(),
-                            actual: actual_code.to_string(),
-                            stdout: output.stdout.clone(),
-                            stderr: output.stderr.clone(),
-                        });
-                    }
-                } else {
-                    return Err(CaseStatus::UnexpectedStatus {
-                        path: self.path.clone(),
-                        expected: expected_code.to_string(),
-                        actual: "interrupted".into(),
-                        stdout: output.stdout.clone(),
-                        stderr: output.stderr.clone(),
-                    });
+                if Some(expected_code) != status.code() {
+                    output.spawn.status = SpawnStatus::Expected(expected_code.to_string());
                 }
             }
         }
 
-        Ok(())
+        Ok(output)
     }
 
-    fn validate_stream(
-        &self,
-        run: &crate::TryCmd,
-        output: &std::process::Output,
-        stream: Stdio,
-        mode: &Mode,
-    ) -> Result<(), CaseStatus> {
-        let stdout = match stream {
-            Stdio::Stdout => &output.stdout,
-            Stdio::Stderr => &output.stderr,
-        };
-
-        let stdout = if run.binary {
-            let data = stdout.clone();
-            File::Binary(data)
-        } else {
-            let data = String::from_utf8(stdout.clone()).map_err(|_| CaseStatus::InvalidUtf8 {
-                path: self.path.clone(),
-                stream: Stdio::Stdout,
-                stdout: output.stdout.clone(),
-                stderr: output.stderr.clone(),
-            })?;
-            File::Text(data)
-        };
-
-        if let Mode::Dump(path) = mode {
-            let stdout_path = path.join(
+    fn validate_stream(&self, mut stream: Stream, mode: &Mode) -> Result<Stream, Stream> {
+        if let Mode::Dump(root) = mode {
+            let stdout_path = root.join(
                 self.path
-                    .with_extension(stream.as_str())
+                    .with_extension(stream.stream.as_str())
                     .file_name()
                     .unwrap(),
             );
-            stdout.write_to(&stdout_path).map_err(|e| {
-                self.to_err(format!("Failed to write {}: {}", stdout_path.display(), e))
+            stream.content.write_to(&stdout_path).map_err(|e| {
+                let mut stream = stream.clone();
+                stream.status = StreamStatus::Failure(format!(
+                    "Failed to read {}: {}",
+                    stdout_path.display(),
+                    e
+                ));
+                stream
             })?;
         } else {
-            let stdout_path = self.path.with_extension(stream.as_str());
+            let stdout_path = self.path.with_extension(stream.stream.as_str());
             if stdout_path.exists() {
-                let expected_stdout = File::read_from(&stdout_path, run.binary).map_err(|e| {
-                    self.to_err(format!("Failed to read {}: {}", stdout_path.display(), e))
-                })?;
+                let expected_content = File::read_from(&stdout_path, stream.content.is_binary())
+                    .map_err(|e| {
+                        let mut stream = stream.clone();
+                        stream.status = StreamStatus::Failure(format!(
+                            "Failed to read {}: {}",
+                            stdout_path.display(),
+                            e
+                        ));
+                        stream
+                    })?;
 
-                if stdout != expected_stdout {
+                if stream.content != expected_content {
                     match mode {
                         Mode::Fail => {
-                            return Err(CaseStatus::MismatchOutput {
-                                path: self.path.clone(),
-                                stream: Stdio::Stdout,
-                                expected: expected_stdout,
-                                stdout: output.stdout.clone(),
-                                stderr: output.stderr.clone(),
-                            });
+                            stream.status = StreamStatus::Expected(expected_content);
+                            return Err(stream);
                         }
                         Mode::Overwrite => {
-                            stdout.write_to(&stdout_path).map_err(|e| {
-                                self.to_err(format!(
+                            stream.content.write_to(&stdout_path).map_err(|e| {
+                                let mut stream = stream.clone();
+                                stream.status = StreamStatus::Failure(format!(
                                     "Failed to write {}: {}",
                                     stdout_path.display(),
                                     e
-                                ))
+                                ));
+                                stream
                             })?;
+                            stream.status = StreamStatus::Expected(expected_content);
+                            return Ok(stream);
                         }
                         Mode::Dump(_) => unreachable!("handled earlier"),
                     }
@@ -281,172 +311,584 @@ impl Case {
             }
         }
 
+        Ok(stream)
+    }
+
+    fn validate_fs(
+        &self,
+        actual_root: &std::path::Path,
+        mut fs: Filesystem,
+        mode: &Mode,
+    ) -> Result<Filesystem, Filesystem> {
+        let mut ok = true;
+
+        if let Mode::Dump(_) = mode {
+            // Handled as part of FilesystemContext
+        } else {
+            let fixture_root = self.path.with_extension("out");
+            if fixture_root.exists() {
+                for expected_path in crate::FsIterate::new(&fixture_root) {
+                    if expected_path
+                        .as_deref()
+                        .map(|p| p.is_dir())
+                        .unwrap_or_default()
+                    {
+                        continue;
+                    }
+
+                    match self.validate_path(expected_path, &fixture_root, actual_root) {
+                        Ok(status) => {
+                            fs.context.push(status);
+                        }
+                        Err(status) => {
+                            let mut is_current_ok = false;
+                            if *mode == Mode::Overwrite {
+                                match &status {
+                                    FileStatus::TypeMismatch {
+                                        expected_path,
+                                        actual_path,
+                                        ..
+                                    } => {
+                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                            is_current_ok = true;
+                                        }
+                                    }
+                                    FileStatus::LinkMismatch {
+                                        expected_path,
+                                        actual_path,
+                                        ..
+                                    } => {
+                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                            is_current_ok = true;
+                                        }
+                                    }
+                                    FileStatus::ContentMismatch {
+                                        expected_path,
+                                        actual_path,
+                                        ..
+                                    } => {
+                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                            is_current_ok = true;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            fs.context.push(status);
+                            if !is_current_ok {
+                                ok = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ok {
+            Ok(fs)
+        } else {
+            Err(fs)
+        }
+    }
+
+    fn validate_path(
+        &self,
+        expected_path: Result<std::path::PathBuf, std::io::Error>,
+        fixture_root: &std::path::Path,
+        actual_root: &std::path::Path,
+    ) -> Result<FileStatus, FileStatus> {
+        let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string()))?;
+        let expected_meta = expected_path
+            .symlink_metadata()
+            .map_err(|e| FileStatus::Failure(e.to_string()))?;
+        let expected_target = std::fs::read_link(&expected_path).ok();
+
+        let rel = expected_path.strip_prefix(&fixture_root).unwrap();
+        let actual_path = actual_root.join(rel);
+        let actual_meta = actual_path.symlink_metadata().ok();
+        let actual_target = std::fs::read_link(&actual_path).ok();
+
+        let expected_type = if expected_meta.is_dir() {
+            FileType::Dir
+        } else if expected_meta.is_file() {
+            FileType::File
+        } else if expected_target.is_some() {
+            FileType::Symlink
+        } else {
+            FileType::Unknown
+        };
+        let actual_type = if let Some(actual_meta) = actual_meta {
+            if actual_meta.is_dir() {
+                FileType::Dir
+            } else if actual_meta.is_file() {
+                FileType::File
+            } else if actual_target.is_some() {
+                FileType::Symlink
+            } else {
+                FileType::Unknown
+            }
+        } else {
+            FileType::Missing
+        };
+        if expected_type != actual_type {
+            return Err(FileStatus::TypeMismatch {
+                expected_path,
+                actual_path,
+                expected_type,
+                actual_type,
+            });
+        }
+
+        match expected_type {
+            FileType::Symlink => {
+                if expected_target != actual_target {
+                    return Err(FileStatus::LinkMismatch {
+                        expected_path,
+                        actual_path,
+                        expected_target: expected_target.unwrap(),
+                        actual_target: actual_target.unwrap(),
+                    });
+                }
+            }
+            FileType::File => {
+                let expected_content = File::read_from(&expected_path, true)
+                    .map_err(|e| {
+                        FileStatus::Failure(format!(
+                            "Failed to read {}: {}",
+                            expected_path.display(),
+                            e
+                        ))
+                    })?
+                    .try_utf8();
+                let actual_content = File::read_from(&actual_path, true)
+                    .map_err(|e| {
+                        FileStatus::Failure(format!(
+                            "Failed to read {}: {}",
+                            actual_path.display(),
+                            e
+                        ))
+                    })?
+                    .try_utf8();
+
+                if expected_content != actual_content {
+                    return Err(FileStatus::ContentMismatch {
+                        expected_path,
+                        actual_path,
+                        expected_content,
+                        actual_content,
+                    });
+                }
+            }
+            FileType::Dir | FileType::Unknown | FileType::Missing => {}
+        }
+
+        Ok(FileStatus::Ok {
+            expected_path,
+            actual_path,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Output {
+    spawn: Spawn,
+    stdout: Option<Stream>,
+    stderr: Option<Stream>,
+    fs: Filesystem,
+}
+
+impl Output {
+    fn output(mut self, output: std::process::Output) -> Self {
+        self.spawn.exit = Some(output.status);
+        assert_eq!(self.spawn.status, SpawnStatus::Skipped);
+        self.spawn.status = SpawnStatus::Ok;
+        self.stdout = Some(Stream {
+            stream: Stdio::Stdout,
+            content: File::Binary(output.stdout),
+            status: StreamStatus::Ok,
+        });
+        self.stderr = Some(Stream {
+            stream: Stdio::Stderr,
+            content: File::Binary(output.stderr),
+            status: StreamStatus::Ok,
+        });
+        self
+    }
+
+    fn error(mut self, msg: impl std::fmt::Display) -> Self {
+        self.spawn.status = SpawnStatus::Failure(msg.to_string());
+        self
+    }
+
+    fn is_ok(&self) -> bool {
+        self.spawn.is_ok()
+            && self.stdout.as_ref().map(|s| s.is_ok()).unwrap_or_default()
+            && self.stderr.as_ref().map(|s| s.is_ok()).unwrap_or_default()
+            && self.fs.is_ok()
+    }
+}
+
+impl Default for Output {
+    fn default() -> Self {
+        Self {
+            spawn: Spawn {
+                exit: None,
+                status: SpawnStatus::Skipped,
+            },
+            stdout: None,
+            stderr: None,
+            fs: Default::default(),
+        }
+    }
+}
+
+impl std::fmt::Display for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.spawn.fmt(f)?;
+        if let Some(stdout) = &self.stdout {
+            stdout.fmt(f)?;
+        }
+        if let Some(stderr) = &self.stderr {
+            stderr.fmt(f)?;
+        }
+        self.fs.fmt(f)?;
+
         Ok(())
     }
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum CaseStatus {
-    Success {
-        path: std::path::PathBuf,
-    },
-    Skipped {
-        path: std::path::PathBuf,
-    },
-    Failure {
-        path: std::path::PathBuf,
-        message: String,
-    },
-    UnexpectedStatus {
-        path: std::path::PathBuf,
-        expected: String,
-        actual: String,
-        stdout: Vec<u8>,
-        stderr: Vec<u8>,
-    },
-    InvalidUtf8 {
-        path: std::path::PathBuf,
-        stream: Stdio,
-        stdout: Vec<u8>,
-        stderr: Vec<u8>,
-    },
-    MismatchOutput {
-        path: std::path::PathBuf,
-        stream: Stdio,
-        expected: File,
-        stdout: Vec<u8>,
-        stderr: Vec<u8>,
-    },
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Spawn {
+    exit: Option<std::process::ExitStatus>,
+    status: SpawnStatus,
 }
 
-impl std::fmt::Display for CaseStatus {
+impl Spawn {
+    fn is_ok(&self) -> bool {
+        self.status.is_ok()
+    }
+}
+
+impl std::fmt::Display for Spawn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let palette = crate::Palette::current();
 
-        match self {
-            Self::Success { path } => {
-                writeln!(
-                    f,
-                    "{} {} ... {}",
-                    palette.hint.paint("Testing"),
-                    path.display(),
-                    palette.info.paint("ok")
-                )?;
+        match &self.status {
+            SpawnStatus::Ok => {
+                if let Some(exit) = self.exit {
+                    if exit.success() {
+                        writeln!(f, "Exit: {}", palette.info.paint("success"))?;
+                    } else if let Some(code) = exit.code() {
+                        writeln!(f, "Exit: {}", palette.error.paint(code))?;
+                    } else {
+                        writeln!(f, "Exit: {}", palette.error.paint("interrupted"))?;
+                    }
+                }
             }
-            Self::Skipped { path } => {
-                writeln!(
-                    f,
-                    "{} {} ... {}",
-                    palette.hint.paint("Testing"),
-                    path.display(),
-                    palette.warn.paint("ignored")
-                )?;
+            SpawnStatus::Skipped => {
+                writeln!(f, "{}", palette.warn.paint("Skipped"))?;
             }
-            Self::Failure { path, message } => {
-                writeln!(
-                    f,
-                    "{} {} ... {}",
-                    palette.hint.paint("Testing"),
-                    path.display(),
-                    palette.error.paint("failed")
-                )?;
-                writeln!(f, "{}", palette.error.paint(message))?;
+            SpawnStatus::Failure(msg) => {
+                writeln!(f, "Failed: {}", palette.error.paint(msg))?;
             }
-            Self::UnexpectedStatus {
-                path,
-                expected,
-                actual,
-                stdout,
-                stderr,
-            } => {
-                writeln!(
-                    f,
-                    "{} {} ... {}",
-                    palette.hint.paint("Testing"),
-                    path.display(),
-                    palette.error.paint("failed")
-                )?;
-                writeln!(
-                    f,
-                    "Expected {}, got {}",
-                    palette.info.paint(expected),
-                    palette.error.paint(actual)
-                )?;
-                writeln!(f, "stdout:")?;
-                writeln!(f, "{}", palette.info.paint(String::from_utf8_lossy(stdout)))?;
-                writeln!(f, "stderr:")?;
-                writeln!(
-                    f,
-                    "{}",
-                    palette.error.paint(String::from_utf8_lossy(stderr))
-                )?;
-            }
-            Self::InvalidUtf8 {
-                path,
-                stream,
-                stdout,
-                stderr,
-            } => {
-                writeln!(
-                    f,
-                    "{} {} ... {}",
-                    palette.hint.paint("Testing"),
-                    path.display(),
-                    palette.error.paint("failed")
-                )?;
-                writeln!(
-                    f,
-                    "Expected utf-8 on {}",
-                    match stream {
-                        Stdio::Stdout => palette.info.paint(stream.as_str()),
-                        Stdio::Stderr => palette.error.paint(stream.as_str()),
-                    },
-                )?;
-                writeln!(f, "stdout:")?;
-                writeln!(f, "{}", palette.info.paint(String::from_utf8_lossy(stdout)))?;
-                writeln!(f, "stderr:")?;
-                writeln!(
-                    f,
-                    "{}",
-                    palette.error.paint(String::from_utf8_lossy(stderr))
-                )?;
-            }
-            Self::MismatchOutput {
-                path,
-                stream,
-                expected,
-                stdout,
-                stderr,
-            } => {
-                writeln!(
-                    f,
-                    "{} {} ... {}",
-                    palette.hint.paint("Testing"),
-                    path.display(),
-                    palette.error.paint("failed")
-                )?;
-                writeln!(
-                    f,
-                    "{} didn't match expectations",
-                    match stream {
-                        Stdio::Stdout => palette.info.paint(stream.as_str()),
-                        Stdio::Stderr => palette.error.paint(stream.as_str()),
-                    },
-                )?;
-                writeln!(f, "stdout:")?;
-                writeln!(f, "{}", palette.info.paint(String::from_utf8_lossy(stdout)))?;
-                writeln!(f, "expected {}:", stream)?;
-                writeln!(f, "{}", palette.warn.paint(expected.to_string_lossy()))?;
-                writeln!(f, "stderr:")?;
-                writeln!(
-                    f,
-                    "{}",
-                    palette.error.paint(String::from_utf8_lossy(stderr))
-                )?;
+            SpawnStatus::Expected(expected) => {
+                if let Some(exit) = self.exit {
+                    if exit.success() {
+                        writeln!(
+                            f,
+                            "Expected {}, was {}",
+                            palette.info.paint(expected),
+                            palette.error.paint("success")
+                        )?;
+                    } else if let Some(code) = exit.code() {
+                        writeln!(
+                            f,
+                            "Expected {}, was {}",
+                            palette.info.paint(expected),
+                            palette.error.paint(code)
+                        )?;
+                    } else {
+                        writeln!(
+                            f,
+                            "Expected {}, was {}",
+                            palette.info.paint(expected),
+                            palette.error.paint("interrupted")
+                        )?;
+                    }
+                }
             }
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum SpawnStatus {
+    Ok,
+    Skipped,
+    Failure(String),
+    Expected(String),
+}
+
+impl SpawnStatus {
+    fn is_ok(&self) -> bool {
+        match self {
+            Self::Ok | Self::Skipped => true,
+            Self::Failure(_) | Self::Expected(_) => false,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Stream {
+    stream: Stdio,
+    content: File,
+    status: StreamStatus,
+}
+
+impl Stream {
+    fn utf8(mut self) -> Self {
+        if self.content.utf8().is_err() {
+            self.status = StreamStatus::Failure("invalid UTF-8".to_string());
+        }
+        self
+    }
+
+    fn is_ok(&self) -> bool {
+        self.status.is_ok()
+    }
+}
+
+impl std::fmt::Display for Stream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let palette = crate::Palette::current();
+
+        match &self.status {
+            StreamStatus::Ok => {
+                writeln!(f, "{}:", self.stream)?;
+                writeln!(f, "{}", palette.info.paint(&self.content))?;
+            }
+            StreamStatus::Failure(msg) => {
+                writeln!(
+                    f,
+                    "{} {}:",
+                    self.stream,
+                    palette.error.paint(format_args!("({})", msg))
+                )?;
+                writeln!(f, "{}", palette.info.paint(&self.content))?;
+            }
+            StreamStatus::Expected(expected) => {
+                writeln!(f, "{} {}:", self.stream, palette.info.paint("(expected)"))?;
+                writeln!(f, "{}", palette.info.paint(&expected))?;
+                writeln!(f, "{} {}:", self.stream, palette.error.paint("(actual)"))?;
+                writeln!(f, "{}", palette.error.paint(&self.content))?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum StreamStatus {
+    Ok,
+    Failure(String),
+    Expected(File),
+}
+
+impl StreamStatus {
+    fn is_ok(&self) -> bool {
+        match self {
+            Self::Ok => true,
+            Self::Failure(_) | Self::Expected(_) => false,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum Stdio {
+    Stdout,
+    Stderr,
+}
+
+impl Stdio {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Stdout => "stdout",
+            Self::Stderr => "stderr",
+        }
+    }
+}
+
+impl std::fmt::Display for Stdio {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+struct Filesystem {
+    context: Vec<FileStatus>,
+}
+
+impl Filesystem {
+    fn is_ok(&self) -> bool {
+        if self.context.is_empty() {
+            true
+        } else {
+            self.context.iter().all(FileStatus::is_ok)
+        }
+    }
+}
+
+impl std::fmt::Display for Filesystem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for status in &self.context {
+            status.fmt(f)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum FileStatus {
+    Ok {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+    },
+    Failure(String),
+    TypeMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_type: FileType,
+        actual_type: FileType,
+    },
+    LinkMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_target: std::path::PathBuf,
+        actual_target: std::path::PathBuf,
+    },
+    ContentMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_content: File,
+        actual_content: File,
+    },
+}
+
+impl FileStatus {
+    fn is_ok(&self) -> bool {
+        match self {
+            Self::Ok { .. } => true,
+            Self::Failure(_)
+            | Self::TypeMismatch { .. }
+            | Self::LinkMismatch { .. }
+            | Self::ContentMismatch { .. } => false,
+        }
+    }
+}
+
+impl std::fmt::Display for FileStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let palette = crate::Palette::current();
+
+        match &self {
+            FileStatus::Ok {
+                expected_path,
+                actual_path: _actual_path,
+            } => {
+                writeln!(
+                    f,
+                    "{}: is {}",
+                    expected_path.display(),
+                    palette.info.paint("good"),
+                )?;
+            }
+            FileStatus::Failure(msg) => {
+                writeln!(f, "{}", palette.error.paint(msg))?;
+            }
+            FileStatus::TypeMismatch {
+                expected_path,
+                actual_path: _actual_path,
+                expected_type,
+                actual_type,
+            } => {
+                writeln!(
+                    f,
+                    "{}: Expected {}, was {}",
+                    expected_path.display(),
+                    palette.info.paint(expected_type),
+                    palette.error.paint(actual_type)
+                )?;
+            }
+            FileStatus::LinkMismatch {
+                expected_path,
+                actual_path: _actual_path,
+                expected_target,
+                actual_target,
+            } => {
+                writeln!(
+                    f,
+                    "{}: Expected {}, was {}",
+                    expected_path.display(),
+                    palette.info.paint(expected_target.display()),
+                    palette.error.paint(actual_target.display())
+                )?;
+            }
+            FileStatus::ContentMismatch {
+                expected_path,
+                actual_path,
+                expected_content,
+                actual_content,
+            } => {
+                writeln!(
+                    f,
+                    "{} {}:",
+                    expected_path.display(),
+                    palette.info.paint("(expected)")
+                )?;
+                writeln!(f, "{}", palette.info.paint(&expected_content))?;
+                writeln!(
+                    f,
+                    "{} {}:",
+                    actual_path.display(),
+                    palette.error.paint("(actual)")
+                )?;
+                writeln!(f, "{}", palette.error.paint(&actual_content))?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum FileType {
+    Dir,
+    File,
+    Symlink,
+    Unknown,
+    Missing,
+}
+
+impl FileType {
+    fn as_str(&self) -> &str {
+        match self {
+            Self::Dir => "dir",
+            Self::File => "file",
+            Self::Symlink => "symlink",
+            Self::Unknown => "unknown",
+            Self::Missing => "missing",
+        }
+    }
+}
+
+impl std::fmt::Display for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_str().fmt(f)
     }
 }
 
@@ -462,35 +904,14 @@ impl Mode {
         match self {
             Self::Fail => {}
             Self::Overwrite => {}
-            Self::Dump(path) => {
-                std::fs::create_dir_all(path)?;
-                let gitignore_path = path.join(".gitignore");
+            Self::Dump(root) => {
+                std::fs::create_dir_all(root)?;
+                let gitignore_path = root.join(".gitignore");
                 std::fs::write(gitignore_path, "*\n")?;
             }
         }
 
         Ok(())
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum Stdio {
-    Stdout,
-    Stderr,
-}
-
-impl Stdio {
-    pub(crate) fn as_str(&self) -> &str {
-        match self {
-            Self::Stdout => "stdout",
-            Self::Stderr => "stderr",
-        }
-    }
-}
-
-impl std::fmt::Display for Stdio {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_str().fmt(f)
     }
 }
 
@@ -513,8 +934,43 @@ impl File {
         Ok(data)
     }
 
-    pub(crate) fn write_to(self, path: &std::path::Path) -> Result<(), std::io::Error> {
+    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), std::io::Error> {
         std::fs::write(path, self.as_bytes())
+    }
+
+    pub(crate) fn is_binary(&self) -> bool {
+        match self {
+            Self::Binary(_) => true,
+            Self::Text(_) => false,
+        }
+    }
+
+    pub(crate) fn utf8(&mut self) -> Result<(), std::str::Utf8Error> {
+        match self {
+            Self::Binary(data) => {
+                let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
+                let data = normalize_line_endings::normalized(data.chars()).collect();
+                *self = Self::Text(data);
+                Ok(())
+            }
+            Self::Text(_) => Ok(()),
+        }
+    }
+
+    pub(crate) fn try_utf8(self) -> Self {
+        match self {
+            Self::Binary(data) => match String::from_utf8(data) {
+                Ok(data) => {
+                    let data = normalize_line_endings::normalized(data.chars()).collect();
+                    Self::Text(data)
+                }
+                Err(err) => {
+                    let data = err.into_bytes();
+                    Self::Binary(data)
+                }
+            },
+            Self::Text(data) => Self::Text(data),
+        }
     }
 
     pub(crate) fn as_bytes(&self) -> &[u8] {
@@ -530,11 +986,13 @@ impl File {
             Self::Text(data) => data.into_bytes(),
         }
     }
+}
 
-    pub(crate) fn to_string_lossy(&self) -> String {
+impl std::fmt::Display for File {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Binary(data) => String::from_utf8_lossy(data).into_owned(),
-            Self::Text(data) => data.clone(),
+            Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
+            Self::Text(data) => data.fmt(f),
         }
     }
 }

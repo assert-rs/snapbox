@@ -10,7 +10,8 @@ use std::collections::BTreeMap;
 pub struct TryCmd {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Vec<String>>,
-    pub(crate) cwd: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub(crate) fs: Filesystem,
     #[serde(default)]
     pub(crate) env: Env,
     pub(crate) status: Option<CommandStatus>,
@@ -37,18 +38,35 @@ impl TryCmd {
             Err("No extension".into())
         }?;
 
-        if let Some(cwd) = run.cwd.take() {
-            run.cwd = Some(
+        if let Some(cwd) = run.fs.cwd.take() {
+            run.fs.cwd = Some(
                 path.parent()
                     .unwrap_or_else(|| std::path::Path::new("."))
                     .join(cwd),
             );
         }
+        if run.fs.base.is_none() {
+            let base_path = path.with_extension("in");
+            if base_path.exists() {
+                run.fs.base = Some(base_path);
+            } else if run.fs.cwd.is_some() {
+                run.fs.base = run.fs.cwd.clone();
+            }
+        }
+        if run.fs.cwd.is_none() {
+            run.fs.cwd = run.fs.base.clone();
+        }
+        if run.fs.sandbox.is_none() {
+            run.fs.sandbox = Some(path.with_extension("out").exists());
+        }
 
         Ok(run)
     }
 
-    pub(crate) fn to_command(&self) -> Result<std::process::Command, String> {
+    pub(crate) fn to_command(
+        &self,
+        base: Option<&std::path::Path>,
+    ) -> Result<std::process::Command, String> {
         let bin = self.bin()?;
         if !bin.exists() {
             return Err(format!("Bin doesn't exist: {}", bin.display()));
@@ -58,16 +76,34 @@ impl TryCmd {
         if let Some(args) = self.args.as_deref() {
             cmd.args(args);
         }
-        if let Some(cwd) = self.cwd.as_deref() {
-            cmd.current_dir(cwd);
+        if let Some(base) = base {
+            let base = if let (Some(orig_cwd), Some(orig_base)) =
+                (self.fs.cwd.as_deref(), self.fs.base.as_deref())
+            {
+                let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
+                    format!(
+                        "fs.cwd ({}) must be within fs.base ({})",
+                        orig_cwd.display(),
+                        orig_base.display()
+                    )
+                })?;
+                base.join(rel_cwd)
+            } else {
+                base.to_owned()
+            };
+            cmd.current_dir(base);
         }
         self.env.apply(&mut cmd);
 
         Ok(cmd)
     }
 
-    pub(crate) fn to_output(&self, stdin: Option<Vec<u8>>) -> Result<std::process::Output, String> {
-        let mut cmd = self.to_command()?;
+    pub(crate) fn to_output(
+        &self,
+        stdin: Option<Vec<u8>>,
+        cwd: Option<&std::path::Path>,
+    ) -> Result<std::process::Output, String> {
+        let mut cmd = self.to_command(cwd)?;
         cmd.stdin(std::process::Stdio::piped());
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
@@ -113,7 +149,24 @@ impl std::str::FromStr for TryCmd {
     }
 }
 
-/// Describe commands environment
+/// Describe command's the filesystem context
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct Filesystem {
+    pub(crate) cwd: Option<std::path::PathBuf>,
+    /// Sandbox base
+    pub(crate) base: Option<std::path::PathBuf>,
+    pub(crate) sandbox: Option<bool>,
+}
+
+impl Filesystem {
+    pub(crate) fn sandbox(&self) -> bool {
+        self.sandbox.unwrap_or_default()
+    }
+}
+
+/// Describe command's environment
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
