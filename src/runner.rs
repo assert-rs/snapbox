@@ -143,7 +143,7 @@ impl Case {
         };
 
         let fs =
-            crate::FilesystemContext::new(&self.path, run.fs.cwd.as_deref(), run.fs.sandbox, mode)
+            crate::FilesystemContext::new(&self.path, run.fs.base.as_deref(), run.fs.sandbox, mode)
                 .map_err(|e| {
                     output
                         .clone()

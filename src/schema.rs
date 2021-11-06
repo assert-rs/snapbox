@@ -45,11 +45,16 @@ impl TryCmd {
                     .join(cwd),
             );
         }
-        if run.fs.cwd.is_none() {
-            let cwd_path = path.with_extension("in");
-            if cwd_path.exists() {
-                run.fs.cwd = Some(cwd_path);
+        if run.fs.base.is_none() {
+            let base_path = path.with_extension("in");
+            if base_path.exists() {
+                run.fs.base = Some(base_path);
+            } else if run.fs.cwd.is_some() {
+                run.fs.base = run.fs.cwd.clone();
             }
+        }
+        if run.fs.cwd.is_none() {
+            run.fs.cwd = run.fs.base.clone();
         }
 
         Ok(run)
@@ -57,7 +62,7 @@ impl TryCmd {
 
     pub(crate) fn to_command(
         &self,
-        cwd: Option<&std::path::Path>,
+        base: Option<&std::path::Path>,
     ) -> Result<std::process::Command, String> {
         let bin = self.bin()?;
         if !bin.exists() {
@@ -68,8 +73,22 @@ impl TryCmd {
         if let Some(args) = self.args.as_deref() {
             cmd.args(args);
         }
-        if let Some(cwd) = cwd {
-            cmd.current_dir(cwd);
+        if let Some(base) = base {
+            let base = if let (Some(orig_cwd), Some(orig_base)) =
+                (self.fs.cwd.as_deref(), self.fs.base.as_deref())
+            {
+                let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
+                    format!(
+                        "fs.cwd ({}) must be within fs.base ({})",
+                        orig_cwd.display(),
+                        orig_base.display()
+                    )
+                })?;
+                base.join(rel_cwd)
+            } else {
+                base.to_owned()
+            };
+            cmd.current_dir(base);
         }
         self.env.apply(&mut cmd);
 
@@ -133,6 +152,8 @@ impl std::str::FromStr for TryCmd {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct Filesystem {
     pub(crate) cwd: Option<std::path::PathBuf>,
+    /// Sandbox base
+    pub(crate) base: Option<std::path::PathBuf>,
     #[serde(default)]
     pub(crate) sandbox: bool,
 }

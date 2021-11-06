@@ -25,6 +25,7 @@
     },
     "fs": {
       "default": {
+        "base": null,
         "cwd": null,
         "sandbox": false
       },
@@ -107,6 +108,13 @@
       "type": "object",
       "properties": {
         "cwd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base": {
+          "description": "Sandbox base",
           "type": [
             "string",
             "null"
