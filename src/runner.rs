@@ -364,10 +364,10 @@ impl Case {
                                     }
                                     FileStatus::ContentMismatch {
                                         expected_path,
-                                        actual_path,
+                                        actual_content,
                                         ..
                                     } => {
-                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                        if actual_content.write_to(expected_path).is_ok() {
                                             is_current_ok = true;
                                         }
                                     }
