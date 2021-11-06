@@ -286,6 +286,9 @@ impl Case {
                         stream
                     })?;
 
+                if let File::Text(e) = &expected_content {
+                    stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+                }
                 if stream.content != expected_content {
                     match mode {
                         Mode::Fail => {
@@ -460,7 +463,7 @@ impl Case {
                         ))
                     })?
                     .try_utf8();
-                let actual_content = File::read_from(&actual_path, true)
+                let mut actual_content = File::read_from(&actual_path, true)
                     .map_err(|e| {
                         FileStatus::Failure(format!(
                             "Failed to read {}: {}",
@@ -470,6 +473,9 @@ impl Case {
                     })?
                     .try_utf8();
 
+                if let File::Text(e) = &expected_content {
+                    actual_content = actual_content.map_text(|t| crate::elide::normalize(t, e));
+                }
                 if expected_content != actual_content {
                     return Err(FileStatus::ContentMismatch {
                         expected_path,
@@ -936,6 +942,13 @@ impl File {
 
     pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), std::io::Error> {
         std::fs::write(path, self.as_bytes())
+    }
+
+    pub(crate) fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
+        match self {
+            Self::Binary(data) => Self::Binary(data),
+            Self::Text(data) => Self::Text(op(&data)),
+        }
     }
 
     pub(crate) fn is_binary(&self) -> bool {

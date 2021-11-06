@@ -70,6 +70,19 @@
 //! - If not present, we'll not verify the output
 //! - If `binary = false` in `*.toml` (the default), newlines will be normalized before comparing
 //!
+//! ##### Eliding Content
+//!
+//! Sometimes the output either includes:
+//! - Content that changes from run-to-run (like time)
+//! - Content out of scope of your tests and you want to exclude it to reduce brittleness
+//!
+//! To elide a section of content:
+//! - `...` as its own line will match all lines until the next one.  This is equivalent of
+//!   `(([^\n]*\n)*?`.
+//!
+//! We will preserve these with `TRYCMD=dump` and will make a best-effort at preserving them with
+//! `TRYCMD=overwrite`.
+//!
 //! #### `*.in/`
 //!
 //! When present, this will automatically be picked as the CWD for the command
@@ -77,6 +90,8 @@
 //! #### `*.out/`
 //!
 //! When present, each file in this directory will be compared to generated or modified files.
+//!
+//! See also "Eliding Content" for `.stdout`
 //!
 //! ### Workflow
 //!
@@ -104,6 +119,7 @@ mod cargo;
 mod cases;
 mod color;
 mod command;
+pub(crate) mod elide;
 mod filesystem;
 mod runner;
 pub mod schema;
