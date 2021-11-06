@@ -74,6 +74,10 @@
 //!
 //! When present, this will automatically be picked as the CWD for the command
 //!
+//! #### `*.out/`
+//!
+//! When present, each file in this directory will be compared to generated or modified files.
+//!
 //! ### Workflow
 //!
 //! To generate snapshots, run
