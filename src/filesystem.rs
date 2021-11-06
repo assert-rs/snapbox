@@ -112,6 +112,7 @@ impl Iterator for Iterate {
     }
 }
 
+#[cfg(feature = "filesystem")]
 fn copy_dir(source: &std::path::Path, dest: &std::path::Path) -> Result<(), std::io::Error> {
     let source = source.canonicalize()?;
     let dest = dest.canonicalize()?;

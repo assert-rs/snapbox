@@ -92,7 +92,7 @@ impl Case {
         let name = path.display().to_string();
         Self {
             name,
-            path: path.clone(),
+            path,
             expected: None,
             timeout: None,
             default_bin: None,
@@ -340,13 +340,30 @@ impl Case {
                             let mut is_current_ok = false;
                             if *mode == Mode::Overwrite {
                                 match &status {
+                                    FileStatus::TypeMismatch {
+                                        expected_path,
+                                        actual_path,
+                                        ..
+                                    } => {
+                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                            is_current_ok = true;
+                                        }
+                                    }
+                                    FileStatus::LinkMismatch {
+                                        expected_path,
+                                        actual_path,
+                                        ..
+                                    } => {
+                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                            is_current_ok = true;
+                                        }
+                                    }
                                     FileStatus::ContentMismatch {
                                         expected_path,
-                                        actual_path: _actual_path,
-                                        expected_content: _expected_content,
-                                        actual_content,
+                                        actual_path,
+                                        ..
                                     } => {
-                                        if actual_content.write_to(expected_path).is_ok() {
+                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
                                             is_current_ok = true;
                                         }
                                     }
@@ -628,8 +645,8 @@ struct Stream {
 
 impl Stream {
     fn utf8(mut self) -> Self {
-        if let Err(_) = self.content.utf8() {
-            self.status = StreamStatus::Failure("invalud UTF-8".to_string());
+        if self.content.utf8().is_err() {
+            self.status = StreamStatus::Failure("invalid UTF-8".to_string());
         }
         self
     }
@@ -936,7 +953,7 @@ impl File {
 
     pub(crate) fn try_utf8(self) -> Self {
         match self {
-            Self::Binary(data) => match String::from_utf8(data.clone()) {
+            Self::Binary(data) => match String::from_utf8(data) {
                 Ok(data) => Self::Text(data),
                 Err(err) => {
                     let data = err.into_bytes();
