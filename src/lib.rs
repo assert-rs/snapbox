@@ -70,6 +70,10 @@
 //! - If not present, we'll not verify the output
 //! - If `binary = false` in `*.toml` (the default), newlines will be normalized before comparing
 //!
+//! #### `*.in/`
+//!
+//! When present, this will automatically be picked as the CWD for the command
+//!
 //! ### Workflow
 //!
 //! To generate snapshots, run

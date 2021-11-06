@@ -44,6 +44,12 @@ impl TryCmd {
                     .join(cwd),
             );
         }
+        if run.cwd.is_none() {
+            let cwd_path = path.with_extension("in");
+            if cwd_path.exists() {
+                run.cwd = Some(cwd_path);
+            }
+        }
 
         Ok(run)
     }

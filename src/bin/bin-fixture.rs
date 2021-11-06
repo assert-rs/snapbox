@@ -12,6 +12,11 @@ fn run() -> Result<(), Box<dyn Error>> {
         eprintln!("{}", text);
     }
 
+    if let Ok(path) = env::var("cat") {
+        let text = std::fs::read_to_string(path).unwrap();
+        eprintln!("{}", text);
+    }
+
     if let Some(timeout) = env::var("sleep").ok().and_then(|s| s.parse().ok()) {
         std::thread::sleep(std::time::Duration::from_secs(timeout));
     }

@@ -1,0 +1,4 @@
+bin.name = "bin-fixture"
+
+[env.add]
+cat = "file.txt"
