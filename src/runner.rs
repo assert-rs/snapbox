@@ -685,10 +685,22 @@ impl std::fmt::Display for Stream {
                 writeln!(f, "{}", palette.info.paint(&self.content))?;
             }
             StreamStatus::Expected(expected) => {
-                writeln!(f, "{} {}:", self.stream, palette.info.paint("(expected)"))?;
-                writeln!(f, "{}", palette.info.paint(&expected))?;
-                writeln!(f, "{} {}:", self.stream, palette.error.paint("(actual)"))?;
-                writeln!(f, "{}", palette.error.paint(&self.content))?;
+                #[allow(unused_mut)]
+                let mut rendered = false;
+                #[cfg(feature = "diff")]
+                if let (File::Text(expected), File::Text(actual)) = (&expected, &self.content) {
+                    let diff =
+                        crate::diff::diff(expected, actual, self.stream, self.stream, palette);
+                    writeln!(f, "{}", diff)?;
+                    rendered = true;
+                }
+
+                if !rendered {
+                    writeln!(f, "{} {}:", self.stream, palette.info.paint("(expected)"))?;
+                    writeln!(f, "{}", palette.info.paint(&expected))?;
+                    writeln!(f, "{} {}:", self.stream, palette.error.paint("(actual)"))?;
+                    writeln!(f, "{}", palette.error.paint(&self.content))?;
+                }
             }
         }
 
@@ -850,20 +862,39 @@ impl std::fmt::Display for FileStatus {
                 expected_content,
                 actual_content,
             } => {
-                writeln!(
-                    f,
-                    "{} {}:",
-                    expected_path.display(),
-                    palette.info.paint("(expected)")
-                )?;
-                writeln!(f, "{}", palette.info.paint(&expected_content))?;
-                writeln!(
-                    f,
-                    "{} {}:",
-                    actual_path.display(),
-                    palette.error.paint("(actual)")
-                )?;
-                writeln!(f, "{}", palette.error.paint(&actual_content))?;
+                #[allow(unused_mut)]
+                let mut rendered = false;
+                #[cfg(feature = "diff")]
+                if let (File::Text(expected), File::Text(actual)) =
+                    (&expected_content, &actual_content)
+                {
+                    let diff = crate::diff::diff(
+                        expected,
+                        actual,
+                        expected_path.display(),
+                        actual_path.display(),
+                        palette,
+                    );
+                    writeln!(f, "{}", diff)?;
+                    rendered = true;
+                }
+
+                if !rendered {
+                    writeln!(
+                        f,
+                        "{} {}:",
+                        expected_path.display(),
+                        palette.info.paint("(expected)")
+                    )?;
+                    writeln!(f, "{}", palette.info.paint(&expected_content))?;
+                    writeln!(
+                        f,
+                        "{} {}:",
+                        actual_path.display(),
+                        palette.error.paint("(actual)")
+                    )?;
+                    writeln!(f, "{}", palette.error.paint(&actual_content))?;
+                }
             }
         }
 

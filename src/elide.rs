@@ -4,8 +4,8 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
     }
 
     let mut normalized: Vec<&str> = Vec::new();
-    let input_lines: Vec<_> = LinesWithTerminator::new(input).collect();
-    let pattern_lines: Vec<_> = LinesWithTerminator::new(pattern).collect();
+    let input_lines: Vec<_> = crate::lines::LinesWithTerminator::new(input).collect();
+    let pattern_lines: Vec<_> = crate::lines::LinesWithTerminator::new(pattern).collect();
 
     let mut input_index = 0;
     let mut pattern_index = 0;
@@ -80,38 +80,6 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
 
 fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
-}
-
-#[derive(Clone, Debug)]
-struct LinesWithTerminator<'a> {
-    data: &'a str,
-}
-
-impl<'a> LinesWithTerminator<'a> {
-    fn new(data: &'a str) -> LinesWithTerminator<'a> {
-        LinesWithTerminator { data }
-    }
-}
-
-impl<'a> Iterator for LinesWithTerminator<'a> {
-    type Item = &'a str;
-
-    #[inline]
-    fn next(&mut self) -> Option<&'a str> {
-        match self.data.find('\n') {
-            None if self.data.is_empty() => None,
-            None => {
-                let line = self.data;
-                self.data = "";
-                Some(line)
-            }
-            Some(end) => {
-                let line = &self.data[..end + 1];
-                self.data = &self.data[end + 1..];
-                Some(line)
-            }
-        }
-    }
 }
 
 #[cfg(test)]
