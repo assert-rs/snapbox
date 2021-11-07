@@ -119,8 +119,11 @@ mod cargo;
 mod cases;
 mod color;
 mod command;
+#[cfg(feature = "diff")]
+pub(crate) mod diff;
 pub(crate) mod elide;
 mod filesystem;
+pub(crate) mod lines;
 mod runner;
 pub mod schema;
 mod spec;
