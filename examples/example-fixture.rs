@@ -1,0 +1,1 @@
+../src/bin/bin-fixture.rs

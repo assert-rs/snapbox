@@ -35,6 +35,7 @@ color-auto = ["color", "concolor-control/auto"]
 schema = ["schemars", "serde_json"]
 diff = ["difflib"]
 filesystem = ["tempfile", "walkdir"]
+examples = ["escargot"]
 
 [[bin]]
 name = "bin-fixture"
@@ -55,6 +56,7 @@ shlex = "1.1.0"
 humantime = "2"
 humantime-serde = "1"
 toml_edit = { version = "0.8", features = ["serde"] }
+escargot = { version = "0.5.6", optional = true }
 
 normalize-line-endings = "0.3.0"
 wait-timeout = "0.2.0"

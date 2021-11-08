@@ -1,6 +1,7 @@
 #[derive(Debug, Default)]
 pub struct TestCases {
     runner: std::cell::RefCell<crate::RunnerSpec>,
+    bins: std::cell::RefCell<crate::BinRegistry>,
     has_run: std::cell::Cell<bool>,
 }
 
@@ -77,6 +78,25 @@ impl TestCases {
         self
     }
 
+    /// Add a bin to the "PATH" for cases to use
+    pub fn register_bin(&self, name: impl Into<String>, path: impl Into<crate::Bin>) -> &Self {
+        self.bins
+            .borrow_mut()
+            .register_bin(name.into(), path.into());
+        self
+    }
+
+    /// Add a series of bins to the "PATH" for cases to use
+    pub fn register_bins<N: Into<String>, B: Into<crate::Bin>>(
+        &self,
+        bins: impl IntoIterator<Item = (N, B)>,
+    ) -> &Self {
+        self.bins
+            .borrow_mut()
+            .register_bins(bins.into_iter().map(|(n, b)| (n.into(), b.into())));
+        self
+    }
+
     /// Run tests
     ///
     /// This will happen on `drop` if not done explicitly
@@ -86,7 +106,8 @@ impl TestCases {
         let mode = parse_mode(std::env::var_os("TRYCMD").as_deref());
         mode.initialize().unwrap();
 
-        self.runner.borrow_mut().prepare().run(&mode);
+        let runner = self.runner.borrow_mut().prepare();
+        runner.run(&mode, &self.bins.borrow());
     }
 }
 

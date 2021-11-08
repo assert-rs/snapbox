@@ -67,7 +67,12 @@ impl TryCmd {
         &self,
         base: Option<&std::path::Path>,
     ) -> Result<std::process::Command, String> {
-        let bin = self.bin()?;
+        let bin = match &self.bin {
+            Some(Bin::Path(path)) => Ok(path.clone()),
+            Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name)),
+            Some(Bin::Error(err)) => Err(err.clone().into_string()),
+            None => Err(String::from("No bin specified")),
+        }?;
         if !bin.exists() {
             return Err(format!("Bin doesn't exist: {}", bin.display()));
         }
@@ -109,14 +114,6 @@ impl TryCmd {
         cmd.stderr(std::process::Stdio::piped());
         let child = cmd.spawn().map_err(|e| e.to_string())?;
         crate::wait_with_input_output(child, stdin, self.timeout).map_err(|e| e.to_string())
-    }
-
-    pub(crate) fn bin(&self) -> Result<std::path::PathBuf, String> {
-        match &self.bin {
-            Some(Bin::Path(path)) => Ok(path.clone()),
-            Some(Bin::Name(name)) => Ok(crate::cargo_bin(name)),
-            None => Err(String::from("No bin specified")),
-        }
     }
 
     pub(crate) fn status(&self) -> CommandStatus {
@@ -298,6 +295,42 @@ impl Env {
 pub enum Bin {
     Path(std::path::PathBuf),
     Name(String),
+    #[serde(skip)]
+    Error(crate::Error),
+}
+
+impl From<std::path::PathBuf> for Bin {
+    fn from(other: std::path::PathBuf) -> Self {
+        Self::Path(other)
+    }
+}
+
+impl<'a> From<&'a std::path::PathBuf> for Bin {
+    fn from(other: &'a std::path::PathBuf) -> Self {
+        Self::Path(other.clone())
+    }
+}
+
+impl<'a> From<&'a std::path::Path> for Bin {
+    fn from(other: &'a std::path::Path) -> Self {
+        Self::Path(other.to_owned())
+    }
+}
+
+impl<P, E> From<Result<P, E>> for Bin
+where
+    P: Into<Bin>,
+    E: std::fmt::Display,
+{
+    fn from(other: Result<P, E>) -> Self {
+        match other {
+            Ok(path) => path.into(),
+            Err(err) => {
+                let err = crate::Error::new(err.to_string());
+                Bin::Error(err)
+            }
+        }
+    }
 }
 
 /// Expected status for command
