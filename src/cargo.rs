@@ -43,7 +43,11 @@ pub(crate) mod examples {
     ///         .case("examples/cmd/*.trycmd");
     /// }
     /// ```
-    pub fn compile_example<'a>(
+    pub fn compile_example<'a>(name: &str, args: impl IntoIterator<Item = &'a str>) -> crate::Bin {
+        compile_example_path(name, args).into()
+    }
+
+    fn compile_example_path<'a>(
         name: &str,
         args: impl IntoIterator<Item = &'a str>,
     ) -> Result<std::path::PathBuf, crate::Error> {
