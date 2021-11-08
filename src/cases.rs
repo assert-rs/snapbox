@@ -78,6 +78,12 @@ impl TestCases {
         self
     }
 
+    /// Add a bin to the "PATH" for cases to use
+    pub fn register_bin(&self, name: &str, path: impl Into<crate::Bin>) -> &Self {
+        self.bins.borrow_mut().register_bin(name, path.into());
+        self
+    }
+
     /// Run tests
     ///
     /// This will happen on `drop` if not done explicitly

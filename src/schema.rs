@@ -69,6 +69,7 @@ impl TryCmd {
     ) -> Result<std::process::Command, String> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
+            Some(Bin::TryPath(path)) => path.clone().map_err(crate::Error::into_string),
             Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name)),
             None => Err(String::from("No bin specified")),
         }?;
@@ -293,7 +294,46 @@ impl Env {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub enum Bin {
     Path(std::path::PathBuf),
+    #[serde(skip)]
+    TryPath(Result<std::path::PathBuf, crate::Error>),
     Name(String),
+}
+
+impl From<std::path::PathBuf> for Bin {
+    fn from(other: std::path::PathBuf) -> Self {
+        Self::Path(other)
+    }
+}
+
+impl<'a> From<&'a std::path::PathBuf> for Bin {
+    fn from(other: &'a std::path::PathBuf) -> Self {
+        Self::Path(other.clone())
+    }
+}
+
+impl<'a> From<&'a std::path::Path> for Bin {
+    fn from(other: &'a std::path::Path) -> Self {
+        Self::Path(other.to_owned())
+    }
+}
+
+impl<P, E> From<Result<P, E>> for Bin
+where
+    P: Into<Bin>,
+    E: std::fmt::Display,
+{
+    fn from(other: Result<P, E>) -> Self {
+        match other {
+            Ok(path) => match path.into() {
+                Bin::Path(path) => Bin::TryPath(Ok(path)),
+                _ => unreachable!("Into<Bin> should map to `Bin::Path`"),
+            },
+            Err(err) => {
+                let err = crate::Error::new(err.to_string());
+                Bin::TryPath(Err(err))
+            }
+        }
+    }
 }
 
 /// Expected status for command

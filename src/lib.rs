@@ -115,23 +115,25 @@
 //! ```
 //! To filter the tests to those with `name1`, `name2`, etc in their file names.
 
-mod cargo;
+pub mod cargo;
+pub mod schema;
+
 mod cases;
 mod color;
 mod command;
 #[cfg(feature = "diff")]
 pub(crate) mod diff;
 pub(crate) mod elide;
+mod error;
 mod filesystem;
 pub(crate) mod lines;
 mod registry;
 mod runner;
-pub mod schema;
 mod spec;
 
 pub use cases::TestCases;
+pub use error::Error;
 
-pub(crate) use cargo::cargo_bin;
 pub(crate) use color::Palette;
 pub(crate) use command::wait_with_input_output;
 pub(crate) use filesystem::{shallow_copy, FilesystemContext, Iterate as FsIterate};

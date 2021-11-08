@@ -1,11 +1,19 @@
 #[derive(Clone, Debug)]
 pub(crate) struct BinRegistry {
+    bins: std::collections::HashMap<String, crate::schema::Bin>,
     fallback: bool,
 }
 
 impl BinRegistry {
     pub(crate) fn new() -> Self {
-        Self { fallback: true }
+        Self {
+            bins: Default::default(),
+            fallback: true,
+        }
+    }
+
+    pub(crate) fn register_bin(&mut self, name: &str, bin: crate::schema::Bin) {
+        self.bins.insert(name.to_owned(), bin);
     }
 
     pub(crate) fn resolve_bin(&self, bin: crate::Bin) -> Result<crate::Bin, String> {
@@ -14,19 +22,26 @@ impl BinRegistry {
                 let bin = crate::Bin::Path(path);
                 Ok(bin)
             }
+            crate::Bin::TryPath(path) => {
+                let bin = crate::Bin::Path(path.map_err(crate::Error::into_string)?);
+                Ok(bin)
+            }
             crate::Bin::Name(name) => {
-                let path = self
+                let bin = self
                     .resolve_name(&name)
                     .ok_or_else(|| format!("Unknown bin.name = {}", name))?;
-                let bin = crate::Bin::Path(path);
                 Ok(bin)
             }
         }
     }
 
-    pub(crate) fn resolve_name(&self, name: &str) -> Option<std::path::PathBuf> {
+    pub(crate) fn resolve_name(&self, name: &str) -> Option<crate::Bin> {
+        if let Some(path) = self.bins.get(name) {
+            return Some(path.clone());
+        }
+
         if self.fallback {
-            return Some(crate::cargo_bin(name));
+            return Some(crate::Bin::Path(crate::cargo::cargo_bin(name)));
         }
 
         None
