@@ -1,13 +1,36 @@
+/// The absolute path to a binary target's executable.
+///
+/// The `bin_target_name` is the name of the binary
+/// target, exactly as-is.
+///
+/// **NOTE:** This is only set when building an integration test or benchmark.
+///
+/// ## Example
+///
+/// ```rust,no_run
+/// #[test]
+/// fn cli_tests() {
+///     trycmd::TestCases::new()
+///         .default_bin_path(trycmd::cargo_bin!("bin-fixture"))
+///         .case("tests/cmd/*.trycmd");
+/// }
+/// ```
+#[macro_export]
+macro_rules! cargo_bin {
+    ($bin_target_name:expr) => {
+        ::std::path::Path::new(env!(concat!("CARGO_BIN_EXE_", $bin_target_name)))
+    };
+}
+
 /// Look up the path to a cargo-built binary within an integration test.
-pub fn cargo_bin<S: AsRef<str>>(name: S) -> std::path::PathBuf {
+///
+/// **NOTE:** Prefer `trycmd::cargo_bin!` as this makes assumptions about cargo
+pub(crate) fn cargo_bin<S: AsRef<str>>(name: S) -> std::path::PathBuf {
     cargo_bin_str(name.as_ref())
 }
 
 fn cargo_bin_str(name: &str) -> std::path::PathBuf {
-    let env_var = format!("CARGO_BIN_EXE_{}", name);
-    std::env::var_os(&env_var)
-        .map(|p| p.into())
-        .unwrap_or_else(|| target_dir().join(format!("{}{}", name, std::env::consts::EXE_SUFFIX)))
+    target_dir().join(format!("{}{}", name, std::env::consts::EXE_SUFFIX))
 }
 
 // Adapted from
