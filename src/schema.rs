@@ -69,8 +69,8 @@ impl TryCmd {
     ) -> Result<std::process::Command, String> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
-            Some(Bin::TryPath(path)) => path.clone().map_err(crate::Error::into_string),
             Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name)),
+            Some(Bin::Error(err)) => Err(err.clone().into_string()),
             None => Err(String::from("No bin specified")),
         }?;
         if !bin.exists() {
@@ -294,9 +294,9 @@ impl Env {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub enum Bin {
     Path(std::path::PathBuf),
-    #[serde(skip)]
-    TryPath(Result<std::path::PathBuf, crate::Error>),
     Name(String),
+    #[serde(skip)]
+    Error(crate::Error),
 }
 
 impl From<std::path::PathBuf> for Bin {
@@ -324,13 +324,10 @@ where
 {
     fn from(other: Result<P, E>) -> Self {
         match other {
-            Ok(path) => match path.into() {
-                Bin::Path(path) => Bin::TryPath(Ok(path)),
-                _ => unreachable!("Into<Bin> should map to `Bin::Path`"),
-            },
+            Ok(path) => path.into(),
             Err(err) => {
                 let err = crate::Error::new(err.to_string());
-                Bin::TryPath(Err(err))
+                Bin::Error(err)
             }
         }
     }

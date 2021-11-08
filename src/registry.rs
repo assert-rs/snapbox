@@ -22,16 +22,13 @@ impl BinRegistry {
                 let bin = crate::Bin::Path(path);
                 Ok(bin)
             }
-            crate::Bin::TryPath(path) => {
-                let bin = crate::Bin::Path(path.map_err(crate::Error::into_string)?);
-                Ok(bin)
-            }
             crate::Bin::Name(name) => {
                 let bin = self
                     .resolve_name(&name)
                     .ok_or_else(|| format!("Unknown bin.name = {}", name))?;
                 Ok(bin)
             }
+            crate::Bin::Error(err) => Err(err.into_string()),
         }
     }
 
