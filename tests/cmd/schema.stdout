@@ -15,13 +15,14 @@
       ]
     },
     "args": {
-      "type": [
-        "array",
-        "null"
-      ],
-      "items": {
-        "type": "string"
-      }
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Args"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "fs": {
       "default": {
@@ -102,6 +103,33 @@
           "additionalProperties": false
         }
       ]
+    },
+    "Args": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/JoinedArgs"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "JoinedArgs": {
+      "type": "object",
+      "required": [
+        "inner"
+      ],
+      "properties": {
+        "inner": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "Filesystem": {
       "description": "Describe command's the filesystem context",

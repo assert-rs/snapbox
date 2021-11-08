@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct TryCmd {
     pub(crate) bin: Option<Bin>,
-    pub(crate) args: Option<Vec<String>>,
+    pub(crate) args: Option<Args>,
     #[serde(default)]
     pub(crate) fs: Filesystem,
     #[serde(default)]
@@ -132,7 +132,7 @@ impl TryCmd {
         let bin = iter
             .next()
             .ok_or_else(|| String::from("No bin specified"))?;
-        let args = iter.collect();
+        let args = Args::Split(iter.collect());
         Ok(Self {
             bin: Some(Bin::Name(bin)),
             args: Some(args),
@@ -146,6 +146,93 @@ impl std::str::FromStr for TryCmd {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse_trycmd(s)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[serde(untagged)]
+pub(crate) enum Args {
+    Joined(JoinedArgs),
+    Split(Vec<String>),
+}
+
+impl Args {
+    fn new() -> Self {
+        Self::Split(Default::default())
+    }
+
+    fn as_slice(&self) -> &[String] {
+        match self {
+            Self::Joined(j) => j.inner.as_slice(),
+            Self::Split(v) => v.as_slice(),
+        }
+    }
+}
+
+impl Default for Args {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::ops::Deref for Args {
+    type Target = [String];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub(crate) struct JoinedArgs {
+    inner: Vec<String>,
+}
+
+impl JoinedArgs {
+    #[cfg(test)]
+    pub(crate) fn from_vec(inner: Vec<String>) -> Self {
+        JoinedArgs { inner }
+    }
+
+    #[allow(clippy::inherent_to_string_shadow_display)]
+    fn to_string(&self) -> String {
+        shlex::join(self.inner.iter().map(|s| s.as_str()))
+    }
+}
+
+impl std::str::FromStr for JoinedArgs {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = shlex::Shlex::new(s).collect();
+        Ok(Self { inner })
+    }
+}
+
+impl std::fmt::Display for JoinedArgs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.to_string().fmt(f)
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for JoinedArgs {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        std::str::FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl serde::ser::Serialize for JoinedArgs {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -239,7 +326,7 @@ mod test {
     fn parse_trycmd_command() {
         let expected = TryCmd {
             bin: Some(Bin::Name("cmd".into())),
-            args: Some(vec![]),
+            args: Some(Args::default()),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("cmd").unwrap();
@@ -250,7 +337,7 @@ mod test {
     fn parse_trycmd_command_line() {
         let expected = TryCmd {
             bin: Some(Bin::Name("cmd".into())),
-            args: Some(vec!["arg1".into(), "arg with space".into()]),
+            args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("cmd arg1 'arg with space'").unwrap();
@@ -292,6 +379,29 @@ mod test {
             ..Default::default()
         };
         let actual = TryCmd::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_args_split() {
+        let expected = TryCmd {
+            args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml(r#"args = ["arg1", "arg with space"]"#).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_args_joined() {
+        let expected = TryCmd {
+            args: Some(Args::Joined(JoinedArgs::from_vec(vec![
+                "arg1".into(),
+                "arg with space".into(),
+            ]))),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_toml(r#"args = "arg1 'arg with space'""#).unwrap();
         assert_eq!(expected, actual);
     }
 
