@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Allow `cmd.toml` to contain `args = "arg1 'arg with space'"`
+
 ## [0.2.1] - 2021-11-06
 
 ### Features
