@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- `cargo_bin!` macro for looking up a bin correctly
+  - Use it with either `TestCases::default_bin_path` or `TestCases::register_bin`
+- `cargo::compile_example` and `cargo::compile_examples` to do snapshot testing of examples!
+  - Use it with `TestCases::register_bin`
+
 ## [0.2.2] - 2021-11-08
 
 ### Features
