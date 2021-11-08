@@ -25,12 +25,10 @@ macro_rules! cargo_bin {
 /// Look up the path to a cargo-built binary within an integration test.
 ///
 /// **NOTE:** Prefer `trycmd::cargo_bin!` as this makes assumptions about cargo
-pub(crate) fn cargo_bin<S: AsRef<str>>(name: S) -> std::path::PathBuf {
-    cargo_bin_str(name.as_ref())
-}
-
-fn cargo_bin_str(name: &str) -> std::path::PathBuf {
-    target_dir().join(format!("{}{}", name, std::env::consts::EXE_SUFFIX))
+pub(crate) fn cargo_bin(name: &str) -> std::path::PathBuf {
+    let file_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
+    let target_dir = target_dir();
+    target_dir.join(&file_name)
 }
 
 // Adapted from
