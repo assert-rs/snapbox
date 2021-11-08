@@ -12,8 +12,15 @@ impl BinRegistry {
         }
     }
 
-    pub(crate) fn register_bin(&mut self, name: &str, bin: crate::schema::Bin) {
-        self.bins.insert(name.to_owned(), bin);
+    pub(crate) fn register_bin(&mut self, name: String, bin: crate::schema::Bin) {
+        self.bins.insert(name, bin);
+    }
+
+    pub(crate) fn register_bins(
+        &mut self,
+        bins: impl Iterator<Item = (String, crate::schema::Bin)>,
+    ) {
+        self.bins.extend(bins);
     }
 
     pub(crate) fn resolve_bin(&self, bin: crate::Bin) -> Result<crate::Bin, String> {
