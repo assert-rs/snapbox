@@ -1,6 +1,7 @@
 #[derive(Debug, Default)]
 pub struct TestCases {
     runner: std::cell::RefCell<crate::RunnerSpec>,
+    bins: std::cell::RefCell<crate::BinRegistry>,
     has_run: std::cell::Cell<bool>,
 }
 
@@ -86,7 +87,8 @@ impl TestCases {
         let mode = parse_mode(std::env::var_os("TRYCMD").as_deref());
         mode.initialize().unwrap();
 
-        self.runner.borrow_mut().prepare().run(&mode);
+        let runner = self.runner.borrow_mut().prepare();
+        runner.run(&mode, &self.bins.borrow());
     }
 }
 

@@ -18,7 +18,7 @@ impl Runner {
         self.cases.push(case);
     }
 
-    pub(crate) fn run(&self, mode: &Mode) {
+    pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) {
         let palette = crate::Palette::current();
         if self.cases.is_empty() {
             eprintln!(
@@ -29,7 +29,7 @@ impl Runner {
             let failures: Vec<_> = self
                 .cases
                 .par_iter()
-                .filter_map(|c| match c.run(mode) {
+                .filter_map(|c| match c.run(mode, bins) {
                     Ok(status) => {
                         let stderr = std::io::stderr();
                         let mut stderr = stderr.lock();
@@ -101,7 +101,7 @@ impl Case {
         }
     }
 
-    pub(crate) fn run(&self, mode: &Mode) -> Result<Output, Output> {
+    pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) -> Result<Output, Output> {
         let mut output = Output::default();
 
         if self.expected == Some(crate::CommandStatus::Skip) {
@@ -117,6 +117,11 @@ impl Case {
         if run.bin.is_none() {
             run.bin = self.default_bin.clone()
         }
+        run.bin = run
+            .bin
+            .map(|name| bins.resolve_bin(name))
+            .transpose()
+            .map_err(|e| output.clone().error(e))?;
         if run.timeout.is_none() {
             run.timeout = self.timeout;
         }
