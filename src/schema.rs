@@ -377,9 +377,9 @@ where
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub enum CommandStatus {
     Success,
-    Fail,
+    Failed,
     Interrupted,
-    Skip,
+    Skipped,
     Code(i32),
 }
 

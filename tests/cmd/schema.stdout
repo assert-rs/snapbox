@@ -194,9 +194,9 @@
           "type": "string",
           "enum": [
             "success",
-            "fail",
+            "failed",
             "interrupted",
-            "skip"
+            "skipped"
           ]
         },
         {

@@ -33,7 +33,7 @@ impl TestCases {
     pub fn fail(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Fail));
+            .case(glob.as_ref(), Some(crate::CommandStatus::Failed));
         self
     }
 
@@ -49,7 +49,7 @@ impl TestCases {
     pub fn skip(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Skip));
+            .case(glob.as_ref(), Some(crate::CommandStatus::Skipped));
         self
     }
 

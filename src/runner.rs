@@ -116,7 +116,7 @@ impl Case {
     pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) -> Result<Output, Output> {
         let mut output = Output::default();
 
-        if self.expected == Some(crate::CommandStatus::Skip) {
+        if self.expected == Some(crate::CommandStatus::Skipped) {
             assert_eq!(output.spawn.status, SpawnStatus::Skipped);
             return Ok(output);
         }
@@ -251,7 +251,7 @@ impl Case {
                     output.spawn.status = SpawnStatus::Expected("success".into());
                 }
             }
-            crate::CommandStatus::Fail => {
+            crate::CommandStatus::Failed => {
                 if status.success() || status.code().is_none() {
                     output.spawn.status = SpawnStatus::Expected("failure".into());
                 }
@@ -261,7 +261,7 @@ impl Case {
                     output.spawn.status = SpawnStatus::Expected("interrupted".into());
                 }
             }
-            crate::CommandStatus::Skip => unreachable!("handled earlier"),
+            crate::CommandStatus::Skipped => unreachable!("handled earlier"),
             crate::CommandStatus::Code(expected_code) => {
                 if Some(expected_code) != status.code() {
                     output.spawn.status = SpawnStatus::Expected(expected_code.to_string());
