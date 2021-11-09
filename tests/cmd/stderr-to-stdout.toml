@@ -1,0 +1,12 @@
+bin.name = "bin-fixture"
+stderr-to-stdout = true
+
+[env.add]
+stdout = """
+Hello
+World!
+"""
+stderr = """
+Goodnight
+Moon!
+"""

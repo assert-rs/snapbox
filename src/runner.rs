@@ -78,7 +78,6 @@ impl Default for Runner {
 
 #[derive(Debug)]
 pub(crate) struct Case {
-    pub(crate) name: String,
     pub(crate) path: std::path::PathBuf,
     pub(crate) expected: Option<crate::CommandStatus>,
     pub(crate) timeout: Option<std::time::Duration>,
@@ -89,9 +88,7 @@ pub(crate) struct Case {
 
 impl Case {
     pub(crate) fn with_error(path: std::path::PathBuf, error: impl std::fmt::Display) -> Self {
-        let name = path.display().to_string();
         Self {
-            name,
             path,
             expected: None,
             timeout: None,

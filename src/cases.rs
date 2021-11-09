@@ -1,3 +1,4 @@
+/// Entry point for running tests
 #[derive(Debug, Default)]
 pub struct TestCases {
     runner: std::cell::RefCell<crate::RunnerSpec>,
