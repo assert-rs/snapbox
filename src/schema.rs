@@ -154,7 +154,7 @@ impl TryCmd {
 
     fn parse_trycmd(s: &str) -> Result<Self, String> {
         let mut cmdline = String::new();
-        let mut status = None;
+        let mut status = Some(CommandStatus::Success);
         for line in s.lines() {
             if let Some(raw) = line.strip_prefix("$ ") {
                 cmdline.clear();
@@ -433,6 +433,7 @@ mod test {
         let expected = TryCmd {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::default()),
+            status: Some(CommandStatus::Success),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd").unwrap();
@@ -444,6 +445,7 @@ mod test {
         let expected = TryCmd {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+            status: Some(CommandStatus::Success),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
@@ -455,6 +457,7 @@ mod test {
         let expected = TryCmd {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+            status: Some(CommandStatus::Success),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
@@ -474,6 +477,7 @@ mod test {
                 .collect(),
                 ..Default::default()
             },
+            status: Some(CommandStatus::Success),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
