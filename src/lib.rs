@@ -155,5 +155,5 @@ pub(crate) use command::wait_with_input_output;
 pub(crate) use filesystem::{shallow_copy, FilesystemContext, Iterate as FsIterate};
 pub(crate) use registry::BinRegistry;
 pub(crate) use runner::{Case, Mode, Runner};
-pub(crate) use schema::{Bin, CommandStatus, Env, TryCmd};
+pub(crate) use schema::{Bin, CommandStatus, Env, Run};
 pub(crate) use spec::RunnerSpec;

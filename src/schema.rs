@@ -1,6 +1,6 @@
 //! `cmd.toml` Schema
 //!
-//! [`TryCmd`] is the top-level item in the `cmd.toml` files.
+//! [`Run`] is the top-level item in the `cmd.toml` files.
 
 use std::collections::BTreeMap;
 use std::io::prelude::*;
@@ -9,7 +9,7 @@ use std::io::prelude::*;
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-pub struct TryCmd {
+pub struct Run {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Option<Args>,
     #[serde(default)]
@@ -26,7 +26,7 @@ pub struct TryCmd {
     pub(crate) timeout: Option<std::time::Duration>,
 }
 
-impl TryCmd {
+impl Run {
     pub(crate) fn load(path: &std::path::Path) -> Result<Self, String> {
         let mut run = if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
@@ -192,7 +192,7 @@ impl TryCmd {
     }
 }
 
-impl std::str::FromStr for TryCmd {
+impl std::str::FromStr for Run {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -428,43 +428,43 @@ mod test {
 
     #[test]
     fn parse_trycmd_command() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::default()),
             status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd").unwrap();
+        let actual = Run::parse_trycmd("$ cmd").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_trycmd_command_line() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
             status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
+        let actual = Run::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_trycmd_multi_line() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
             status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
+        let actual = Run::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_trycmd_env() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::default()),
             env: Env {
@@ -478,112 +478,112 @@ mod test {
             status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
+        let actual = Run::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_trycmd_status() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::default()),
             status: Some(CommandStatus::Skipped),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd\n? skipped").unwrap();
+        let actual = Run::parse_trycmd("$ cmd\n? skipped").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_trycmd_status_code() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             args: Some(Args::default()),
             status: Some(CommandStatus::Code(-1)),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd\n? -1").unwrap();
+        let actual = Run::parse_trycmd("$ cmd\n? -1").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_minimal() {
-        let expected = TryCmd {
+        let expected = Run {
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("").unwrap();
+        let actual = Run::parse_toml("").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_minimal_env() {
-        let expected = TryCmd {
+        let expected = Run {
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("[env]").unwrap();
+        let actual = Run::parse_toml("[env]").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_bin_name() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Name("cmd".into())),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("bin.name = 'cmd'").unwrap();
+        let actual = Run::parse_toml("bin.name = 'cmd'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_bin_path() {
-        let expected = TryCmd {
+        let expected = Run {
             bin: Some(Bin::Path("/usr/bin/cmd".into())),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
+        let actual = Run::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_args_split() {
-        let expected = TryCmd {
+        let expected = Run {
             args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml(r#"args = ["arg1", "arg with space"]"#).unwrap();
+        let actual = Run::parse_toml(r#"args = ["arg1", "arg with space"]"#).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_args_joined() {
-        let expected = TryCmd {
+        let expected = Run {
             args: Some(Args::Joined(JoinedArgs::from_vec(vec![
                 "arg1".into(),
                 "arg with space".into(),
             ]))),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml(r#"args = "arg1 'arg with space'""#).unwrap();
+        let actual = Run::parse_toml(r#"args = "arg1 'arg with space'""#).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_status_success() {
-        let expected = TryCmd {
+        let expected = Run {
             status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("status = 'success'").unwrap();
+        let actual = Run::parse_toml("status = 'success'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_status_code() {
-        let expected = TryCmd {
+        let expected = Run {
             status: Some(CommandStatus::Code(42)),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("status.code = 42").unwrap();
+        let actual = Run::parse_toml("status.code = 42").unwrap();
         assert_eq!(expected, actual);
     }
 }

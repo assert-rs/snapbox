@@ -125,7 +125,7 @@ impl Case {
             return Err(output);
         }
 
-        let mut run = crate::TryCmd::load(&self.path).map_err(|e| output.clone().error(e))?;
+        let mut run = crate::Run::load(&self.path).map_err(|e| output.clone().error(e))?;
         if run.bin.is_none() {
             run.bin = self.default_bin.clone()
         }

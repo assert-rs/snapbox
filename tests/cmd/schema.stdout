@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "TryCmd",
+  "title": "Run",
   "description": "Top-level data in `cmd.toml` files",
   "type": "object",
   "properties": {
