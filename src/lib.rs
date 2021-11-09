@@ -85,13 +85,17 @@
 //!
 //! #### `*.in/`
 //!
-//! When present, this will automatically be picked as the CWD for the command
+//! When present, this will automatically be picked as the CWD for the command.
+//!
+//! `.keep` files will be ignored but their parent directories will be created.
 //!
 //! #### `*.out/`
 //!
 //! When present, each file in this directory will be compared to generated or modified files.
 //!
 //! See also "Eliding Content" for `.stdout`
+//!
+//! `.keep` files will be ignored.
 //!
 //! ### Workflow
 //!
