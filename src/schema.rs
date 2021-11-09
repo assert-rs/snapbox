@@ -1,6 +1,7 @@
-/// `cmd.toml` Schema
-///
-/// [`TryCmd`] is the top-level item in the `cmd.toml` files.
+//! `cmd.toml` Schema
+//!
+//! [`TryCmd`] is the top-level item in the `cmd.toml` files.
+
 use std::collections::BTreeMap;
 
 /// Top-level data in `cmd.toml` files
