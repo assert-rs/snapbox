@@ -83,10 +83,9 @@ impl TryCmd {
                 break next;
             }
         };
-        let args = Args::Split(cmdline);
         let run = Run {
             bin: Some(Bin::Name(bin)),
-            args: Some(args),
+            args: cmdline,
             env,
             status,
             ..Default::default()
@@ -108,55 +107,46 @@ impl std::str::FromStr for TryCmd {
 
 impl From<OneShot> for TryCmd {
     fn from(other: OneShot) -> Self {
+        let OneShot {
+            bin,
+            args,
+            env,
+            stderr_to_stdout,
+            status,
+            binary,
+            timeout,
+            fs,
+        } = other;
         Self {
-            run: other.run,
-            fs: other.fs,
+            run: Run {
+                bin,
+                args: args.into_vec(),
+                env,
+                stderr_to_stdout,
+                status,
+                binary,
+                timeout,
+            },
+            fs: fs,
         }
     }
 }
 
-/// Top-level data in `cmd.toml` files
-#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "kebab-case")]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-pub struct OneShot {
-    #[serde(flatten)]
-    pub(crate) run: Run,
-    #[serde(default)]
-    pub(crate) fs: Filesystem,
-}
-
-impl OneShot {
-    fn parse_toml(s: &str) -> Result<Self, String> {
-        toml_edit::de::from_str(s).map_err(|e| e.to_string())
-    }
-}
-
-/// Top-level data in `cmd.toml` files
-#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "kebab-case")]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-pub struct Run {
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+pub(crate) struct Run {
     pub(crate) bin: Option<Bin>,
-    pub(crate) args: Option<Args>,
-    #[serde(default)]
-    pub(crate) fs: Filesystem,
-    #[serde(default)]
+    pub(crate) args: Vec<String>,
     pub(crate) env: Env,
-    #[serde(default)]
     pub(crate) stderr_to_stdout: bool,
     pub(crate) status: Option<CommandStatus>,
-    #[serde(default)]
     pub(crate) binary: bool,
-    #[serde(default)]
-    #[serde(deserialize_with = "humantime_serde::deserialize")]
     pub(crate) timeout: Option<std::time::Duration>,
 }
 
 impl Run {
     pub(crate) fn to_command(
         &self,
-        base: Option<&std::path::Path>,
+        cwd: Option<&std::path::Path>,
     ) -> Result<std::process::Command, String> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
@@ -169,25 +159,9 @@ impl Run {
         }
 
         let mut cmd = std::process::Command::new(bin);
-        if let Some(args) = self.args.as_deref() {
-            cmd.args(args);
-        }
-        if let Some(base) = base {
-            let base = if let (Some(orig_cwd), Some(orig_base)) =
-                (self.fs.cwd.as_deref(), self.fs.base.as_deref())
-            {
-                let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
-                    format!(
-                        "fs.cwd ({}) must be within fs.base ({})",
-                        orig_cwd.display(),
-                        orig_base.display()
-                    )
-                })?;
-                base.join(rel_cwd)
-            } else {
-                base.to_owned()
-            };
-            cmd.current_dir(base);
+        cmd.args(&self.args);
+        if let Some(cwd) = cwd {
+            cmd.current_dir(cwd);
         }
         self.env.apply(&mut cmd);
 
@@ -236,6 +210,34 @@ impl Run {
     }
 }
 
+/// Top-level data in `cmd.toml` files
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct OneShot {
+    pub(crate) bin: Option<Bin>,
+    #[serde(default)]
+    pub(crate) args: Args,
+    #[serde(default)]
+    pub(crate) env: Env,
+    #[serde(default)]
+    pub(crate) stderr_to_stdout: bool,
+    pub(crate) status: Option<CommandStatus>,
+    #[serde(default)]
+    pub(crate) binary: bool,
+    #[serde(default)]
+    #[serde(deserialize_with = "humantime_serde::deserialize")]
+    pub(crate) timeout: Option<std::time::Duration>,
+    #[serde(default)]
+    pub(crate) fs: Filesystem,
+}
+
+impl OneShot {
+    fn parse_toml(s: &str) -> Result<Self, String> {
+        toml_edit::de::from_str(s).map_err(|e| e.to_string())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(untagged)]
@@ -253,6 +255,13 @@ impl Args {
         match self {
             Self::Joined(j) => j.inner.as_slice(),
             Self::Split(v) => v.as_slice(),
+        }
+    }
+
+    fn into_vec(self) -> Vec<String> {
+        match self {
+            Self::Joined(j) => j.inner,
+            Self::Split(v) => v,
         }
     }
 }
@@ -337,6 +346,21 @@ pub struct Filesystem {
 impl Filesystem {
     pub(crate) fn sandbox(&self) -> bool {
         self.sandbox.unwrap_or_default()
+    }
+
+    pub(crate) fn rel_cwd(&self) -> Result<&std::path::Path, String> {
+        if let (Some(orig_cwd), Some(orig_base)) = (self.cwd.as_deref(), self.base.as_deref()) {
+            let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
+                format!(
+                    "fs.cwd ({}) must be within fs.base ({})",
+                    orig_cwd.display(),
+                    orig_base.display()
+                )
+            })?;
+            Ok(rel_cwd)
+        } else {
+            Ok(std::path::Path::new(""))
+        }
     }
 }
 
@@ -467,7 +491,6 @@ mod test {
         let expected = TryCmd {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
-                args: Some(Args::default()),
                 status: Some(CommandStatus::Success),
                 ..Default::default()
             },
@@ -482,7 +505,7 @@ mod test {
         let expected = TryCmd {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
-                args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+                args: vec!["arg1".into(), "arg with space".into()],
                 status: Some(CommandStatus::Success),
                 ..Default::default()
             },
@@ -497,7 +520,7 @@ mod test {
         let expected = TryCmd {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
-                args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+                args: vec!["arg1".into(), "arg with space".into()],
                 status: Some(CommandStatus::Success),
                 ..Default::default()
             },
@@ -512,7 +535,6 @@ mod test {
         let expected = TryCmd {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
-                args: Some(Args::default()),
                 env: Env {
                     add: IntoIterator::into_iter([
                         ("KEY1".into(), "VALUE1".into()),
@@ -535,7 +557,6 @@ mod test {
         let expected = TryCmd {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
-                args: Some(Args::default()),
                 status: Some(CommandStatus::Skipped),
                 ..Default::default()
             },
@@ -550,7 +571,6 @@ mod test {
         let expected = TryCmd {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
-                args: Some(Args::default()),
                 status: Some(CommandStatus::Code(-1)),
                 ..Default::default()
             },
@@ -581,10 +601,7 @@ mod test {
     #[test]
     fn parse_toml_bin_name() {
         let expected = OneShot {
-            run: Run {
-                bin: Some(Bin::Name("cmd".into())),
-                ..Default::default()
-            },
+            bin: Some(Bin::Name("cmd".into())),
             ..Default::default()
         };
         let actual = OneShot::parse_toml("bin.name = 'cmd'").unwrap();
@@ -594,10 +611,7 @@ mod test {
     #[test]
     fn parse_toml_bin_path() {
         let expected = OneShot {
-            run: Run {
-                bin: Some(Bin::Path("/usr/bin/cmd".into())),
-                ..Default::default()
-            },
+            bin: Some(Bin::Path("/usr/bin/cmd".into())),
             ..Default::default()
         };
         let actual = OneShot::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
@@ -607,10 +621,7 @@ mod test {
     #[test]
     fn parse_toml_args_split() {
         let expected = OneShot {
-            run: Run {
-                args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
-                ..Default::default()
-            },
+            args: Args::Split(vec!["arg1".into(), "arg with space".into()]),
             ..Default::default()
         };
         let actual = OneShot::parse_toml(r#"args = ["arg1", "arg with space"]"#).unwrap();
@@ -620,13 +631,10 @@ mod test {
     #[test]
     fn parse_toml_args_joined() {
         let expected = OneShot {
-            run: Run {
-                args: Some(Args::Joined(JoinedArgs::from_vec(vec![
-                    "arg1".into(),
-                    "arg with space".into(),
-                ]))),
-                ..Default::default()
-            },
+            args: Args::Joined(JoinedArgs::from_vec(vec![
+                "arg1".into(),
+                "arg with space".into(),
+            ])),
             ..Default::default()
         };
         let actual = OneShot::parse_toml(r#"args = "arg1 'arg with space'""#).unwrap();
@@ -636,10 +644,7 @@ mod test {
     #[test]
     fn parse_toml_status_success() {
         let expected = OneShot {
-            run: Run {
-                status: Some(CommandStatus::Success),
-                ..Default::default()
-            },
+            status: Some(CommandStatus::Success),
             ..Default::default()
         };
         let actual = OneShot::parse_toml("status = 'success'").unwrap();
@@ -649,10 +654,7 @@ mod test {
     #[test]
     fn parse_toml_status_code() {
         let expected = OneShot {
-            run: Run {
-                status: Some(CommandStatus::Code(42)),
-                ..Default::default()
-            },
+            status: Some(CommandStatus::Code(42)),
             ..Default::default()
         };
         let actual = OneShot::parse_toml("status.code = 42").unwrap();

@@ -4,18 +4,6 @@
   "description": "Top-level data in `cmd.toml` files",
   "type": "object",
   "properties": {
-    "fs": {
-      "default": {
-        "base": null,
-        "cwd": null,
-        "sandbox": null
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/Filesystem"
-        }
-      ]
-    },
     "bin": {
       "anyOf": [
         {
@@ -27,12 +15,10 @@
       ]
     },
     "args": {
-      "anyOf": [
+      "default": [],
+      "allOf": [
         {
           "$ref": "#/definitions/Args"
-        },
-        {
-          "type": "null"
         }
       ]
     },
@@ -76,34 +62,21 @@
           "type": "null"
         }
       ]
+    },
+    "fs": {
+      "default": {
+        "base": null,
+        "cwd": null,
+        "sandbox": null
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/Filesystem"
+        }
+      ]
     }
   },
   "definitions": {
-    "Filesystem": {
-      "description": "Describe command's the filesystem context",
-      "type": "object",
-      "properties": {
-        "cwd": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "base": {
-          "description": "Sandbox base",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "sandbox": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      }
-    },
     "Bin": {
       "description": "Target under test",
       "oneOf": [
@@ -230,6 +203,31 @@
           "type": "integer",
           "format": "uint32",
           "minimum": 0.0
+        }
+      }
+    },
+    "Filesystem": {
+      "description": "Describe command's the filesystem context",
+      "type": "object",
+      "properties": {
+        "cwd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base": {
+          "description": "Sandbox base",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sandbox": {
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       }
     }

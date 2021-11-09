@@ -172,9 +172,15 @@ impl Case {
                 .clone()
                 .error(format!("Failed to initialize sandbox: {}", e))
         })?;
+        let cwd = fs
+            .path()
+            .map(|p| sequence.fs.rel_cwd().map(|rel| p.join(rel)))
+            .transpose()
+            .map_err(|e| output.clone().error(e))?;
+
         let cmd_output = sequence
             .run
-            .to_output(stdin, fs.path())
+            .to_output(stdin, cwd.as_deref())
             .map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
