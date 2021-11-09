@@ -144,17 +144,6 @@ impl Case {
         }
         sequence.run.env.update(&self.env);
 
-        let stdin_path = self.path.with_extension("stdin");
-        let stdin = if stdin_path.exists() {
-            Some(
-                crate::File::read_from(&stdin_path, sequence.run.binary)
-                    .map_err(|e| output.clone().error(e))?
-                    .into_bytes(),
-            )
-        } else {
-            None
-        };
-
         let fs = crate::FilesystemContext::new(
             &self.path,
             sequence.fs.base.as_deref(),
@@ -174,7 +163,7 @@ impl Case {
 
         let cmd_output = sequence
             .run
-            .to_output(stdin, cwd.as_deref())
+            .to_output(cwd.as_deref())
             .map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 

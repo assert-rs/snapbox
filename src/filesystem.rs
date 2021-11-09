@@ -72,13 +72,6 @@ impl File {
             Self::Text(data) => data.as_bytes(),
         }
     }
-
-    pub(crate) fn into_bytes(self) -> Vec<u8> {
-        match self {
-            Self::Binary(data) => data,
-            Self::Text(data) => data.into_bytes(),
-        }
-    }
 }
 
 impl std::fmt::Display for File {

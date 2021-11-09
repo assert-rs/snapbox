@@ -7,9 +7,10 @@ use std::io::prelude::*;
 /// to also write to stdin.
 pub(crate) fn wait_with_input_output(
     mut child: std::process::Child,
-    input: Option<Vec<u8>>,
+    input: Option<&[u8]>,
     timeout: Option<std::time::Duration>,
 ) -> std::io::Result<std::process::Output> {
+    let input = input.map(|b| b.to_owned());
     let stdin = input.and_then(|i| {
         child
             .stdin

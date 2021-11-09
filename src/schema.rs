@@ -17,7 +17,15 @@ impl TryCmd {
             if ext == std::ffi::OsStr::new("toml") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
                 let one_shot = OneShot::parse_toml(&raw)?;
-                one_shot.into()
+                let mut sequence: Self = one_shot.into();
+                let stdin_path = path.with_extension("stdin");
+                let stdin = if stdin_path.exists() {
+                    Some(crate::File::read_from(&stdin_path, sequence.run.binary)?)
+                } else {
+                    None
+                };
+                sequence.run.stdin = stdin;
+                sequence
             } else if ext == std::ffi::OsStr::new("trycmd") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
                 let sequence = Self::parse_trycmd(&raw)?;
@@ -122,6 +130,7 @@ impl From<OneShot> for TryCmd {
                 bin,
                 args: args.into_vec(),
                 env,
+                stdin: None,
                 stderr_to_stdout,
                 status,
                 binary,
@@ -137,6 +146,7 @@ pub(crate) struct Run {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Vec<String>,
     pub(crate) env: Env,
+    pub(crate) stdin: Option<crate::File>,
     pub(crate) stderr_to_stdout: bool,
     pub(crate) status: Option<CommandStatus>,
     pub(crate) binary: bool,
@@ -170,7 +180,6 @@ impl Run {
 
     pub(crate) fn to_output(
         &self,
-        stdin: Option<Vec<u8>>,
         cwd: Option<&std::path::Path>,
     ) -> Result<std::process::Output, String> {
         let mut cmd = self.to_command(cwd)?;
@@ -188,7 +197,7 @@ impl Run {
             // before we read. Here we do this by dropping the Command object.
             drop(cmd);
 
-            let mut output = crate::wait_with_input_output(child, stdin, self.timeout)
+            let mut output = crate::wait_with_input_output(child, self.stdin(), self.timeout)
                 .map_err(|e| e.to_string())?;
             assert!(output.stdout.is_empty());
             assert!(output.stderr.is_empty());
@@ -201,12 +210,17 @@ impl Run {
             cmd.stdout(std::process::Stdio::piped());
             cmd.stderr(std::process::Stdio::piped());
             let child = cmd.spawn().map_err(|e| e.to_string())?;
-            crate::wait_with_input_output(child, stdin, self.timeout).map_err(|e| e.to_string())
+            crate::wait_with_input_output(child, self.stdin(), self.timeout)
+                .map_err(|e| e.to_string())
         }
     }
 
     pub(crate) fn status(&self) -> CommandStatus {
         self.status.unwrap_or_default()
+    }
+
+    pub(crate) fn stdin(&self) -> Option<&[u8]> {
+        self.stdin.as_ref().map(|f| f.as_bytes())
     }
 }
 
