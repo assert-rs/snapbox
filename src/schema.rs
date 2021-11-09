@@ -153,9 +153,23 @@ impl TryCmd {
     }
 
     fn parse_trycmd(s: &str) -> Result<Self, String> {
+        let mut cmdline = String::new();
+        for line in s.lines() {
+            if let Some(raw) = line.strip_prefix("$ ") {
+                cmdline.clear();
+                cmdline.push_str(raw.trim());
+                cmdline.push(' ');
+            } else if let Some(raw) = line.strip_prefix("> ") {
+                cmdline.push_str(raw.trim());
+                cmdline.push(' ');
+            } else {
+                return Err(format!("Invalid line: `{}`", line));
+            }
+        }
+
         let mut env = Env::default();
 
-        let mut iter = shlex::Shlex::new(s.trim());
+        let mut iter = shlex::Shlex::new(cmdline.trim());
         let bin = loop {
             let next = iter
                 .next()
@@ -400,7 +414,7 @@ mod test {
             args: Some(Args::default()),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("cmd").unwrap();
+        let actual = TryCmd::parse_trycmd("$ cmd").unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -411,7 +425,18 @@ mod test {
             args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("cmd arg1 'arg with space'").unwrap();
+        let actual = TryCmd::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_multi_line() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -430,7 +455,7 @@ mod test {
             },
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
+        let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
         assert_eq!(expected, actual);
     }
 
