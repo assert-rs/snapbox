@@ -125,27 +125,29 @@ impl Case {
             return Err(output);
         }
 
-        let mut run = crate::schema::Run::load(&self.path).map_err(|e| output.clone().error(e))?;
-        if run.bin.is_none() {
-            run.bin = self.default_bin.clone()
+        let mut sequence =
+            crate::schema::TryCmd::load(&self.path).map_err(|e| output.clone().error(e))?;
+        if sequence.run.bin.is_none() {
+            sequence.run.bin = self.default_bin.clone()
         }
-        run.bin = run
+        sequence.run.bin = sequence
+            .run
             .bin
             .map(|name| bins.resolve_bin(name))
             .transpose()
             .map_err(|e| output.clone().error(e))?;
-        if run.timeout.is_none() {
-            run.timeout = self.timeout;
+        if sequence.run.timeout.is_none() {
+            sequence.run.timeout = self.timeout;
         }
         if self.expected.is_some() {
-            run.status = self.expected;
+            sequence.run.status = self.expected;
         }
-        run.env.update(&self.env);
+        sequence.run.env.update(&self.env);
 
         let stdin_path = self.path.with_extension("stdin");
         let stdin = if stdin_path.exists() {
             Some(
-                File::read_from(&stdin_path, run.binary)
+                File::read_from(&stdin_path, sequence.run.binary)
                     .map_err(|e| {
                         output.clone().error(format!(
                             "Failed to read {}: {}",
@@ -161,8 +163,8 @@ impl Case {
 
         let fs = crate::FilesystemContext::new(
             &self.path,
-            run.fs.base.as_deref(),
-            run.fs.sandbox(),
+            sequence.fs.base.as_deref(),
+            sequence.fs.sandbox(),
             mode,
         )
         .map_err(|e| {
@@ -170,14 +172,15 @@ impl Case {
                 .clone()
                 .error(format!("Failed to initialize sandbox: {}", e))
         })?;
-        let cmd_output = run
+        let cmd_output = sequence
+            .run
             .to_output(stdin, fs.path())
             .map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
         // For dump mode's sake, allow running all
         let mut ok = output.is_ok();
-        let mut output = match self.validate_spawn(output, run.status()) {
+        let mut output = match self.validate_spawn(output, sequence.run.status()) {
             Ok(output) => output,
             Err(output) => {
                 ok = false;
@@ -185,7 +188,7 @@ impl Case {
             }
         };
         if let Some(mut stdout) = output.stdout {
-            if !run.binary {
+            if !sequence.run.binary {
                 stdout = stdout.utf8();
             }
             if stdout.is_ok() {
@@ -200,7 +203,7 @@ impl Case {
             output.stdout = Some(stdout);
         }
         if let Some(mut stderr) = output.stderr {
-            if !run.binary {
+            if !sequence.run.binary {
                 stderr = stderr.utf8();
             }
             if stderr.is_ok() {
@@ -214,7 +217,7 @@ impl Case {
             }
             output.stderr = Some(stderr);
         }
-        if run.fs.sandbox() {
+        if sequence.fs.sandbox() {
             output.fs =
                 match self.validate_fs(fs.path().expect("sandbox must be filled"), output.fs, mode)
                 {
