@@ -20,6 +20,7 @@ impl Runner {
 
     pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) {
         let palette = crate::Palette::current();
+
         if self.cases.is_empty() {
             eprintln!(
                 "{}",
@@ -64,6 +65,20 @@ impl Runner {
                 .collect();
 
             if !failures.is_empty() {
+                let stderr = std::io::stderr();
+                let mut stderr = stderr.lock();
+                let _ = writeln!(
+                    stderr,
+                    "{}",
+                    palette
+                        .hint
+                        .paint("Update snapshots with `TRYCMD=overwrite`"),
+                );
+                let _ = writeln!(
+                    stderr,
+                    "{}",
+                    palette.hint.paint("Debug output with `TRYCMD=dump`"),
+                );
                 panic!("{} of {} tests failed", failures.len(), self.cases.len());
             }
         }
