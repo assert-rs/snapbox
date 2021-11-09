@@ -23,29 +23,32 @@ impl BinRegistry {
         self.bins.extend(bins);
     }
 
-    pub(crate) fn resolve_bin(&self, bin: crate::Bin) -> Result<crate::Bin, String> {
+    pub(crate) fn resolve_bin(
+        &self,
+        bin: crate::schema::Bin,
+    ) -> Result<crate::schema::Bin, String> {
         match bin {
-            crate::Bin::Path(path) => {
-                let bin = crate::Bin::Path(path);
+            crate::schema::Bin::Path(path) => {
+                let bin = crate::schema::Bin::Path(path);
                 Ok(bin)
             }
-            crate::Bin::Name(name) => {
+            crate::schema::Bin::Name(name) => {
                 let bin = self
                     .resolve_name(&name)
                     .ok_or_else(|| format!("Unknown bin.name = {}", name))?;
                 Ok(bin)
             }
-            crate::Bin::Error(err) => Err(err.into_string()),
+            crate::schema::Bin::Error(err) => Err(err.into_string()),
         }
     }
 
-    pub(crate) fn resolve_name(&self, name: &str) -> Option<crate::Bin> {
+    pub(crate) fn resolve_name(&self, name: &str) -> Option<crate::schema::Bin> {
         if let Some(path) = self.bins.get(name) {
             return Some(path.clone());
         }
 
         if self.fallback {
-            return Some(crate::Bin::Path(crate::cargo::cargo_bin(name)));
+            return Some(crate::schema::Bin::Path(crate::cargo::cargo_bin(name)));
         }
 
         None

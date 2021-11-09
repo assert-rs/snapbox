@@ -94,10 +94,10 @@ impl Default for Runner {
 #[derive(Debug)]
 pub(crate) struct Case {
     pub(crate) path: std::path::PathBuf,
-    pub(crate) expected: Option<crate::CommandStatus>,
+    pub(crate) expected: Option<crate::schema::CommandStatus>,
     pub(crate) timeout: Option<std::time::Duration>,
-    pub(crate) default_bin: Option<crate::Bin>,
-    pub(crate) env: crate::Env,
+    pub(crate) default_bin: Option<crate::schema::Bin>,
+    pub(crate) env: crate::schema::Env,
     pub(crate) error: Option<SpawnStatus>,
 }
 
@@ -116,7 +116,7 @@ impl Case {
     pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) -> Result<Output, Output> {
         let mut output = Output::default();
 
-        if self.expected == Some(crate::CommandStatus::Skipped) {
+        if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             assert_eq!(output.spawn.status, SpawnStatus::Skipped);
             return Ok(output);
         }
@@ -125,7 +125,7 @@ impl Case {
             return Err(output);
         }
 
-        let mut run = crate::Run::load(&self.path).map_err(|e| output.clone().error(e))?;
+        let mut run = crate::schema::Run::load(&self.path).map_err(|e| output.clone().error(e))?;
         if run.bin.is_none() {
             run.bin = self.default_bin.clone()
         }
@@ -242,27 +242,27 @@ impl Case {
     fn validate_spawn(
         &self,
         mut output: Output,
-        expected: crate::CommandStatus,
+        expected: crate::schema::CommandStatus,
     ) -> Result<Output, Output> {
         let status = output.spawn.exit.expect("bale out before now");
         match expected {
-            crate::CommandStatus::Success => {
+            crate::schema::CommandStatus::Success => {
                 if !status.success() {
                     output.spawn.status = SpawnStatus::Expected("success".into());
                 }
             }
-            crate::CommandStatus::Failed => {
+            crate::schema::CommandStatus::Failed => {
                 if status.success() || status.code().is_none() {
                     output.spawn.status = SpawnStatus::Expected("failure".into());
                 }
             }
-            crate::CommandStatus::Interrupted => {
+            crate::schema::CommandStatus::Interrupted => {
                 if status.code().is_some() {
                     output.spawn.status = SpawnStatus::Expected("interrupted".into());
                 }
             }
-            crate::CommandStatus::Skipped => unreachable!("handled earlier"),
-            crate::CommandStatus::Code(expected_code) => {
+            crate::schema::CommandStatus::Skipped => unreachable!("handled earlier"),
+            crate::schema::CommandStatus::Code(expected_code) => {
                 if Some(expected_code) != status.code() {
                     output.spawn.status = SpawnStatus::Expected(expected_code.to_string());
                 }

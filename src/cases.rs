@@ -25,7 +25,7 @@ impl TestCases {
     pub fn pass(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Success));
+            .case(glob.as_ref(), Some(crate::schema::CommandStatus::Success));
         self
     }
 
@@ -33,15 +33,16 @@ impl TestCases {
     pub fn fail(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Failed));
+            .case(glob.as_ref(), Some(crate::schema::CommandStatus::Failed));
         self
     }
 
     /// Overwrite expected status for a test
     pub fn interrupted(&self, glob: impl AsRef<std::path::Path>) -> &Self {
-        self.runner
-            .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Interrupted));
+        self.runner.borrow_mut().case(
+            glob.as_ref(),
+            Some(crate::schema::CommandStatus::Interrupted),
+        );
         self
     }
 
@@ -49,20 +50,20 @@ impl TestCases {
     pub fn skip(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Skipped));
+            .case(glob.as_ref(), Some(crate::schema::CommandStatus::Skipped));
         self
     }
 
     /// Set default bin, by path, for commands
     pub fn default_bin_path(&self, path: impl AsRef<std::path::Path>) -> &Self {
-        let bin = Some(crate::Bin::Path(path.as_ref().into()));
+        let bin = Some(crate::schema::Bin::Path(path.as_ref().into()));
         self.runner.borrow_mut().default_bin(bin);
         self
     }
 
     /// Set default bin, by name, for commands
     pub fn default_bin_name(&self, name: impl AsRef<str>) -> &Self {
-        let bin = Some(crate::Bin::Name(name.as_ref().into()));
+        let bin = Some(crate::schema::Bin::Name(name.as_ref().into()));
         self.runner.borrow_mut().default_bin(bin);
         self
     }
@@ -80,7 +81,11 @@ impl TestCases {
     }
 
     /// Add a bin to the "PATH" for cases to use
-    pub fn register_bin(&self, name: impl Into<String>, path: impl Into<crate::Bin>) -> &Self {
+    pub fn register_bin(
+        &self,
+        name: impl Into<String>,
+        path: impl Into<crate::schema::Bin>,
+    ) -> &Self {
         self.bins
             .borrow_mut()
             .register_bin(name.into(), path.into());
@@ -88,7 +93,7 @@ impl TestCases {
     }
 
     /// Add a series of bins to the "PATH" for cases to use
-    pub fn register_bins<N: Into<String>, B: Into<crate::Bin>>(
+    pub fn register_bins<N: Into<String>, B: Into<crate::schema::Bin>>(
         &self,
         bins: impl IntoIterator<Item = (N, B)>,
     ) -> &Self {
