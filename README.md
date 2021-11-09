@@ -16,9 +16,9 @@ Here's a trivial example:
 
 ```rust,no_run
 #[test]
-fn ui() {
-    let t = trycmd::TestCases::new();
-    t.pass("tests/cmd/*.toml");
+fn cli_tests() {
+    trycmd::TestCases::new()
+        .case("tests/cmd/*.trycmd");
 }
 ```
 

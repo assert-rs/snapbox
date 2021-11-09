@@ -376,7 +376,7 @@ where
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub enum CommandStatus {
-    Pass,
+    Success,
     Fail,
     Interrupted,
     Skip,
@@ -385,7 +385,7 @@ pub enum CommandStatus {
 
 impl Default for CommandStatus {
     fn default() -> Self {
-        CommandStatus::Pass
+        CommandStatus::Success
     }
 }
 
@@ -498,10 +498,10 @@ mod test {
     #[test]
     fn parse_toml_status_success() {
         let expected = TryCmd {
-            status: Some(CommandStatus::Pass),
+            status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("status = 'pass'").unwrap();
+        let actual = TryCmd::parse_toml("status = 'success'").unwrap();
         assert_eq!(expected, actual);
     }
 

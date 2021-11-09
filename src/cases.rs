@@ -25,7 +25,7 @@ impl TestCases {
     pub fn pass(&self, glob: impl AsRef<std::path::Path>) -> &Self {
         self.runner
             .borrow_mut()
-            .case(glob.as_ref(), Some(crate::CommandStatus::Pass));
+            .case(glob.as_ref(), Some(crate::CommandStatus::Success));
         self
     }
 

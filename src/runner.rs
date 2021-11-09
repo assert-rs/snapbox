@@ -246,7 +246,7 @@ impl Case {
     ) -> Result<Output, Output> {
         let status = output.spawn.exit.expect("bale out before now");
         match expected {
-            crate::CommandStatus::Pass => {
+            crate::CommandStatus::Success => {
                 if !status.success() {
                     output.spawn.status = SpawnStatus::Expected("success".into());
                 }

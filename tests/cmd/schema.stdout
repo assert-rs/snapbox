@@ -193,7 +193,7 @@
         {
           "type": "string",
           "enum": [
-            "pass",
+            "success",
             "fail",
             "interrupted",
             "skip"
