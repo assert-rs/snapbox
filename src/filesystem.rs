@@ -1,3 +1,92 @@
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum File {
+    Binary(Vec<u8>),
+    Text(String),
+}
+
+impl File {
+    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, std::io::Error> {
+        let data = if binary {
+            let data = std::fs::read(&path)?;
+            Self::Binary(data)
+        } else {
+            let data = std::fs::read_to_string(&path)?;
+            let data = normalize_line_endings::normalized(data.chars()).collect();
+            Self::Text(data)
+        };
+        Ok(data)
+    }
+
+    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), std::io::Error> {
+        std::fs::write(path, self.as_bytes())
+    }
+
+    pub(crate) fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
+        match self {
+            Self::Binary(data) => Self::Binary(data),
+            Self::Text(data) => Self::Text(op(&data)),
+        }
+    }
+
+    pub(crate) fn is_binary(&self) -> bool {
+        match self {
+            Self::Binary(_) => true,
+            Self::Text(_) => false,
+        }
+    }
+
+    pub(crate) fn utf8(&mut self) -> Result<(), std::str::Utf8Error> {
+        match self {
+            Self::Binary(data) => {
+                let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
+                let data = normalize_line_endings::normalized(data.chars()).collect();
+                *self = Self::Text(data);
+                Ok(())
+            }
+            Self::Text(_) => Ok(()),
+        }
+    }
+
+    pub(crate) fn try_utf8(self) -> Self {
+        match self {
+            Self::Binary(data) => match String::from_utf8(data) {
+                Ok(data) => {
+                    let data = normalize_line_endings::normalized(data.chars()).collect();
+                    Self::Text(data)
+                }
+                Err(err) => {
+                    let data = err.into_bytes();
+                    Self::Binary(data)
+                }
+            },
+            Self::Text(data) => Self::Text(data),
+        }
+    }
+
+    pub(crate) fn as_bytes(&self) -> &[u8] {
+        match self {
+            Self::Binary(data) => data,
+            Self::Text(data) => data.as_bytes(),
+        }
+    }
+
+    pub(crate) fn into_bytes(self) -> Vec<u8> {
+        match self {
+            Self::Binary(data) => data,
+            Self::Text(data) => data.into_bytes(),
+        }
+    }
+}
+
+impl std::fmt::Display for File {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
+            Self::Text(data) => data.fmt(f),
+        }
+    }
+}
+
 pub(crate) enum FilesystemContext {
     Default,
     Path(std::path::PathBuf),

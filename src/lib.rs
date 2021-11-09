@@ -152,7 +152,7 @@ pub use error::Error;
 
 pub(crate) use color::Palette;
 pub(crate) use command::wait_with_input_output;
-pub(crate) use filesystem::{shallow_copy, FilesystemContext, Iterate as FsIterate};
+pub(crate) use filesystem::{shallow_copy, File, FilesystemContext, Iterate as FsIterate};
 pub(crate) use registry::BinRegistry;
 pub(crate) use runner::{Case, Mode, Runner};
 pub(crate) use spec::RunnerSpec;
