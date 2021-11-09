@@ -48,6 +48,10 @@
         }
       ]
     },
+    "stderr-to-stdout": {
+      "default": false,
+      "type": "boolean"
+    },
     "status": {
       "anyOf": [
         {

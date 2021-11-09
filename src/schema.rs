@@ -3,6 +3,7 @@
 //! [`TryCmd`] is the top-level item in the `cmd.toml` files.
 
 use std::collections::BTreeMap;
+use std::io::prelude::*;
 
 /// Top-level data in `cmd.toml` files
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
@@ -15,6 +16,8 @@ pub struct TryCmd {
     pub(crate) fs: Filesystem,
     #[serde(default)]
     pub(crate) env: Env,
+    #[serde(default)]
+    pub(crate) stderr_to_stdout: bool,
     pub(crate) status: Option<CommandStatus>,
     #[serde(default)]
     pub(crate) binary: bool,
@@ -110,11 +113,35 @@ impl TryCmd {
         cwd: Option<&std::path::Path>,
     ) -> Result<std::process::Output, String> {
         let mut cmd = self.to_command(cwd)?;
-        cmd.stdin(std::process::Stdio::piped());
-        cmd.stdout(std::process::Stdio::piped());
-        cmd.stderr(std::process::Stdio::piped());
-        let child = cmd.spawn().map_err(|e| e.to_string())?;
-        crate::wait_with_input_output(child, stdin, self.timeout).map_err(|e| e.to_string())
+
+        if self.stderr_to_stdout {
+            cmd.stdin(std::process::Stdio::piped());
+            let (mut reader, writer) = os_pipe::pipe().map_err(|e| e.to_string())?;
+            let writer_clone = writer.try_clone().map_err(|e| e.to_string())?;
+            cmd.stdout(writer);
+            cmd.stderr(writer_clone);
+            let child = cmd.spawn().map_err(|e| e.to_string())?;
+
+            // Avoid a deadlock! This parent process is still holding open pipe
+            // writers (inside the Command object), and we have to close those
+            // before we read. Here we do this by dropping the Command object.
+            drop(cmd);
+
+            let mut output = crate::wait_with_input_output(child, stdin, self.timeout)
+                .map_err(|e| e.to_string())?;
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+            reader
+                .read_to_end(&mut output.stdout)
+                .map_err(|e| e.to_string())?;
+            Ok(output)
+        } else {
+            cmd.stdin(std::process::Stdio::piped());
+            cmd.stdout(std::process::Stdio::piped());
+            cmd.stderr(std::process::Stdio::piped());
+            let child = cmd.spawn().map_err(|e| e.to_string())?;
+            crate::wait_with_input_output(child, stdin, self.timeout).map_err(|e| e.to_string())
+        }
     }
 
     pub(crate) fn status(&self) -> CommandStatus {

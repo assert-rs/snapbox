@@ -115,6 +115,9 @@
 //! ```
 //! To filter the tests to those with `name1`, `name2`, etc in their file names.
 
+// Doesn't distinguish between incidental sharing vs essential sharing
+#![allow(clippy::branches_sharing_code)]
+
 pub mod cargo;
 pub mod schema;
 
