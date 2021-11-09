@@ -56,25 +56,17 @@ impl RunnerSpec {
                         for path in paths {
                             match path {
                                 Ok(path) => {
-                                    if let Some(name) = get_name(&path) {
-                                        cases.insert(
-                                            path.clone(),
-                                            crate::Case {
-                                                name: name.to_owned(),
-                                                path,
-                                                expected: spec.expected,
-                                                default_bin: self.default_bin.clone(),
-                                                timeout: self.timeout,
-                                                env: self.env.clone(),
-                                                error: None,
-                                            },
-                                        );
-                                    } else {
-                                        cases.insert(
-                                            path.clone(),
-                                            crate::Case::with_error(path, "path has no name"),
-                                        );
-                                    }
+                                    cases.insert(
+                                        path.clone(),
+                                        crate::Case {
+                                            path,
+                                            expected: spec.expected,
+                                            default_bin: self.default_bin.clone(),
+                                            timeout: self.timeout,
+                                            env: self.env.clone(),
+                                            error: None,
+                                        },
+                                    );
                                 }
                                 Err(err) => {
                                     let path = err.path().to_owned();
@@ -91,12 +83,11 @@ impl RunnerSpec {
                         );
                     }
                 }
-            } else if let Some(name) = get_name(&spec.glob) {
+            } else {
                 let path = spec.glob.as_path();
                 cases.insert(
                     path.into(),
                     crate::Case {
-                        name: name.into(),
                         path: path.into(),
                         expected: spec.expected,
                         default_bin: self.default_bin.clone(),
@@ -104,11 +95,6 @@ impl RunnerSpec {
                         env: self.env.clone(),
                         error: None,
                     },
-                );
-            } else {
-                cases.insert(
-                    spec.glob.clone(),
-                    crate::Case::with_error(spec.glob.clone(), "path has no name"),
                 );
             }
         }
@@ -153,8 +139,4 @@ fn get_glob(path: &std::path::Path) -> Option<&str> {
     }
 
     None
-}
-
-fn get_name(path: &std::path::Path) -> Option<&str> {
-    path.file_name().and_then(|os| os.to_str())
 }
