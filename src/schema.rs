@@ -153,16 +153,14 @@ impl TryCmd {
     }
 
     fn parse_trycmd(s: &str) -> Result<Self, String> {
-        let mut cmdline = String::new();
+        let mut cmdline = Vec::new();
         let mut status = Some(CommandStatus::Success);
         for line in s.lines() {
             if let Some(raw) = line.strip_prefix("$ ") {
                 cmdline.clear();
-                cmdline.push_str(raw.trim());
-                cmdline.push(' ');
+                cmdline.extend(shlex::Shlex::new(raw.trim()));
             } else if let Some(raw) = line.strip_prefix("> ") {
-                cmdline.push_str(raw.trim());
-                cmdline.push(' ');
+                cmdline.extend(shlex::Shlex::new(raw.trim()));
             } else if let Some(raw) = line.strip_prefix("? ") {
                 status = Some(raw.trim().parse::<CommandStatus>()?);
             } else {
@@ -172,18 +170,18 @@ impl TryCmd {
 
         let mut env = Env::default();
 
-        let mut iter = shlex::Shlex::new(cmdline.trim());
         let bin = loop {
-            let next = iter
-                .next()
-                .ok_or_else(|| String::from("No bin specified"))?;
+            if cmdline.is_empty() {
+                return Err(String::from("No bin specified"));
+            }
+            let next = cmdline.remove(0);
             if let Some((key, value)) = next.split_once('=') {
                 env.add.insert(key.to_owned(), value.to_owned());
             } else {
                 break next;
             }
         };
-        let args = Args::Split(iter.collect());
+        let args = Args::Split(cmdline);
         Ok(Self {
             bin: Some(Bin::Name(bin)),
             args: Some(args),
