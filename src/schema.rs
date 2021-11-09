@@ -154,6 +154,7 @@ impl TryCmd {
 
     fn parse_trycmd(s: &str) -> Result<Self, String> {
         let mut cmdline = String::new();
+        let mut status = None;
         for line in s.lines() {
             if let Some(raw) = line.strip_prefix("$ ") {
                 cmdline.clear();
@@ -162,6 +163,8 @@ impl TryCmd {
             } else if let Some(raw) = line.strip_prefix("> ") {
                 cmdline.push_str(raw.trim());
                 cmdline.push(' ');
+            } else if let Some(raw) = line.strip_prefix("? ") {
+                status = Some(raw.trim().parse::<CommandStatus>()?);
             } else {
                 return Err(format!("Invalid line: `{}`", line));
             }
@@ -185,6 +188,7 @@ impl TryCmd {
             bin: Some(Bin::Name(bin)),
             args: Some(args),
             env,
+            status,
             ..Default::default()
         })
     }
@@ -403,6 +407,23 @@ impl Default for CommandStatus {
     }
 }
 
+impl std::str::FromStr for CommandStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "success" => Ok(Self::Success),
+            "failed" => Ok(Self::Failed),
+            "interrupted" => Ok(Self::Interrupted),
+            "skipped" => Ok(Self::Skipped),
+            _ => s
+                .parse::<i32>()
+                .map(Self::Code)
+                .map_err(|_| format!("Expected an exit code, got {}", s)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -456,6 +477,30 @@ mod test {
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_status() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            args: Some(Args::default()),
+            status: Some(CommandStatus::Skipped),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("$ cmd\n? skipped").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_status_code() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            args: Some(Args::default()),
+            status: Some(CommandStatus::Code(-1)),
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("$ cmd\n? -1").unwrap();
         assert_eq!(expected, actual);
     }
 

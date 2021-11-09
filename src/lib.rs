@@ -52,6 +52,9 @@
 //! The basic syntax is:
 //! - "`$ `" line prefix starts a new command
 //! - "`> `" line prefix appends to the prior command
+//! - "`? <status>`" line indicates the exit code (like `echo "? $?"`) and `<status>` can be
+//!   - An exit code
+//!   - `success`, `failed`, `interrupted`, `skipped`
 //!
 //! The command is then split with [shlex](https://crates.io/crates/shlex), allowing quoted content
 //! to allow spaces.  The first argument is the program to run which maps to `bin.name` in the
