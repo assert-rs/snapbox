@@ -126,14 +126,24 @@ impl TryCmd {
     }
 
     fn parse_trycmd(s: &str) -> Result<Self, String> {
+        let mut env = Env::default();
+
         let mut iter = shlex::Shlex::new(s.trim());
-        let bin = iter
-            .next()
-            .ok_or_else(|| String::from("No bin specified"))?;
+        let bin = loop {
+            let next = iter
+                .next()
+                .ok_or_else(|| String::from("No bin specified"))?;
+            if let Some((key, value)) = next.split_once('=') {
+                env.add.insert(key.to_owned(), value.to_owned());
+            } else {
+                break next;
+            }
+        };
         let args = Args::Split(iter.collect());
         Ok(Self {
             bin: Some(Bin::Name(bin)),
             args: Some(args),
+            env,
             ..Default::default()
         })
     }
@@ -375,6 +385,25 @@ mod test {
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("cmd arg1 'arg with space'").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_env() {
+        let expected = TryCmd {
+            bin: Some(Bin::Name("cmd".into())),
+            args: Some(Args::default()),
+            env: Env {
+                add: IntoIterator::into_iter([
+                    ("KEY1".into(), "VALUE1".into()),
+                    ("KEY2".into(), "VALUE2 with space".into()),
+                ])
+                .collect(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
         assert_eq!(expected, actual);
     }
 
