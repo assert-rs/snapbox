@@ -148,13 +148,7 @@ impl Case {
         let stdin = if stdin_path.exists() {
             Some(
                 crate::File::read_from(&stdin_path, sequence.run.binary)
-                    .map_err(|e| {
-                        output.clone().error(format!(
-                            "Failed to read {}: {}",
-                            stdin_path.display(),
-                            e
-                        ))
-                    })?
+                    .map_err(|e| output.clone().error(e))?
                     .into_bytes(),
             )
         } else {
@@ -291,11 +285,7 @@ impl Case {
             );
             stream.content.write_to(&stdout_path).map_err(|e| {
                 let mut stream = stream.clone();
-                stream.status = StreamStatus::Failure(format!(
-                    "Failed to read {}: {}",
-                    stdout_path.display(),
-                    e
-                ));
+                stream.status = StreamStatus::Failure(e);
                 stream
             })?;
         } else {
@@ -305,11 +295,7 @@ impl Case {
                     crate::File::read_from(&stdout_path, stream.content.is_binary()).map_err(
                         |e| {
                             let mut stream = stream.clone();
-                            stream.status = StreamStatus::Failure(format!(
-                                "Failed to read {}: {}",
-                                stdout_path.display(),
-                                e
-                            ));
+                            stream.status = StreamStatus::Failure(e);
                             stream
                         },
                     )?;
@@ -326,11 +312,7 @@ impl Case {
                         Mode::Overwrite => {
                             stream.content.write_to(&stdout_path).map_err(|e| {
                                 let mut stream = stream.clone();
-                                stream.status = StreamStatus::Failure(format!(
-                                    "Failed to write {}: {}",
-                                    stdout_path.display(),
-                                    e
-                                ));
+                                stream.status = StreamStatus::Failure(e);
                                 stream
                             })?;
                             stream.status = StreamStatus::Expected(expected_content);
@@ -483,22 +465,10 @@ impl Case {
             }
             FileType::File => {
                 let expected_content = crate::File::read_from(&expected_path, true)
-                    .map_err(|e| {
-                        FileStatus::Failure(format!(
-                            "Failed to read {}: {}",
-                            expected_path.display(),
-                            e
-                        ))
-                    })?
+                    .map_err(|e| FileStatus::Failure(e))?
                     .try_utf8();
                 let mut actual_content = crate::File::read_from(&actual_path, true)
-                    .map_err(|e| {
-                        FileStatus::Failure(format!(
-                            "Failed to read {}: {}",
-                            actual_path.display(),
-                            e
-                        ))
-                    })?
+                    .map_err(|e| FileStatus::Failure(e))?
                     .try_utf8();
 
                 if let crate::File::Text(e) = &expected_content {

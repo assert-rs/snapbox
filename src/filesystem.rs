@@ -5,20 +5,23 @@ pub(crate) enum File {
 }
 
 impl File {
-    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, std::io::Error> {
+    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, String> {
         let data = if binary {
-            let data = std::fs::read(&path)?;
+            let data = std::fs::read(&path)
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             Self::Binary(data)
         } else {
-            let data = std::fs::read_to_string(&path)?;
+            let data = std::fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             let data = normalize_line_endings::normalized(data.chars()).collect();
             Self::Text(data)
         };
         Ok(data)
     }
 
-    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), std::io::Error> {
+    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), String> {
         std::fs::write(path, self.as_bytes())
+            .map_err(|e| format!("Failed to write {}: {}", path.display(), e))
     }
 
     pub(crate) fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
