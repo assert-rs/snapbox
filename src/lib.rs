@@ -47,9 +47,18 @@
 //!
 //! #### `*.trycmd`
 //!
-//! A `trycmd` file is just a command with arguments, with the arguments split with [shlex](https://crates.io/crates/shlex).
+//! `.trycmd` files provide a more visually familiar way of specifying test cases.
 //!
-//! The command is interpreted as `bin.name` in a `toml` file.
+//! The basic syntax is:
+//! - "`$ `" line prefix starts a new command
+//! - "`> `" line prefix appends to the prior command
+//! - "`? <status>`" line indicates the exit code (like `echo "? $?"`) and `<status>` can be
+//!   - An exit code
+//!   - `success` *(default)*, `failed`, `interrupted`, `skipped`
+//!
+//! The command is then split with [shlex](https://crates.io/crates/shlex), allowing quoted content
+//! to allow spaces.  The first argument is the program to run which maps to `bin.name` in the
+//! `.toml` file.
 //!
 //! #### `*.toml`
 //!

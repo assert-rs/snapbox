@@ -1,5 +1,5 @@
 bin.name = "bin-fixture"
-status = "fail"
+status = "failed"
 
 [env.add]
 exit = "1"
