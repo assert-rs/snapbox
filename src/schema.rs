@@ -1,6 +1,6 @@
 //! `cmd.toml` Schema
 //!
-//! [`Run`] is the top-level item in the `cmd.toml` files.
+//! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
