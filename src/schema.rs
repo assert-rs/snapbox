@@ -3,6 +3,7 @@
 //! [`Run`] is the top-level item in the `cmd.toml` files.
 
 use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::io::prelude::*;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
@@ -83,17 +84,32 @@ impl TryCmd {
     fn parse_trycmd(s: &str) -> Result<Self, String> {
         let mut cmdline = Vec::new();
         let mut status = Some(CommandStatus::Success);
-        for line in s.lines() {
+
+        let mut lines: VecDeque<_> = s.lines().collect();
+        if let Some(line) = lines.pop_front() {
             if let Some(raw) = line.strip_prefix("$ ") {
-                cmdline.clear();
                 cmdline.extend(shlex::Shlex::new(raw.trim()));
-            } else if let Some(raw) = line.strip_prefix("> ") {
+            } else {
+                return Err(format!("Expected `$` line, got `{}`", line));
+            }
+        }
+        while let Some(line) = lines.pop_front() {
+            if let Some(raw) = line.strip_prefix("> ") {
                 cmdline.extend(shlex::Shlex::new(raw.trim()));
-            } else if let Some(raw) = line.strip_prefix("? ") {
+            } else {
+                lines.push_front(line);
+                break;
+            }
+        }
+        if let Some(line) = lines.pop_front() {
+            if let Some(raw) = line.strip_prefix("? ") {
                 status = Some(raw.trim().parse::<CommandStatus>()?);
             } else {
-                return Err(format!("Invalid line: `{}`", line));
+                lines.push_front(line);
             }
+        }
+        if let Some(line) = lines.pop_front() {
+            return Err(format!("Unexpected line `{}`", line));
         }
 
         let mut env = Env::default();
