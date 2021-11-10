@@ -146,6 +146,12 @@ impl Case {
             }
         };
 
+        if sequence.steps.is_empty() {
+            let output = Output::sequence(self.path.clone());
+            assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+            return vec![Ok(output)];
+        }
+
         let fs_context = match crate::FilesystemContext::new(
             &self.path,
             sequence.fs.base.as_deref(),
