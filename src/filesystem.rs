@@ -31,13 +31,6 @@ impl File {
         }
     }
 
-    pub(crate) fn is_binary(&self) -> bool {
-        match self {
-            Self::Binary(_) => true,
-            Self::Text(_) => false,
-        }
-    }
-
     pub(crate) fn utf8(&mut self) -> Result<(), std::str::Utf8Error> {
         match self {
             Self::Binary(data) => {

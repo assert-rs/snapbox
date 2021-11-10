@@ -18,6 +18,7 @@ impl TryCmd {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
                 let one_shot = OneShot::parse_toml(&raw)?;
                 let mut sequence: Self = one_shot.into();
+
                 let stdin_path = path.with_extension("stdin");
                 let stdin = if stdin_path.exists() {
                     Some(crate::File::read_from(&stdin_path, sequence.run.binary)?)
@@ -25,6 +26,23 @@ impl TryCmd {
                     None
                 };
                 sequence.run.stdin = stdin;
+
+                let stdout_path = path.with_extension("stdout");
+                let stdout = if stdout_path.exists() {
+                    Some(crate::File::read_from(&stdout_path, sequence.run.binary)?)
+                } else {
+                    None
+                };
+                sequence.run.expected_stdout = stdout;
+
+                let stderr_path = path.with_extension("stderr");
+                let stderr = if stderr_path.exists() {
+                    Some(crate::File::read_from(&stderr_path, sequence.run.binary)?)
+                } else {
+                    None
+                };
+                sequence.run.expected_stderr = stderr;
+
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
@@ -133,6 +151,8 @@ impl From<OneShot> for TryCmd {
                 stdin: None,
                 stderr_to_stdout,
                 status,
+                expected_stdout: None,
+                expected_stderr: None,
                 binary,
                 timeout,
             },
@@ -149,6 +169,8 @@ pub(crate) struct Run {
     pub(crate) stdin: Option<crate::File>,
     pub(crate) stderr_to_stdout: bool,
     pub(crate) status: Option<CommandStatus>,
+    pub(crate) expected_stdout: Option<crate::File>,
+    pub(crate) expected_stderr: Option<crate::File>,
     pub(crate) binary: bool,
     pub(crate) timeout: Option<std::time::Duration>,
 }

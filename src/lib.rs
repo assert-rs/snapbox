@@ -1,4 +1,4 @@
-//! ## Snapshot testing for a herd of CLI tests
+//! # Snapshot testing for a herd of CLI tests
 //!
 //! `trycmd` is a test harness that will enumerate test case files and run them to verify the
 //! results, taking inspiration from
@@ -13,7 +13,7 @@
 //!     with [mdbook](https://rust-lang.github.io/mdBook/)
 //! - [cram](https://bitheap.org/cram/): For cases agnostic of any programming language
 //!
-//! ### Getting Started
+//! ## Getting Started
 //!
 //! To create a minimal setup, create a `tests/cli_tests.rs` with
 //! ```rust,no_run
@@ -38,14 +38,42 @@
 //! }
 //! ```
 //!
-//! ### File Formats
+//! ## Workflow
 //!
-//! Say you have `tests/cmd/help.trycmd` (or `help.toml`), `trycmd` will look for:
+//! To generate snapshots, run
+//! ```bash
+//! $ TRYCMD=dump cargo test --test cli_tests
+//! ```
+//! This will write all of the `.stdout` and `.stderr` files in a `dump/` directory.
+//!
+//! You can then copy over to `tests/cmd` the cases you want to test
+//!
+//! To update snapshots, run
+//! ```bash
+//! $ TRYCMD=overwrite cargo test --test cli_tests
+//! ```
+//! This will overwrite any existing `.stdout` and `.stderr` file in `tests/cmd`
+//!
+//! When iterating on a test, you can run:
+//! ```bash
+//! cargo test --test cli_tests -- cli_tests trycmd=name1 trycmd=name2...
+//! ```
+//! To filter the tests to those with `name1`, `name2`, etc in their file names.
+//!
+//! ## File Formats
+//!
+//! Say you have `tests/cmd/help.trycmd`, `trycmd` will look for:
+//! - `tests/cmd/help.in/
+//! - `tests/cmd/help.out/
+//!
+//! For `tests/cmd/help.toml`, `trycmd` will look for:
 //! - `tests/cmd/help.stdin`
 //! - `tests/cmd/help.stdout`
 //! - `tests/cmd/help.stderr`
+//! - `tests/cmd/help.in/
+//! - `tests/cmd/help.out/
 //!
-//! #### `*.trycmd`
+//! ### `*.trycmd`
 //!
 //! `.trycmd` files provide a more visually familiar way of specifying test cases.
 //!
@@ -60,7 +88,7 @@
 //! to allow spaces.  The first argument is the program to run which maps to `bin.name` in the
 //! `.toml` file.
 //!
-//! #### `*.toml`
+//! ### `*.toml`
 //!
 //! As an alternative to `.trycmd`, he `toml` files give you a lot more control over how your command runs.
 //!
@@ -92,41 +120,19 @@
 //! We will preserve these with `TRYCMD=dump` and will make a best-effort at preserving them with
 //! `TRYCMD=overwrite`.
 //!
-//! #### `*.in/`
+//! ### `*.in/`
 //!
 //! When present, this will automatically be picked as the CWD for the command.
 //!
 //! `.keep` files will be ignored but their parent directories will be created.
 //!
-//! #### `*.out/`
+//! ### `*.out/`
 //!
 //! When present, each file in this directory will be compared to generated or modified files.
 //!
 //! See also "Eliding Content" for `.stdout`
 //!
 //! `.keep` files will be ignored.
-//!
-//! ### Workflow
-//!
-//! To generate snapshots, run
-//! ```bash
-//! $ TRYCMD=dump cargo test --test cli_tests
-//! ```
-//! This will write all of the `.stdout` and `.stderr` files in a `dump/` directory.
-//!
-//! You can then copy over to `tests/cmd` the cases you want to test
-//!
-//! To update snapshots, run
-//! ```bash
-//! $ TRYCMD=overwrite cargo test --test cli_tests
-//! ```
-//! This will overwrite any existing `.stdout` and `.stderr` file in `tests/cmd`
-//!
-//! When iterating on a test, you can run:
-//! ```bash
-//! cargo test --test cli_tests -- cli_tests trycmd=name1 trycmd=name2...
-//! ```
-//! To filter the tests to those with `name1`, `name2`, etc in their file names.
 
 // Doesn't distinguish between incidental sharing vs essential sharing
 #![allow(clippy::branches_sharing_code)]

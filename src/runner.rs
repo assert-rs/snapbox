@@ -181,13 +181,15 @@ impl Case {
                 stdout = stdout.utf8();
             }
             if stdout.is_ok() {
-                stdout = match self.validate_stream(stdout, mode) {
-                    Ok(stdout) => stdout,
-                    Err(stdout) => {
-                        ok = false;
-                        stdout
-                    }
-                };
+                stdout =
+                    match self.validate_stream(stdout, sequence.run.expected_stdout.as_ref(), mode)
+                    {
+                        Ok(stdout) => stdout,
+                        Err(stdout) => {
+                            ok = false;
+                            stdout
+                        }
+                    };
             }
             output.stdout = Some(stdout);
         }
@@ -196,13 +198,15 @@ impl Case {
                 stderr = stderr.utf8();
             }
             if stderr.is_ok() {
-                stderr = match self.validate_stream(stderr, mode) {
-                    Ok(stderr) => stderr,
-                    Err(stderr) => {
-                        ok = false;
-                        stderr
-                    }
-                };
+                stderr =
+                    match self.validate_stream(stderr, sequence.run.expected_stderr.as_ref(), mode)
+                    {
+                        Ok(stderr) => stderr,
+                        Err(stderr) => {
+                            ok = false;
+                            stderr
+                        }
+                    };
             }
             output.stderr = Some(stderr);
         }
@@ -264,7 +268,12 @@ impl Case {
         Ok(output)
     }
 
-    fn validate_stream(&self, mut stream: Stream, mode: &Mode) -> Result<Stream, Stream> {
+    fn validate_stream(
+        &self,
+        mut stream: Stream,
+        expected_content: Option<&crate::File>,
+        mode: &Mode,
+    ) -> Result<Stream, Stream> {
         if let Mode::Dump(root) = mode {
             let stdout_path = root.join(
                 self.path
@@ -278,33 +287,24 @@ impl Case {
                 stream
             })?;
         } else {
-            let stdout_path = self.path.with_extension(stream.stream.as_str());
-            if stdout_path.exists() {
-                let expected_content =
-                    crate::File::read_from(&stdout_path, stream.content.is_binary()).map_err(
-                        |e| {
-                            let mut stream = stream.clone();
-                            stream.status = StreamStatus::Failure(e);
-                            stream
-                        },
-                    )?;
-
+            if let Some(expected_content) = expected_content {
                 if let crate::File::Text(e) = &expected_content {
                     stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
                 }
-                if stream.content != expected_content {
+                if stream.content != *expected_content {
                     match mode {
                         Mode::Fail => {
-                            stream.status = StreamStatus::Expected(expected_content);
+                            stream.status = StreamStatus::Expected(expected_content.clone());
                             return Err(stream);
                         }
                         Mode::Overwrite => {
+                            let stdout_path = self.path.with_extension(stream.stream.as_str());
                             stream.content.write_to(&stdout_path).map_err(|e| {
                                 let mut stream = stream.clone();
                                 stream.status = StreamStatus::Failure(e);
                                 stream
                             })?;
-                            stream.status = StreamStatus::Expected(expected_content);
+                            stream.status = StreamStatus::Expected(expected_content.clone());
                             return Ok(stream);
                         }
                         Mode::Dump(_) => unreachable!("handled earlier"),
