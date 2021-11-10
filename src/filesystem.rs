@@ -59,6 +59,17 @@ impl File {
         }
     }
 
+    pub(crate) fn into_utf8(self) -> Result<String, std::str::Utf8Error> {
+        match self {
+            Self::Binary(data) => {
+                let data = String::from_utf8(data).map_err(|e| e.utf8_error())?;
+                let data = normalize_line_endings::normalized(data.chars()).collect();
+                Ok(data)
+            }
+            Self::Text(data) => Ok(data),
+        }
+    }
+
     pub(crate) fn as_bytes(&self) -> &[u8] {
         match self {
             Self::Binary(data) => data,

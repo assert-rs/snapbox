@@ -46,7 +46,7 @@ impl TryCmd {
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") {
-                let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+                let raw = crate::File::read_from(path, false)?.into_utf8().unwrap();
                 Self::parse_trycmd(&raw)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
