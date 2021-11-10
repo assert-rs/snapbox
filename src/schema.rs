@@ -46,7 +46,7 @@ impl TryCmd {
                 sequence.steps[0].expected_stderr = stderr;
 
                 sequence
-            } else if ext == std::ffi::OsStr::new("trycmd") {
+            } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 let raw = crate::File::read_from(path, false)?.into_utf8().unwrap();
                 Self::parse_trycmd(&raw)?
             } else {
@@ -188,10 +188,6 @@ impl TryCmd {
                     break 'code;
                 }
             }
-        }
-
-        if steps.is_empty() {
-            return Err("No runs in trycmd file".into());
         }
 
         Ok(Self {
