@@ -286,29 +286,27 @@ impl Case {
                 stream.status = StreamStatus::Failure(e);
                 stream
             })?;
-        } else {
-            if let Some(expected_content) = expected_content {
-                if let crate::File::Text(e) = &expected_content {
-                    stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
-                }
-                if stream.content != *expected_content {
-                    match mode {
-                        Mode::Fail => {
-                            stream.status = StreamStatus::Expected(expected_content.clone());
-                            return Err(stream);
-                        }
-                        Mode::Overwrite => {
-                            let stdout_path = self.path.with_extension(stream.stream.as_str());
-                            stream.content.write_to(&stdout_path).map_err(|e| {
-                                let mut stream = stream.clone();
-                                stream.status = StreamStatus::Failure(e);
-                                stream
-                            })?;
-                            stream.status = StreamStatus::Expected(expected_content.clone());
-                            return Ok(stream);
-                        }
-                        Mode::Dump(_) => unreachable!("handled earlier"),
+        } else if let Some(expected_content) = expected_content {
+            if let crate::File::Text(e) = &expected_content {
+                stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+            }
+            if stream.content != *expected_content {
+                match mode {
+                    Mode::Fail => {
+                        stream.status = StreamStatus::Expected(expected_content.clone());
+                        return Err(stream);
                     }
+                    Mode::Overwrite => {
+                        let stdout_path = self.path.with_extension(stream.stream.as_str());
+                        stream.content.write_to(&stdout_path).map_err(|e| {
+                            let mut stream = stream.clone();
+                            stream.status = StreamStatus::Failure(e);
+                            stream
+                        })?;
+                        stream.status = StreamStatus::Expected(expected_content.clone());
+                        return Ok(stream);
+                    }
+                    Mode::Dump(_) => unreachable!("handled earlier"),
                 }
             }
         }
@@ -454,10 +452,10 @@ impl Case {
             }
             FileType::File => {
                 let expected_content = crate::File::read_from(&expected_path, true)
-                    .map_err(|e| FileStatus::Failure(e))?
+                    .map_err(FileStatus::Failure)?
                     .try_utf8();
                 let mut actual_content = crate::File::read_from(&actual_path, true)
-                    .map_err(|e| FileStatus::Failure(e))?
+                    .map_err(FileStatus::Failure)?
                     .try_utf8();
 
                 if let crate::File::Text(e) = &expected_content {

@@ -47,8 +47,7 @@ impl TryCmd {
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-                let sequence = Self::parse_trycmd(&raw)?;
-                sequence
+                Self::parse_trycmd(&raw)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
             }
@@ -175,7 +174,7 @@ impl From<OneShot> for TryCmd {
                 binary,
                 timeout,
             },
-            fs: fs,
+            fs,
         }
     }
 }
