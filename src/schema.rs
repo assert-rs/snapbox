@@ -84,8 +84,9 @@ impl TryCmd {
     fn parse_trycmd(s: &str) -> Result<Self, String> {
         let mut cmdline = Vec::new();
         let mut status = Some(CommandStatus::Success);
+        let mut stdout = String::new();
 
-        let mut lines: VecDeque<_> = s.lines().collect();
+        let mut lines: VecDeque<_> = crate::lines::LinesWithTerminator::new(s).collect();
         if let Some(line) = lines.pop_front() {
             if let Some(raw) = line.strip_prefix("$ ") {
                 cmdline.extend(shlex::Shlex::new(raw.trim()));
@@ -108,8 +109,8 @@ impl TryCmd {
                 lines.push_front(line);
             }
         }
-        if let Some(line) = lines.pop_front() {
-            return Err(format!("Unexpected line `{}`", line));
+        if !lines.is_empty() {
+            stdout.extend(lines);
         }
 
         let mut env = Env::default();
@@ -130,6 +131,8 @@ impl TryCmd {
             args: cmdline,
             env,
             status,
+            stderr_to_stdout: true,
+            expected_stdout: Some(crate::File::Text(stdout)),
             ..Default::default()
         };
         Ok(Self {
@@ -544,6 +547,9 @@ mod test {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
                 status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
             ..Default::default()
@@ -559,6 +565,9 @@ mod test {
                 bin: Some(Bin::Name("cmd".into())),
                 args: vec!["arg1".into(), "arg with space".into()],
                 status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
             ..Default::default()
@@ -574,6 +583,9 @@ mod test {
                 bin: Some(Bin::Name("cmd".into())),
                 args: vec!["arg1".into(), "arg with space".into()],
                 status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
             ..Default::default()
@@ -596,6 +608,9 @@ mod test {
                     ..Default::default()
                 },
                 status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
             ..Default::default()
@@ -610,6 +625,9 @@ mod test {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
                 status: Some(CommandStatus::Skipped),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
             ..Default::default()
@@ -624,11 +642,31 @@ mod test {
             run: Run {
                 bin: Some(Bin::Name("cmd".into())),
                 status: Some(CommandStatus::Code(-1)),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd\n? -1").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_stdout() {
+        let expected = TryCmd {
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("Hello World".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("$ cmd\nHello World").unwrap();
         assert_eq!(expected, actual);
     }
 

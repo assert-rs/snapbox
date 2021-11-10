@@ -83,6 +83,7 @@
 //! - "`? <status>`" line indicates the exit code (like `echo "? $?"`) and `<status>` can be
 //!   - An exit code
 //!   - `success` *(default)*, `failed`, `interrupted`, `skipped`
+//!  - All following lines are treated as stdout + stderr
 //!
 //! The command is then split with [shlex](https://crates.io/crates/shlex), allowing quoted content
 //! to allow spaces.  The first argument is the program to run which maps to `bin.name` in the
