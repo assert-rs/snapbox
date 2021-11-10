@@ -63,21 +63,29 @@
 //! ## File Formats
 //!
 //! Say you have `tests/cmd/help.trycmd`, `trycmd` will look for:
-//! - `tests/cmd/help.in/
-//! - `tests/cmd/help.out/
+//! - `tests/cmd/help.in/`
+//! - `tests/cmd/help.out/`
 //!
 //! For `tests/cmd/help.toml`, `trycmd` will look for:
 //! - `tests/cmd/help.stdin`
 //! - `tests/cmd/help.stdout`
 //! - `tests/cmd/help.stderr`
-//! - `tests/cmd/help.in/
-//! - `tests/cmd/help.out/
+//! - `tests/cmd/help.in/`
+//! - `tests/cmd/help.out/`
 //!
 //! ### `*.trycmd`
 //!
-//! `.trycmd` files provide a more visually familiar way of specifying test cases.
+//! `*.trycmd` files are literate test cases good for:
+//! - Markdown-compatible syntax for directly rendering them
+//! - Terminal-like appearance for extracting subsections into documentation
+//! - Reducing the proliferation of files
+//! - Running multiple commands within the same temp dir
 //!
-//! The basic syntax is:
+//! The syntax is:
+//! - Test cases live inside of ` ``` ` fenced code blocks
+//!   - Everything out of them is ignored
+//!   - Blocks with info strings with an unsupported language (not `trycmd`, `bash`, `sh`) or the
+//!     `ignore` attribute are ignored
 //! - "`$ `" line prefix starts a new command
 //! - "`> `" line prefix appends to the prior command
 //! - "`? <status>`" line indicates the exit code (like `echo "? $?"`) and `<status>` can be
@@ -89,9 +97,26 @@
 //! to allow spaces.  The first argument is the program to run which maps to `bin.name` in the
 //! `.toml` file.
 //!
+//! Example:
+//! ~~~md
+//! With the following code:
+//! ```rust
+//! println!("{}", message);
+//! ```
+//!
+//! You get the following:
+//! ```
+//! $ my-cmd --print 'Hello World'
+//! Hello
+//! ```
+//! ~~~
+//!
 //! ### `*.toml`
 //!
-//! As an alternative to `.trycmd`, he `toml` files give you a lot more control over how your command runs.
+//! As an alternative to `.trycmd`, the `toml` are good for:
+//! - Precise control over current dir, stdin/stdout/stderr (including binary support)
+//! - 1-to-1 with dumped results
+//! - `TRYCMD=overwrite` support
 //!
 //! [schema](https://github.com/assert-rs/trycmd/blob/main/schema.json):
 //! - `bin.name`: The name of the binary target from `Cargo.toml` to be used to find the file path
@@ -108,15 +133,15 @@
 //! - If not present, we'll not verify the output
 //! - If `binary = false` in `*.toml` (the default), newlines will be normalized before comparing
 //!
-//! ##### Eliding Content
+//! **Eliding Content**
 //!
 //! Sometimes the output either includes:
 //! - Content that changes from run-to-run (like time)
 //! - Content out of scope of your tests and you want to exclude it to reduce brittleness
 //!
 //! To elide a section of content:
-//! - `...` as its own line will match all lines until the next one.  This is equivalent of
-//!   `(([^\n]*\n)*?`.
+//! - `...` as its own line: match all lines until the next one.  This is equivalent of
+//!   `\n(([^\n]*\n)*?`.
 //!
 //! We will preserve these with `TRYCMD=dump` and will make a best-effort at preserving them with
 //! `TRYCMD=overwrite`.
@@ -141,15 +166,16 @@
 pub mod cargo;
 pub mod schema;
 
-mod cases;
-mod color;
-mod command;
 #[cfg(feature = "diff")]
 pub(crate) mod diff;
 pub(crate) mod elide;
+pub(crate) mod lines;
+
+mod cases;
+mod color;
+mod command;
 mod error;
 mod filesystem;
-pub(crate) mod lines;
 mod registry;
 mod runner;
 mod spec;

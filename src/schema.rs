@@ -88,70 +88,106 @@ impl TryCmd {
             .enumerate()
             .map(|(i, l)| (i + 1, l))
             .collect();
-        loop {
-            let mut cmdline = Vec::new();
-            let mut expected_status = Some(CommandStatus::Success);
-            let mut stdout = String::new();
-            let id;
+        'outer: loop {
+            while let Some((_, line)) = lines.pop_front() {
+                if let Some(raw) = line.trim().strip_prefix("```") {
+                    if raw.is_empty() {
+                        // Assuming a trycmd block
+                        break;
+                    } else {
+                        let mut info = raw.split(',');
+                        let lang = info.next().unwrap();
+                        match lang {
+                            "trycmd" | "bash" | "sh" => {
+                                if !info.any(|i| i == "ignore") {
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
 
-            if let Some((line_num, line)) = lines.pop_front() {
-                if let Some(raw) = line.strip_prefix("$ ") {
-                    cmdline.extend(shlex::Shlex::new(raw.trim()));
-                    id = Some(line_num.to_string());
-                } else {
-                    return Err(format!("Expected `$` line, got `{}`", line));
-                }
-            } else {
-                break;
-            }
-            while let Some((line_num, line)) = lines.pop_front() {
-                if let Some(raw) = line.strip_prefix("> ") {
-                    cmdline.extend(shlex::Shlex::new(raw.trim()));
-                } else {
-                    lines.push_front((line_num, line));
-                    break;
-                }
-            }
-            if let Some((line_num, line)) = lines.pop_front() {
-                if let Some(raw) = line.strip_prefix("? ") {
-                    expected_status = Some(raw.trim().parse::<CommandStatus>()?);
-                } else {
-                    lines.push_front((line_num, line));
-                }
-            }
-            while let Some((line_num, line)) = lines.pop_front() {
-                if line.starts_with("$ ") {
-                    lines.push_front((line_num, line));
-                    break;
-                } else {
-                    stdout.push_str(line);
+                    // Irrelevant block, consume to end
+                    while let Some((_, line)) = lines.pop_front() {
+                        if line.starts_with("```") {
+                            continue 'outer;
+                        }
+                    }
                 }
             }
 
-            let mut env = Env::default();
+            'code: loop {
+                let mut cmdline = Vec::new();
+                let mut expected_status = Some(CommandStatus::Success);
+                let mut stdout = String::new();
+                let cmd_start;
 
-            let bin = loop {
-                if cmdline.is_empty() {
-                    return Err(String::from("No bin specified"));
-                }
-                let next = cmdline.remove(0);
-                if let Some((key, value)) = next.split_once('=') {
-                    env.add.insert(key.to_owned(), value.to_owned());
+                if let Some((line_num, line)) = lines.pop_front() {
+                    if let Some(raw) = line.strip_prefix("$ ") {
+                        cmdline.extend(shlex::Shlex::new(raw.trim()));
+                        cmd_start = line_num;
+                    } else {
+                        return Err(format!("Expected `$` on line {}, got `{}`", line_num, line));
+                    }
                 } else {
-                    break next;
+                    break 'outer;
                 }
-            };
-            let step = Step {
-                id,
-                bin: Some(Bin::Name(bin)),
-                args: cmdline,
-                env,
-                expected_status,
-                stderr_to_stdout: true,
-                expected_stdout: Some(crate::File::Text(stdout)),
-                ..Default::default()
-            };
-            steps.push(step);
+                while let Some((line_num, line)) = lines.pop_front() {
+                    if let Some(raw) = line.strip_prefix("> ") {
+                        cmdline.extend(shlex::Shlex::new(raw.trim()));
+                    } else {
+                        lines.push_front((line_num, line));
+                        break;
+                    }
+                }
+                if let Some((line_num, line)) = lines.pop_front() {
+                    if let Some(raw) = line.strip_prefix("? ") {
+                        expected_status = Some(raw.trim().parse::<CommandStatus>()?);
+                    } else {
+                        lines.push_front((line_num, line));
+                    }
+                }
+                let mut block_done = false;
+                while let Some((line_num, line)) = lines.pop_front() {
+                    if line.starts_with("$ ") {
+                        lines.push_front((line_num, line));
+                        break;
+                    } else if line.starts_with("```") {
+                        block_done = true;
+                        break;
+                    } else {
+                        stdout.push_str(line);
+                    }
+                }
+
+                let mut env = Env::default();
+
+                let bin = loop {
+                    if cmdline.is_empty() {
+                        return Err(format!("No bin specified on line {}", cmd_start));
+                    }
+                    let next = cmdline.remove(0);
+                    if let Some((key, value)) = next.split_once('=') {
+                        env.add.insert(key.to_owned(), value.to_owned());
+                    } else {
+                        break next;
+                    }
+                };
+                let step = Step {
+                    id: Some(cmd_start.to_string()),
+                    bin: Some(Bin::Name(bin)),
+                    args: cmdline,
+                    env,
+                    expected_status,
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text(stdout)),
+                    ..Default::default()
+                };
+                steps.push(step);
+                if block_done {
+                    break 'code;
+                }
+            }
         }
 
         if steps.is_empty() {
@@ -570,7 +606,7 @@ mod test {
     fn parse_trycmd_command() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
@@ -580,7 +616,14 @@ mod test {
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -588,7 +631,7 @@ mod test {
     fn parse_trycmd_command_line() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 args: vec!["arg1".into(), "arg with space".into()],
                 expected_status: Some(CommandStatus::Success),
@@ -599,7 +642,14 @@ mod test {
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd arg1 'arg with space'
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -607,7 +657,7 @@ mod test {
     fn parse_trycmd_multi_line() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 args: vec!["arg1".into(), "arg with space".into()],
                 expected_status: Some(CommandStatus::Success),
@@ -618,7 +668,15 @@ mod test {
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd arg1
+> 'arg with space'
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -626,7 +684,7 @@ mod test {
     fn parse_trycmd_env() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 env: Env {
                     add: IntoIterator::into_iter([
@@ -644,7 +702,14 @@ mod test {
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -652,7 +717,7 @@ mod test {
     fn parse_trycmd_status() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
@@ -662,7 +727,15 @@ mod test {
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd\n? skipped").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd
+? skipped
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -670,7 +743,7 @@ mod test {
     fn parse_trycmd_status_code() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
@@ -680,7 +753,15 @@ mod test {
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd\n? -1").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd
+? -1
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -688,17 +769,24 @@ mod test {
     fn parse_trycmd_stdout() {
         let expected = TryCmd {
             steps: vec![Step {
-                id: Some("1".into()),
+                id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
-                expected_stdout: Some(crate::File::Text("Hello World".into())),
+                expected_stdout: Some(crate::File::Text("Hello World\n".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd\nHello World").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd
+Hello World
+```",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -707,7 +795,7 @@ mod test {
         let expected = TryCmd {
             steps: vec![
                 Step {
-                    id: Some("1".into()),
+                    id: Some("3".into()),
                     bin: Some(Bin::Name("cmd1".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
@@ -716,7 +804,7 @@ mod test {
                     ..Default::default()
                 },
                 Step {
-                    id: Some("3".into()),
+                    id: Some("5".into()),
                     bin: Some(Bin::Name("cmd2".into())),
                     expected_status: Some(CommandStatus::Success),
                     stderr_to_stdout: true,
@@ -727,7 +815,101 @@ mod test {
             ],
             ..Default::default()
         };
-        let actual = TryCmd::parse_trycmd("$ cmd1\n? 1\n$ cmd2").unwrap();
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ cmd1
+? 1
+$ cmd2
+```
+",
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_info_string() {
+        let expected = TryCmd {
+            steps: vec![
+                Step {
+                    id: Some("3".into()),
+                    bin: Some(Bin::Name("bare-cmd".into())),
+                    expected_status: Some(CommandStatus::Code(1)),
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stderr: None,
+                    ..Default::default()
+                },
+                Step {
+                    id: Some("8".into()),
+                    bin: Some(Bin::Name("trycmd-cmd".into())),
+                    expected_status: Some(CommandStatus::Code(1)),
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stderr: None,
+                    ..Default::default()
+                },
+                Step {
+                    id: Some("13".into()),
+                    bin: Some(Bin::Name("sh-cmd".into())),
+                    expected_status: Some(CommandStatus::Code(1)),
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stderr: None,
+                    ..Default::default()
+                },
+                Step {
+                    id: Some("18".into()),
+                    bin: Some(Bin::Name("bash-cmd".into())),
+                    expected_status: Some(CommandStatus::Code(1)),
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stderr: None,
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+$ bare-cmd
+? 1
+```
+
+```trycmd
+$ trycmd-cmd
+? 1
+```
+
+```sh
+$ sh-cmd
+? 1
+```
+
+```bash
+$ bash-cmd
+? 1
+```
+
+```ignore
+$ rust-cmd1
+? 1
+```
+
+```trycmd,ignore
+$ rust-cmd1
+? 1
+```
+
+```rust
+$ rust-cmd1
+? 1
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
