@@ -1,75 +1,202 @@
 //! `cmd.toml` Schema
 //!
-//! [`TryCmd`] is the top-level item in the `cmd.toml` files.
+//! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
 use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::io::prelude::*;
 
-/// Top-level data in `cmd.toml` files
-#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "kebab-case")]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-pub struct TryCmd {
-    pub(crate) bin: Option<Bin>,
-    pub(crate) args: Option<Args>,
-    #[serde(default)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+pub(crate) struct TryCmd {
+    pub(crate) run: Run,
     pub(crate) fs: Filesystem,
-    #[serde(default)]
-    pub(crate) env: Env,
-    #[serde(default)]
-    pub(crate) stderr_to_stdout: bool,
-    pub(crate) status: Option<CommandStatus>,
-    #[serde(default)]
-    pub(crate) binary: bool,
-    #[serde(default)]
-    #[serde(deserialize_with = "humantime_serde::deserialize")]
-    pub(crate) timeout: Option<std::time::Duration>,
 }
 
 impl TryCmd {
     pub(crate) fn load(path: &std::path::Path) -> Result<Self, String> {
-        let mut run = if let Some(ext) = path.extension() {
+        let mut sequence = if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-                Self::parse_toml(&raw)
+                let one_shot = OneShot::parse_toml(&raw)?;
+                let mut sequence: Self = one_shot.into();
+
+                let stdin_path = path.with_extension("stdin");
+                let stdin = if stdin_path.exists() {
+                    Some(crate::File::read_from(&stdin_path, sequence.run.binary)?)
+                } else {
+                    None
+                };
+                sequence.run.stdin = stdin;
+
+                let stdout_path = path.with_extension("stdout");
+                let stdout = if stdout_path.exists() {
+                    Some(crate::File::read_from(&stdout_path, sequence.run.binary)?)
+                } else {
+                    None
+                };
+                sequence.run.expected_stdout = stdout;
+
+                let stderr_path = path.with_extension("stderr");
+                let stderr = if stderr_path.exists() {
+                    Some(crate::File::read_from(&stderr_path, sequence.run.binary)?)
+                } else {
+                    None
+                };
+                sequence.run.expected_stderr = stderr;
+
+                sequence
             } else if ext == std::ffi::OsStr::new("trycmd") {
-                let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-                Self::parse_trycmd(&raw)
+                let raw = crate::File::read_from(path, false)?.into_utf8().unwrap();
+                Self::parse_trycmd(&raw)?
             } else {
-                Err(format!("Unsupported extension: {}", ext.to_string_lossy()))
+                return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
             }
         } else {
-            Err("No extension".into())
-        }?;
+            return Err("No extension".into());
+        };
 
-        if let Some(cwd) = run.fs.cwd.take() {
-            run.fs.cwd = Some(
+        if let Some(cwd) = sequence.fs.cwd.take() {
+            sequence.fs.cwd = Some(
                 path.parent()
                     .unwrap_or_else(|| std::path::Path::new("."))
                     .join(cwd),
             );
         }
-        if run.fs.base.is_none() {
+        if sequence.fs.base.is_none() {
             let base_path = path.with_extension("in");
             if base_path.exists() {
-                run.fs.base = Some(base_path);
-            } else if run.fs.cwd.is_some() {
-                run.fs.base = run.fs.cwd.clone();
+                sequence.fs.base = Some(base_path);
+            } else if sequence.fs.cwd.is_some() {
+                sequence.fs.base = sequence.fs.cwd.clone();
             }
         }
-        if run.fs.cwd.is_none() {
-            run.fs.cwd = run.fs.base.clone();
+        if sequence.fs.cwd.is_none() {
+            sequence.fs.cwd = sequence.fs.base.clone();
         }
-        if run.fs.sandbox.is_none() {
-            run.fs.sandbox = Some(path.with_extension("out").exists());
+        if sequence.fs.sandbox.is_none() {
+            sequence.fs.sandbox = Some(path.with_extension("out").exists());
         }
 
-        Ok(run)
+        Ok(sequence)
     }
 
+    fn parse_trycmd(s: &str) -> Result<Self, String> {
+        let mut cmdline = Vec::new();
+        let mut status = Some(CommandStatus::Success);
+        let mut stdout = String::new();
+
+        let mut lines: VecDeque<_> = crate::lines::LinesWithTerminator::new(s).collect();
+        if let Some(line) = lines.pop_front() {
+            if let Some(raw) = line.strip_prefix("$ ") {
+                cmdline.extend(shlex::Shlex::new(raw.trim()));
+            } else {
+                return Err(format!("Expected `$` line, got `{}`", line));
+            }
+        }
+        while let Some(line) = lines.pop_front() {
+            if let Some(raw) = line.strip_prefix("> ") {
+                cmdline.extend(shlex::Shlex::new(raw.trim()));
+            } else {
+                lines.push_front(line);
+                break;
+            }
+        }
+        if let Some(line) = lines.pop_front() {
+            if let Some(raw) = line.strip_prefix("? ") {
+                status = Some(raw.trim().parse::<CommandStatus>()?);
+            } else {
+                lines.push_front(line);
+            }
+        }
+        if !lines.is_empty() {
+            stdout.extend(lines);
+        }
+
+        let mut env = Env::default();
+
+        let bin = loop {
+            if cmdline.is_empty() {
+                return Err(String::from("No bin specified"));
+            }
+            let next = cmdline.remove(0);
+            if let Some((key, value)) = next.split_once('=') {
+                env.add.insert(key.to_owned(), value.to_owned());
+            } else {
+                break next;
+            }
+        };
+        let run = Run {
+            bin: Some(Bin::Name(bin)),
+            args: cmdline,
+            env,
+            status,
+            stderr_to_stdout: true,
+            expected_stdout: Some(crate::File::Text(stdout)),
+            ..Default::default()
+        };
+        Ok(Self {
+            run,
+            ..Default::default()
+        })
+    }
+}
+
+impl std::str::FromStr for TryCmd {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse_trycmd(s)
+    }
+}
+
+impl From<OneShot> for TryCmd {
+    fn from(other: OneShot) -> Self {
+        let OneShot {
+            bin,
+            args,
+            env,
+            stderr_to_stdout,
+            status,
+            binary,
+            timeout,
+            fs,
+        } = other;
+        Self {
+            run: Run {
+                bin,
+                args: args.into_vec(),
+                env,
+                stdin: None,
+                stderr_to_stdout,
+                status,
+                expected_stdout: None,
+                expected_stderr: None,
+                binary,
+                timeout,
+            },
+            fs,
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+pub(crate) struct Run {
+    pub(crate) bin: Option<Bin>,
+    pub(crate) args: Vec<String>,
+    pub(crate) env: Env,
+    pub(crate) stdin: Option<crate::File>,
+    pub(crate) stderr_to_stdout: bool,
+    pub(crate) status: Option<CommandStatus>,
+    pub(crate) expected_stdout: Option<crate::File>,
+    pub(crate) expected_stderr: Option<crate::File>,
+    pub(crate) binary: bool,
+    pub(crate) timeout: Option<std::time::Duration>,
+}
+
+impl Run {
     pub(crate) fn to_command(
         &self,
-        base: Option<&std::path::Path>,
+        cwd: Option<&std::path::Path>,
     ) -> Result<std::process::Command, String> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
@@ -82,25 +209,9 @@ impl TryCmd {
         }
 
         let mut cmd = std::process::Command::new(bin);
-        if let Some(args) = self.args.as_deref() {
-            cmd.args(args);
-        }
-        if let Some(base) = base {
-            let base = if let (Some(orig_cwd), Some(orig_base)) =
-                (self.fs.cwd.as_deref(), self.fs.base.as_deref())
-            {
-                let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
-                    format!(
-                        "fs.cwd ({}) must be within fs.base ({})",
-                        orig_cwd.display(),
-                        orig_base.display()
-                    )
-                })?;
-                base.join(rel_cwd)
-            } else {
-                base.to_owned()
-            };
-            cmd.current_dir(base);
+        cmd.args(&self.args);
+        if let Some(cwd) = cwd {
+            cmd.current_dir(cwd);
         }
         self.env.apply(&mut cmd);
 
@@ -109,7 +220,6 @@ impl TryCmd {
 
     pub(crate) fn to_output(
         &self,
-        stdin: Option<Vec<u8>>,
         cwd: Option<&std::path::Path>,
     ) -> Result<std::process::Output, String> {
         let mut cmd = self.to_command(cwd)?;
@@ -127,7 +237,7 @@ impl TryCmd {
             // before we read. Here we do this by dropping the Command object.
             drop(cmd);
 
-            let mut output = crate::wait_with_input_output(child, stdin, self.timeout)
+            let mut output = crate::wait_with_input_output(child, self.stdin(), self.timeout)
                 .map_err(|e| e.to_string())?;
             assert!(output.stdout.is_empty());
             assert!(output.stderr.is_empty());
@@ -140,7 +250,8 @@ impl TryCmd {
             cmd.stdout(std::process::Stdio::piped());
             cmd.stderr(std::process::Stdio::piped());
             let child = cmd.spawn().map_err(|e| e.to_string())?;
-            crate::wait_with_input_output(child, stdin, self.timeout).map_err(|e| e.to_string())
+            crate::wait_with_input_output(child, self.stdin(), self.timeout)
+                .map_err(|e| e.to_string())
         }
     }
 
@@ -148,57 +259,36 @@ impl TryCmd {
         self.status.unwrap_or_default()
     }
 
-    fn parse_toml(s: &str) -> Result<Self, String> {
-        toml_edit::de::from_str(s).map_err(|e| e.to_string())
-    }
-
-    fn parse_trycmd(s: &str) -> Result<Self, String> {
-        let mut cmdline = String::new();
-        let mut status = Some(CommandStatus::Success);
-        for line in s.lines() {
-            if let Some(raw) = line.strip_prefix("$ ") {
-                cmdline.clear();
-                cmdline.push_str(raw.trim());
-                cmdline.push(' ');
-            } else if let Some(raw) = line.strip_prefix("> ") {
-                cmdline.push_str(raw.trim());
-                cmdline.push(' ');
-            } else if let Some(raw) = line.strip_prefix("? ") {
-                status = Some(raw.trim().parse::<CommandStatus>()?);
-            } else {
-                return Err(format!("Invalid line: `{}`", line));
-            }
-        }
-
-        let mut env = Env::default();
-
-        let mut iter = shlex::Shlex::new(cmdline.trim());
-        let bin = loop {
-            let next = iter
-                .next()
-                .ok_or_else(|| String::from("No bin specified"))?;
-            if let Some((key, value)) = next.split_once('=') {
-                env.add.insert(key.to_owned(), value.to_owned());
-            } else {
-                break next;
-            }
-        };
-        let args = Args::Split(iter.collect());
-        Ok(Self {
-            bin: Some(Bin::Name(bin)),
-            args: Some(args),
-            env,
-            status,
-            ..Default::default()
-        })
+    pub(crate) fn stdin(&self) -> Option<&[u8]> {
+        self.stdin.as_ref().map(|f| f.as_bytes())
     }
 }
 
-impl std::str::FromStr for TryCmd {
-    type Err = String;
+/// Top-level data in `cmd.toml` files
+#[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+pub struct OneShot {
+    pub(crate) bin: Option<Bin>,
+    #[serde(default)]
+    pub(crate) args: Args,
+    #[serde(default)]
+    pub(crate) env: Env,
+    #[serde(default)]
+    pub(crate) stderr_to_stdout: bool,
+    pub(crate) status: Option<CommandStatus>,
+    #[serde(default)]
+    pub(crate) binary: bool,
+    #[serde(default)]
+    #[serde(deserialize_with = "humantime_serde::deserialize")]
+    pub(crate) timeout: Option<std::time::Duration>,
+    #[serde(default)]
+    pub(crate) fs: Filesystem,
+}
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::parse_trycmd(s)
+impl OneShot {
+    fn parse_toml(s: &str) -> Result<Self, String> {
+        toml_edit::de::from_str(s).map_err(|e| e.to_string())
     }
 }
 
@@ -219,6 +309,13 @@ impl Args {
         match self {
             Self::Joined(j) => j.inner.as_slice(),
             Self::Split(v) => v.as_slice(),
+        }
+    }
+
+    fn into_vec(self) -> Vec<String> {
+        match self {
+            Self::Joined(j) => j.inner,
+            Self::Split(v) => v,
         }
     }
 }
@@ -303,6 +400,21 @@ pub struct Filesystem {
 impl Filesystem {
     pub(crate) fn sandbox(&self) -> bool {
         self.sandbox.unwrap_or_default()
+    }
+
+    pub(crate) fn rel_cwd(&self) -> Result<&std::path::Path, String> {
+        if let (Some(orig_cwd), Some(orig_base)) = (self.cwd.as_deref(), self.base.as_deref()) {
+            let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
+                format!(
+                    "fs.cwd ({}) must be within fs.base ({})",
+                    orig_cwd.display(),
+                    orig_base.display()
+                )
+            })?;
+            Ok(rel_cwd)
+        } else {
+            Ok(std::path::Path::new(""))
+        }
     }
 }
 
@@ -431,9 +543,14 @@ mod test {
     #[test]
     fn parse_trycmd_command() {
         let expected = TryCmd {
-            bin: Some(Bin::Name("cmd".into())),
-            args: Some(Args::default()),
-            status: Some(CommandStatus::Success),
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd").unwrap();
@@ -443,9 +560,15 @@ mod test {
     #[test]
     fn parse_trycmd_command_line() {
         let expected = TryCmd {
-            bin: Some(Bin::Name("cmd".into())),
-            args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
-            status: Some(CommandStatus::Success),
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                args: vec!["arg1".into(), "arg with space".into()],
+                status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
@@ -455,9 +578,15 @@ mod test {
     #[test]
     fn parse_trycmd_multi_line() {
         let expected = TryCmd {
-            bin: Some(Bin::Name("cmd".into())),
-            args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
-            status: Some(CommandStatus::Success),
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                args: vec!["arg1".into(), "arg with space".into()],
+                status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
@@ -467,17 +596,22 @@ mod test {
     #[test]
     fn parse_trycmd_env() {
         let expected = TryCmd {
-            bin: Some(Bin::Name("cmd".into())),
-            args: Some(Args::default()),
-            env: Env {
-                add: IntoIterator::into_iter([
-                    ("KEY1".into(), "VALUE1".into()),
-                    ("KEY2".into(), "VALUE2 with space".into()),
-                ])
-                .collect(),
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                env: Env {
+                    add: IntoIterator::into_iter([
+                        ("KEY1".into(), "VALUE1".into()),
+                        ("KEY2".into(), "VALUE2 with space".into()),
+                    ])
+                    .collect(),
+                    ..Default::default()
+                },
+                status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
                 ..Default::default()
             },
-            status: Some(CommandStatus::Success),
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
@@ -487,9 +621,14 @@ mod test {
     #[test]
     fn parse_trycmd_status() {
         let expected = TryCmd {
-            bin: Some(Bin::Name("cmd".into())),
-            args: Some(Args::default()),
-            status: Some(CommandStatus::Skipped),
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                status: Some(CommandStatus::Skipped),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd\n? skipped").unwrap();
@@ -499,9 +638,14 @@ mod test {
     #[test]
     fn parse_trycmd_status_code() {
         let expected = TryCmd {
-            bin: Some(Bin::Name("cmd".into())),
-            args: Some(Args::default()),
-            status: Some(CommandStatus::Code(-1)),
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                status: Some(CommandStatus::Code(-1)),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd\n? -1").unwrap();
@@ -509,83 +653,100 @@ mod test {
     }
 
     #[test]
-    fn parse_toml_minimal() {
+    fn parse_trycmd_stdout() {
         let expected = TryCmd {
+            run: Run {
+                bin: Some(Bin::Name("cmd".into())),
+                status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text("Hello World".into())),
+                expected_stderr: None,
+                ..Default::default()
+            },
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("").unwrap();
+        let actual = TryCmd::parse_trycmd("$ cmd\nHello World").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_toml_minimal() {
+        let expected = OneShot {
+            ..Default::default()
+        };
+        let actual = OneShot::parse_toml("").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_minimal_env() {
-        let expected = TryCmd {
+        let expected = OneShot {
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("[env]").unwrap();
+        let actual = OneShot::parse_toml("[env]").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_bin_name() {
-        let expected = TryCmd {
+        let expected = OneShot {
             bin: Some(Bin::Name("cmd".into())),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("bin.name = 'cmd'").unwrap();
+        let actual = OneShot::parse_toml("bin.name = 'cmd'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_bin_path() {
-        let expected = TryCmd {
+        let expected = OneShot {
             bin: Some(Bin::Path("/usr/bin/cmd".into())),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
+        let actual = OneShot::parse_toml("bin.path = '/usr/bin/cmd'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_args_split() {
-        let expected = TryCmd {
-            args: Some(Args::Split(vec!["arg1".into(), "arg with space".into()])),
+        let expected = OneShot {
+            args: Args::Split(vec!["arg1".into(), "arg with space".into()]),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml(r#"args = ["arg1", "arg with space"]"#).unwrap();
+        let actual = OneShot::parse_toml(r#"args = ["arg1", "arg with space"]"#).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_args_joined() {
-        let expected = TryCmd {
-            args: Some(Args::Joined(JoinedArgs::from_vec(vec![
+        let expected = OneShot {
+            args: Args::Joined(JoinedArgs::from_vec(vec![
                 "arg1".into(),
                 "arg with space".into(),
-            ]))),
+            ])),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml(r#"args = "arg1 'arg with space'""#).unwrap();
+        let actual = OneShot::parse_toml(r#"args = "arg1 'arg with space'""#).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_status_success() {
-        let expected = TryCmd {
+        let expected = OneShot {
             status: Some(CommandStatus::Success),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("status = 'success'").unwrap();
+        let actual = OneShot::parse_toml("status = 'success'").unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn parse_toml_status_code() {
-        let expected = TryCmd {
+        let expected = OneShot {
             status: Some(CommandStatus::Code(42)),
             ..Default::default()
         };
-        let actual = TryCmd::parse_toml("status.code = 42").unwrap();
+        let actual = OneShot::parse_toml("status.code = 42").unwrap();
         assert_eq!(expected, actual);
     }
 }

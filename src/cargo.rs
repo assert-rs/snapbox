@@ -48,14 +48,14 @@ pub(crate) mod examples {
     pub fn compile_example<'a>(
         target_name: &str,
         args: impl IntoIterator<Item = &'a str>,
-    ) -> crate::Bin {
+    ) -> crate::schema::Bin {
         compile_example_path(target_name, args).into()
     }
 
     fn compile_example_path<'a>(
         target_name: &str,
         args: impl IntoIterator<Item = &'a str>,
-    ) -> Result<crate::Bin, crate::Error> {
+    ) -> Result<crate::schema::Bin, crate::Error> {
         eprintln!("Compiling example {}", target_name);
         let messages = escargot::CargoBuild::new()
             .current_target()
@@ -101,7 +101,7 @@ pub(crate) mod examples {
     /// ```
     pub fn compile_examples<'a>(
         args: impl IntoIterator<Item = &'a str>,
-    ) -> Result<impl Iterator<Item = (String, crate::Bin)>, crate::Error> {
+    ) -> Result<impl Iterator<Item = (String, crate::schema::Bin)>, crate::Error> {
         eprintln!("Compiling examples");
         let mut examples = std::collections::BTreeMap::new();
 
@@ -129,7 +129,7 @@ pub(crate) mod examples {
 
     fn decode_example_message<'m>(
         message: &'m escargot::format::Message,
-    ) -> Option<Result<(&'m str, crate::Bin), crate::Error>> {
+    ) -> Option<Result<(&'m str, crate::schema::Bin), crate::Error>> {
         match message {
             escargot::format::Message::CompilerMessage(msg) => {
                 let level = msg.message.level;
@@ -143,7 +143,7 @@ pub(crate) mod examples {
                         .unwrap_or_else(|| msg.message.message.as_ref())
                         .to_owned();
                     if is_example_target(&msg.target) {
-                        let bin = crate::Bin::Error(crate::Error::new(output));
+                        let bin = crate::schema::Bin::Error(crate::Error::new(output));
                         Some(Ok((msg.target.name.as_ref(), bin)))
                     } else {
                         Some(Err(crate::Error::new(output)))
@@ -158,7 +158,7 @@ pub(crate) mod examples {
                         .executable
                         .clone()
                         .expect("cargo is new enough for this to be present");
-                    let bin = crate::Bin::Path(path.into_owned());
+                    let bin = crate::schema::Bin::Path(path.into_owned());
                     Some(Ok((artifact.target.name.as_ref(), bin)))
                 } else {
                     None

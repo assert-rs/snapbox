@@ -94,10 +94,10 @@ impl Default for Runner {
 #[derive(Debug)]
 pub(crate) struct Case {
     pub(crate) path: std::path::PathBuf,
-    pub(crate) expected: Option<crate::CommandStatus>,
+    pub(crate) expected: Option<crate::schema::CommandStatus>,
     pub(crate) timeout: Option<std::time::Duration>,
-    pub(crate) default_bin: Option<crate::Bin>,
-    pub(crate) env: crate::Env,
+    pub(crate) default_bin: Option<crate::schema::Bin>,
+    pub(crate) env: crate::schema::Env,
     pub(crate) error: Option<SpawnStatus>,
 }
 
@@ -116,7 +116,7 @@ impl Case {
     pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) -> Result<Output, Output> {
         let mut output = Output::default();
 
-        if self.expected == Some(crate::CommandStatus::Skipped) {
+        if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             assert_eq!(output.spawn.status, SpawnStatus::Skipped);
             return Ok(output);
         }
@@ -125,44 +125,29 @@ impl Case {
             return Err(output);
         }
 
-        let mut run = crate::TryCmd::load(&self.path).map_err(|e| output.clone().error(e))?;
-        if run.bin.is_none() {
-            run.bin = self.default_bin.clone()
+        let mut sequence =
+            crate::schema::TryCmd::load(&self.path).map_err(|e| output.clone().error(e))?;
+        if sequence.run.bin.is_none() {
+            sequence.run.bin = self.default_bin.clone()
         }
-        run.bin = run
+        sequence.run.bin = sequence
+            .run
             .bin
             .map(|name| bins.resolve_bin(name))
             .transpose()
             .map_err(|e| output.clone().error(e))?;
-        if run.timeout.is_none() {
-            run.timeout = self.timeout;
+        if sequence.run.timeout.is_none() {
+            sequence.run.timeout = self.timeout;
         }
         if self.expected.is_some() {
-            run.status = self.expected;
+            sequence.run.status = self.expected;
         }
-        run.env.update(&self.env);
-
-        let stdin_path = self.path.with_extension("stdin");
-        let stdin = if stdin_path.exists() {
-            Some(
-                File::read_from(&stdin_path, run.binary)
-                    .map_err(|e| {
-                        output.clone().error(format!(
-                            "Failed to read {}: {}",
-                            stdin_path.display(),
-                            e
-                        ))
-                    })?
-                    .into_bytes(),
-            )
-        } else {
-            None
-        };
+        sequence.run.env.update(&self.env);
 
         let fs = crate::FilesystemContext::new(
             &self.path,
-            run.fs.base.as_deref(),
-            run.fs.sandbox(),
+            sequence.fs.base.as_deref(),
+            sequence.fs.sandbox(),
             mode,
         )
         .map_err(|e| {
@@ -170,14 +155,21 @@ impl Case {
                 .clone()
                 .error(format!("Failed to initialize sandbox: {}", e))
         })?;
-        let cmd_output = run
-            .to_output(stdin, fs.path())
+        let cwd = fs
+            .path()
+            .map(|p| sequence.fs.rel_cwd().map(|rel| p.join(rel)))
+            .transpose()
+            .map_err(|e| output.clone().error(e))?;
+
+        let cmd_output = sequence
+            .run
+            .to_output(cwd.as_deref())
             .map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
         // For dump mode's sake, allow running all
         let mut ok = output.is_ok();
-        let mut output = match self.validate_spawn(output, run.status()) {
+        let mut output = match self.validate_spawn(output, sequence.run.status()) {
             Ok(output) => output,
             Err(output) => {
                 ok = false;
@@ -185,36 +177,40 @@ impl Case {
             }
         };
         if let Some(mut stdout) = output.stdout {
-            if !run.binary {
+            if !sequence.run.binary {
                 stdout = stdout.utf8();
             }
             if stdout.is_ok() {
-                stdout = match self.validate_stream(stdout, mode) {
-                    Ok(stdout) => stdout,
-                    Err(stdout) => {
-                        ok = false;
-                        stdout
-                    }
-                };
+                stdout =
+                    match self.validate_stream(stdout, sequence.run.expected_stdout.as_ref(), mode)
+                    {
+                        Ok(stdout) => stdout,
+                        Err(stdout) => {
+                            ok = false;
+                            stdout
+                        }
+                    };
             }
             output.stdout = Some(stdout);
         }
         if let Some(mut stderr) = output.stderr {
-            if !run.binary {
+            if !sequence.run.binary {
                 stderr = stderr.utf8();
             }
             if stderr.is_ok() {
-                stderr = match self.validate_stream(stderr, mode) {
-                    Ok(stderr) => stderr,
-                    Err(stderr) => {
-                        ok = false;
-                        stderr
-                    }
-                };
+                stderr =
+                    match self.validate_stream(stderr, sequence.run.expected_stderr.as_ref(), mode)
+                    {
+                        Ok(stderr) => stderr,
+                        Err(stderr) => {
+                            ok = false;
+                            stderr
+                        }
+                    };
             }
             output.stderr = Some(stderr);
         }
-        if run.fs.sandbox() {
+        if sequence.fs.sandbox() {
             output.fs =
                 match self.validate_fs(fs.path().expect("sandbox must be filled"), output.fs, mode)
                 {
@@ -242,27 +238,27 @@ impl Case {
     fn validate_spawn(
         &self,
         mut output: Output,
-        expected: crate::CommandStatus,
+        expected: crate::schema::CommandStatus,
     ) -> Result<Output, Output> {
         let status = output.spawn.exit.expect("bale out before now");
         match expected {
-            crate::CommandStatus::Success => {
+            crate::schema::CommandStatus::Success => {
                 if !status.success() {
                     output.spawn.status = SpawnStatus::Expected("success".into());
                 }
             }
-            crate::CommandStatus::Failed => {
+            crate::schema::CommandStatus::Failed => {
                 if status.success() || status.code().is_none() {
                     output.spawn.status = SpawnStatus::Expected("failure".into());
                 }
             }
-            crate::CommandStatus::Interrupted => {
+            crate::schema::CommandStatus::Interrupted => {
                 if status.code().is_some() {
                     output.spawn.status = SpawnStatus::Expected("interrupted".into());
                 }
             }
-            crate::CommandStatus::Skipped => unreachable!("handled earlier"),
-            crate::CommandStatus::Code(expected_code) => {
+            crate::schema::CommandStatus::Skipped => unreachable!("handled earlier"),
+            crate::schema::CommandStatus::Code(expected_code) => {
                 if Some(expected_code) != status.code() {
                     output.spawn.status = SpawnStatus::Expected(expected_code.to_string());
                 }
@@ -272,7 +268,12 @@ impl Case {
         Ok(output)
     }
 
-    fn validate_stream(&self, mut stream: Stream, mode: &Mode) -> Result<Stream, Stream> {
+    fn validate_stream(
+        &self,
+        mut stream: Stream,
+        expected_content: Option<&crate::File>,
+        mode: &Mode,
+    ) -> Result<Stream, Stream> {
         if let Mode::Dump(root) = mode {
             let stdout_path = root.join(
                 self.path
@@ -282,51 +283,30 @@ impl Case {
             );
             stream.content.write_to(&stdout_path).map_err(|e| {
                 let mut stream = stream.clone();
-                stream.status = StreamStatus::Failure(format!(
-                    "Failed to read {}: {}",
-                    stdout_path.display(),
-                    e
-                ));
+                stream.status = StreamStatus::Failure(e);
                 stream
             })?;
-        } else {
-            let stdout_path = self.path.with_extension(stream.stream.as_str());
-            if stdout_path.exists() {
-                let expected_content = File::read_from(&stdout_path, stream.content.is_binary())
-                    .map_err(|e| {
-                        let mut stream = stream.clone();
-                        stream.status = StreamStatus::Failure(format!(
-                            "Failed to read {}: {}",
-                            stdout_path.display(),
-                            e
-                        ));
-                        stream
-                    })?;
-
-                if let File::Text(e) = &expected_content {
-                    stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
-                }
-                if stream.content != expected_content {
-                    match mode {
-                        Mode::Fail => {
-                            stream.status = StreamStatus::Expected(expected_content);
-                            return Err(stream);
-                        }
-                        Mode::Overwrite => {
-                            stream.content.write_to(&stdout_path).map_err(|e| {
-                                let mut stream = stream.clone();
-                                stream.status = StreamStatus::Failure(format!(
-                                    "Failed to write {}: {}",
-                                    stdout_path.display(),
-                                    e
-                                ));
-                                stream
-                            })?;
-                            stream.status = StreamStatus::Expected(expected_content);
-                            return Ok(stream);
-                        }
-                        Mode::Dump(_) => unreachable!("handled earlier"),
+        } else if let Some(expected_content) = expected_content {
+            if let crate::File::Text(e) = &expected_content {
+                stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+            }
+            if stream.content != *expected_content {
+                match mode {
+                    Mode::Fail => {
+                        stream.status = StreamStatus::Expected(expected_content.clone());
+                        return Err(stream);
                     }
+                    Mode::Overwrite => {
+                        let stdout_path = self.path.with_extension(stream.stream.as_str());
+                        stream.content.write_to(&stdout_path).map_err(|e| {
+                            let mut stream = stream.clone();
+                            stream.status = StreamStatus::Failure(e);
+                            stream
+                        })?;
+                        stream.status = StreamStatus::Expected(expected_content.clone());
+                        return Ok(stream);
+                    }
+                    Mode::Dump(_) => unreachable!("handled earlier"),
                 }
             }
         }
@@ -471,26 +451,14 @@ impl Case {
                 }
             }
             FileType::File => {
-                let expected_content = File::read_from(&expected_path, true)
-                    .map_err(|e| {
-                        FileStatus::Failure(format!(
-                            "Failed to read {}: {}",
-                            expected_path.display(),
-                            e
-                        ))
-                    })?
+                let expected_content = crate::File::read_from(&expected_path, true)
+                    .map_err(FileStatus::Failure)?
                     .try_utf8();
-                let mut actual_content = File::read_from(&actual_path, true)
-                    .map_err(|e| {
-                        FileStatus::Failure(format!(
-                            "Failed to read {}: {}",
-                            actual_path.display(),
-                            e
-                        ))
-                    })?
+                let mut actual_content = crate::File::read_from(&actual_path, true)
+                    .map_err(FileStatus::Failure)?
                     .try_utf8();
 
-                if let File::Text(e) = &expected_content {
+                if let crate::File::Text(e) = &expected_content {
                     actual_content = actual_content.map_text(|t| crate::elide::normalize(t, e));
                 }
                 if expected_content != actual_content {
@@ -527,12 +495,12 @@ impl Output {
         self.spawn.status = SpawnStatus::Ok;
         self.stdout = Some(Stream {
             stream: Stdio::Stdout,
-            content: File::Binary(output.stdout),
+            content: crate::File::Binary(output.stdout),
             status: StreamStatus::Ok,
         });
         self.stderr = Some(Stream {
             stream: Stdio::Stderr,
-            content: File::Binary(output.stderr),
+            content: crate::File::Binary(output.stderr),
             status: StreamStatus::Ok,
         });
         self
@@ -666,7 +634,7 @@ impl SpawnStatus {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Stream {
     stream: Stdio,
-    content: File,
+    content: crate::File,
     status: StreamStatus,
 }
 
@@ -705,7 +673,9 @@ impl std::fmt::Display for Stream {
                 #[allow(unused_mut)]
                 let mut rendered = false;
                 #[cfg(feature = "diff")]
-                if let (File::Text(expected), File::Text(actual)) = (&expected, &self.content) {
+                if let (crate::File::Text(expected), crate::File::Text(actual)) =
+                    (&expected, &self.content)
+                {
                     let diff =
                         crate::diff::diff(expected, actual, self.stream, self.stream, palette);
                     writeln!(f, "{}", diff)?;
@@ -729,7 +699,7 @@ impl std::fmt::Display for Stream {
 enum StreamStatus {
     Ok,
     Failure(String),
-    Expected(File),
+    Expected(crate::File),
 }
 
 impl StreamStatus {
@@ -809,8 +779,8 @@ enum FileStatus {
     ContentMismatch {
         expected_path: std::path::PathBuf,
         actual_path: std::path::PathBuf,
-        expected_content: File,
-        actual_content: File,
+        expected_content: crate::File,
+        actual_content: crate::File,
     },
 }
 
@@ -882,7 +852,7 @@ impl std::fmt::Display for FileStatus {
                 #[allow(unused_mut)]
                 let mut rendered = false;
                 #[cfg(feature = "diff")]
-                if let (File::Text(expected), File::Text(actual)) =
+                if let (crate::File::Text(expected), crate::File::Text(actual)) =
                     (&expected_content, &actual_content)
                 {
                     let diff = crate::diff::diff(
@@ -966,94 +936,5 @@ impl Mode {
         }
 
         Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum File {
-    Binary(Vec<u8>),
-    Text(String),
-}
-
-impl File {
-    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, std::io::Error> {
-        let data = if binary {
-            let data = std::fs::read(&path)?;
-            Self::Binary(data)
-        } else {
-            let data = std::fs::read_to_string(&path)?;
-            let data = normalize_line_endings::normalized(data.chars()).collect();
-            Self::Text(data)
-        };
-        Ok(data)
-    }
-
-    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), std::io::Error> {
-        std::fs::write(path, self.as_bytes())
-    }
-
-    pub(crate) fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
-        match self {
-            Self::Binary(data) => Self::Binary(data),
-            Self::Text(data) => Self::Text(op(&data)),
-        }
-    }
-
-    pub(crate) fn is_binary(&self) -> bool {
-        match self {
-            Self::Binary(_) => true,
-            Self::Text(_) => false,
-        }
-    }
-
-    pub(crate) fn utf8(&mut self) -> Result<(), std::str::Utf8Error> {
-        match self {
-            Self::Binary(data) => {
-                let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
-                let data = normalize_line_endings::normalized(data.chars()).collect();
-                *self = Self::Text(data);
-                Ok(())
-            }
-            Self::Text(_) => Ok(()),
-        }
-    }
-
-    pub(crate) fn try_utf8(self) -> Self {
-        match self {
-            Self::Binary(data) => match String::from_utf8(data) {
-                Ok(data) => {
-                    let data = normalize_line_endings::normalized(data.chars()).collect();
-                    Self::Text(data)
-                }
-                Err(err) => {
-                    let data = err.into_bytes();
-                    Self::Binary(data)
-                }
-            },
-            Self::Text(data) => Self::Text(data),
-        }
-    }
-
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        match self {
-            Self::Binary(data) => data,
-            Self::Text(data) => data.as_bytes(),
-        }
-    }
-
-    pub(crate) fn into_bytes(self) -> Vec<u8> {
-        match self {
-            Self::Binary(data) => data,
-            Self::Text(data) => data.into_bytes(),
-        }
-    }
-}
-
-impl std::fmt::Display for File {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
-            Self::Text(data) => data.fmt(f),
-        }
     }
 }

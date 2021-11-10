@@ -4,9 +4,9 @@ use std::collections::BTreeMap;
 pub(crate) struct RunnerSpec {
     cases: Vec<CaseSpec>,
     include: Option<Vec<String>>,
-    default_bin: Option<crate::Bin>,
+    default_bin: Option<crate::schema::Bin>,
     timeout: Option<std::time::Duration>,
-    env: crate::Env,
+    env: crate::schema::Env,
 }
 
 impl RunnerSpec {
@@ -20,7 +20,11 @@ impl RunnerSpec {
         }
     }
 
-    pub(crate) fn case(&mut self, glob: &std::path::Path, expected: Option<crate::CommandStatus>) {
+    pub(crate) fn case(
+        &mut self,
+        glob: &std::path::Path,
+        expected: Option<crate::schema::CommandStatus>,
+    ) {
         self.cases.push(CaseSpec {
             glob: glob.into(),
             expected,
@@ -31,7 +35,7 @@ impl RunnerSpec {
         self.include = include;
     }
 
-    pub(crate) fn default_bin(&mut self, bin: Option<crate::Bin>) {
+    pub(crate) fn default_bin(&mut self, bin: Option<crate::schema::Bin>) {
         self.default_bin = bin;
     }
 
@@ -128,7 +132,7 @@ impl Default for RunnerSpec {
 #[derive(Debug)]
 struct CaseSpec {
     glob: std::path::PathBuf,
-    expected: Option<crate::CommandStatus>,
+    expected: Option<crate::schema::CommandStatus>,
 }
 
 fn get_glob(path: &std::path::Path) -> Option<&str> {
