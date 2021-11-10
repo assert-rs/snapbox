@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+- `*.trycmd` syntax now requires fenced code blocks for test cases
+- `*.trycmd` syntax requires specific ordering between `$`, `>`, and `?`
+- `*.trycmd` files no longer support `*.stdout` and `*.stderr` files
+
+### Features
+
+- `*.trycmd` files
+  - Markdown-compatible syntax and `*.md` extension support
+  - Support multiple test cases
+  - Support setting env variables inline
+  - Support inline stdout with stderr redirected to stdout
+- Ignore `.keep` files in `*.in` and `*.out`
+- Support redirecting stderr to stdout
+
+### Fix
+
+- Cleaned up tenses
+- On failure, direct people to `TRYCMD` env variable
+
 ## [0.3.1] - 2021-11-08
 
 ### Fix
