@@ -8,7 +8,7 @@ use std::io::prelude::*;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct TryCmd {
-    pub(crate) run: Run,
+    pub(crate) steps: Vec<Step>,
     pub(crate) fs: Filesystem,
 }
 
@@ -19,30 +19,31 @@ impl TryCmd {
                 let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
                 let one_shot = OneShot::parse_toml(&raw)?;
                 let mut sequence: Self = one_shot.into();
+                let is_binary = sequence.steps[0].binary;
 
                 let stdin_path = path.with_extension("stdin");
                 let stdin = if stdin_path.exists() {
-                    Some(crate::File::read_from(&stdin_path, sequence.run.binary)?)
+                    Some(crate::File::read_from(&stdin_path, is_binary)?)
                 } else {
                     None
                 };
-                sequence.run.stdin = stdin;
+                sequence.steps[0].stdin = stdin;
 
                 let stdout_path = path.with_extension("stdout");
                 let stdout = if stdout_path.exists() {
-                    Some(crate::File::read_from(&stdout_path, sequence.run.binary)?)
+                    Some(crate::File::read_from(&stdout_path, is_binary)?)
                 } else {
                     None
                 };
-                sequence.run.expected_stdout = stdout;
+                sequence.steps[0].expected_stdout = stdout;
 
                 let stderr_path = path.with_extension("stderr");
                 let stderr = if stderr_path.exists() {
-                    Some(crate::File::read_from(&stderr_path, sequence.run.binary)?)
+                    Some(crate::File::read_from(&stderr_path, is_binary)?)
                 } else {
                     None
                 };
-                sequence.run.expected_stderr = stderr;
+                sequence.steps[0].expected_stderr = stderr;
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") {
@@ -81,61 +82,84 @@ impl TryCmd {
     }
 
     fn parse_trycmd(s: &str) -> Result<Self, String> {
-        let mut cmdline = Vec::new();
-        let mut status = Some(CommandStatus::Success);
-        let mut stdout = String::new();
+        let mut steps = Vec::new();
 
-        let mut lines: VecDeque<_> = crate::lines::LinesWithTerminator::new(s).collect();
-        if let Some(line) = lines.pop_front() {
-            if let Some(raw) = line.strip_prefix("$ ") {
-                cmdline.extend(shlex::Shlex::new(raw.trim()));
+        let mut lines: VecDeque<_> = crate::lines::LinesWithTerminator::new(s)
+            .enumerate()
+            .map(|(i, l)| (i + 1, l))
+            .collect();
+        loop {
+            let mut cmdline = Vec::new();
+            let mut expected_status = Some(CommandStatus::Success);
+            let mut stdout = String::new();
+            let id;
+
+            if let Some((line_num, line)) = lines.pop_front() {
+                if let Some(raw) = line.strip_prefix("$ ") {
+                    cmdline.extend(shlex::Shlex::new(raw.trim()));
+                    id = Some(line_num.to_string());
+                } else {
+                    return Err(format!("Expected `$` line, got `{}`", line));
+                }
             } else {
-                return Err(format!("Expected `$` line, got `{}`", line));
-            }
-        }
-        while let Some(line) = lines.pop_front() {
-            if let Some(raw) = line.strip_prefix("> ") {
-                cmdline.extend(shlex::Shlex::new(raw.trim()));
-            } else {
-                lines.push_front(line);
                 break;
             }
-        }
-        if let Some(line) = lines.pop_front() {
-            if let Some(raw) = line.strip_prefix("? ") {
-                status = Some(raw.trim().parse::<CommandStatus>()?);
-            } else {
-                lines.push_front(line);
+            while let Some((line_num, line)) = lines.pop_front() {
+                if let Some(raw) = line.strip_prefix("> ") {
+                    cmdline.extend(shlex::Shlex::new(raw.trim()));
+                } else {
+                    lines.push_front((line_num, line));
+                    break;
+                }
             }
-        }
-        if !lines.is_empty() {
-            stdout.extend(lines);
+            if let Some((line_num, line)) = lines.pop_front() {
+                if let Some(raw) = line.strip_prefix("? ") {
+                    expected_status = Some(raw.trim().parse::<CommandStatus>()?);
+                } else {
+                    lines.push_front((line_num, line));
+                }
+            }
+            while let Some((line_num, line)) = lines.pop_front() {
+                if line.starts_with("$ ") {
+                    lines.push_front((line_num, line));
+                    break;
+                } else {
+                    stdout.push_str(line);
+                }
+            }
+
+            let mut env = Env::default();
+
+            let bin = loop {
+                if cmdline.is_empty() {
+                    return Err(String::from("No bin specified"));
+                }
+                let next = cmdline.remove(0);
+                if let Some((key, value)) = next.split_once('=') {
+                    env.add.insert(key.to_owned(), value.to_owned());
+                } else {
+                    break next;
+                }
+            };
+            let step = Step {
+                id,
+                bin: Some(Bin::Name(bin)),
+                args: cmdline,
+                env,
+                expected_status,
+                stderr_to_stdout: true,
+                expected_stdout: Some(crate::File::Text(stdout)),
+                ..Default::default()
+            };
+            steps.push(step);
         }
 
-        let mut env = Env::default();
+        if steps.is_empty() {
+            return Err("No runs in trycmd file".into());
+        }
 
-        let bin = loop {
-            if cmdline.is_empty() {
-                return Err(String::from("No bin specified"));
-            }
-            let next = cmdline.remove(0);
-            if let Some((key, value)) = next.split_once('=') {
-                env.add.insert(key.to_owned(), value.to_owned());
-            } else {
-                break next;
-            }
-        };
-        let run = Run {
-            bin: Some(Bin::Name(bin)),
-            args: cmdline,
-            env,
-            status,
-            stderr_to_stdout: true,
-            expected_stdout: Some(crate::File::Text(stdout)),
-            ..Default::default()
-        };
         Ok(Self {
-            run,
+            steps,
             ..Default::default()
         })
     }
@@ -162,38 +186,40 @@ impl From<OneShot> for TryCmd {
             fs,
         } = other;
         Self {
-            run: Run {
+            steps: vec![Step {
+                id: None,
                 bin,
                 args: args.into_vec(),
                 env,
                 stdin: None,
                 stderr_to_stdout,
-                status,
+                expected_status: status,
                 expected_stdout: None,
                 expected_stderr: None,
                 binary,
                 timeout,
-            },
+            }],
             fs,
         }
     }
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
-pub(crate) struct Run {
+pub(crate) struct Step {
+    pub(crate) id: Option<String>,
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Vec<String>,
     pub(crate) env: Env,
     pub(crate) stdin: Option<crate::File>,
     pub(crate) stderr_to_stdout: bool,
-    pub(crate) status: Option<CommandStatus>,
+    pub(crate) expected_status: Option<CommandStatus>,
     pub(crate) expected_stdout: Option<crate::File>,
     pub(crate) expected_stderr: Option<crate::File>,
     pub(crate) binary: bool,
     pub(crate) timeout: Option<std::time::Duration>,
 }
 
-impl Run {
+impl Step {
     pub(crate) fn to_command(
         &self,
         cwd: Option<&std::path::Path>,
@@ -255,8 +281,8 @@ impl Run {
         }
     }
 
-    pub(crate) fn status(&self) -> CommandStatus {
-        self.status.unwrap_or_default()
+    pub(crate) fn expected_status(&self) -> CommandStatus {
+        self.expected_status.unwrap_or_default()
     }
 
     pub(crate) fn stdin(&self) -> Option<&[u8]> {
@@ -543,14 +569,15 @@ mod test {
     #[test]
     fn parse_trycmd_command() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
-                status: Some(CommandStatus::Success),
+                expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd").unwrap();
@@ -560,15 +587,16 @@ mod test {
     #[test]
     fn parse_trycmd_command_line() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 args: vec!["arg1".into(), "arg with space".into()],
-                status: Some(CommandStatus::Success),
+                expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd arg1 'arg with space'").unwrap();
@@ -578,15 +606,16 @@ mod test {
     #[test]
     fn parse_trycmd_multi_line() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 args: vec!["arg1".into(), "arg with space".into()],
-                status: Some(CommandStatus::Success),
+                expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd arg1\n> 'arg with space'").unwrap();
@@ -596,7 +625,8 @@ mod test {
     #[test]
     fn parse_trycmd_env() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
                 env: Env {
                     add: IntoIterator::into_iter([
@@ -606,12 +636,12 @@ mod test {
                     .collect(),
                     ..Default::default()
                 },
-                status: Some(CommandStatus::Success),
+                expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ KEY1=VALUE1 KEY2='VALUE2 with space' cmd").unwrap();
@@ -621,14 +651,15 @@ mod test {
     #[test]
     fn parse_trycmd_status() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
-                status: Some(CommandStatus::Skipped),
+                expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd\n? skipped").unwrap();
@@ -638,14 +669,15 @@ mod test {
     #[test]
     fn parse_trycmd_status_code() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
-                status: Some(CommandStatus::Code(-1)),
+                expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd\n? -1").unwrap();
@@ -655,17 +687,47 @@ mod test {
     #[test]
     fn parse_trycmd_stdout() {
         let expected = TryCmd {
-            run: Run {
+            steps: vec![Step {
+                id: Some("1".into()),
                 bin: Some(Bin::Name("cmd".into())),
-                status: Some(CommandStatus::Success),
+                expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout: Some(crate::File::Text("Hello World".into())),
                 expected_stderr: None,
                 ..Default::default()
-            },
+            }],
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("$ cmd\nHello World").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_multi_step() {
+        let expected = TryCmd {
+            steps: vec![
+                Step {
+                    id: Some("1".into()),
+                    bin: Some(Bin::Name("cmd1".into())),
+                    expected_status: Some(CommandStatus::Code(1)),
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stderr: None,
+                    ..Default::default()
+                },
+                Step {
+                    id: Some("3".into()),
+                    bin: Some(Bin::Name("cmd2".into())),
+                    expected_status: Some(CommandStatus::Success),
+                    stderr_to_stdout: true,
+                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stderr: None,
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("$ cmd1\n? 1\n$ cmd2").unwrap();
         assert_eq!(expected, actual);
     }
 

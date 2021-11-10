@@ -30,37 +30,45 @@ impl Runner {
             let failures: Vec<_> = self
                 .cases
                 .par_iter()
-                .filter_map(|c| match c.run(mode, bins) {
-                    Ok(status) => {
-                        let stderr = std::io::stderr();
-                        let mut stderr = stderr.lock();
-                        let _ = writeln!(
-                            stderr,
-                            "{} {} ... {}",
-                            palette.hint.paint("Testing"),
-                            c.path.display(),
-                            palette.info.paint("ok")
-                        );
-                        if !status.is_ok() {
-                            // Assuming `status` will print the newline
-                            let _ = write!(stderr, "{}", &status);
-                        }
-                        None
-                    }
-                    Err(status) => {
-                        let stderr = std::io::stderr();
-                        let mut stderr = stderr.lock();
-                        let _ = writeln!(
-                            stderr,
-                            "{} {} ... {}",
-                            palette.hint.paint("Testing"),
-                            c.path.display(),
-                            palette.error.paint("failed")
-                        );
-                        // Assuming `status` will print the newline
-                        let _ = write!(stderr, "{}", &status);
-                        Some(status)
-                    }
+                .flat_map(|c| {
+                    let results = c.run(mode, bins);
+
+                    let stderr = std::io::stderr();
+                    let mut stderr = stderr.lock();
+
+                    results
+                        .into_iter()
+                        .filter_map(|s| {
+                            match s {
+                                Ok(status) => {
+                                    let _ = writeln!(
+                                        stderr,
+                                        "{} {} ... {}",
+                                        palette.hint.paint("Testing"),
+                                        status.name(),
+                                        status.spawn.status.summary()
+                                    );
+                                    if !status.is_ok() {
+                                        // Assuming `status` will print the newline
+                                        let _ = write!(stderr, "{}", &status);
+                                    }
+                                    None
+                                }
+                                Err(status) => {
+                                    let _ = writeln!(
+                                        stderr,
+                                        "{} {} ... {}",
+                                        palette.hint.paint("Testing"),
+                                        status.name(),
+                                        status.spawn.status.summary()
+                                    );
+                                    // Assuming `status` will print the newline
+                                    let _ = write!(stderr, "{}", &status);
+                                    Some(status)
+                                }
+                            }
+                        })
+                        .collect::<Vec<_>>()
                 })
                 .collect();
 
@@ -113,63 +121,148 @@ impl Case {
         }
     }
 
-    pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) -> Result<Output, Output> {
-        let mut output = Output::default();
-
+    pub(crate) fn run(
+        &self,
+        mode: &Mode,
+        bins: &crate::BinRegistry,
+    ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
+            let output = Output::sequence(self.path.clone());
             assert_eq!(output.spawn.status, SpawnStatus::Skipped);
-            return Ok(output);
+            return vec![Ok(output)];
         }
+
         if let Some(err) = self.error.clone() {
+            let mut output = Output::step(self.path.clone(), "setup".into());
             output.spawn.status = err;
-            return Err(output);
+            return vec![Err(output)];
         }
 
-        let mut sequence =
-            crate::schema::TryCmd::load(&self.path).map_err(|e| output.clone().error(e))?;
-        if sequence.run.bin.is_none() {
-            sequence.run.bin = self.default_bin.clone()
-        }
-        sequence.run.bin = sequence
-            .run
-            .bin
-            .map(|name| bins.resolve_bin(name))
-            .transpose()
-            .map_err(|e| output.clone().error(e))?;
-        if sequence.run.timeout.is_none() {
-            sequence.run.timeout = self.timeout;
-        }
-        if self.expected.is_some() {
-            sequence.run.status = self.expected;
-        }
-        sequence.run.env.update(&self.env);
+        let mut sequence = match crate::schema::TryCmd::load(&self.path) {
+            Ok(sequence) => sequence,
+            Err(e) => {
+                let output = Output::step(self.path.clone(), "setup".into());
+                return vec![Err(output.error(e))];
+            }
+        };
 
-        let fs = crate::FilesystemContext::new(
+        let fs_context = match crate::FilesystemContext::new(
             &self.path,
             sequence.fs.base.as_deref(),
             sequence.fs.sandbox(),
             mode,
-        )
-        .map_err(|e| {
-            output
-                .clone()
-                .error(format!("Failed to initialize sandbox: {}", e))
-        })?;
-        let cwd = fs
+        ) {
+            Ok(fs_context) => fs_context,
+            Err(e) => {
+                let output = Output::step(self.path.clone(), "setup".into());
+                return vec![Err(
+                    output.error(format!("Failed to initialize sandbox: {}", e))
+                )];
+            }
+        };
+        let cwd = match fs_context
             .path()
             .map(|p| sequence.fs.rel_cwd().map(|rel| p.join(rel)))
             .transpose()
-            .map_err(|e| output.clone().error(e))?;
+        {
+            Ok(cwd) => cwd,
+            Err(e) => {
+                let output = Output::step(self.path.clone(), "setup".into());
+                return vec![Err(output.error(e))];
+            }
+        };
 
-        let cmd_output = sequence
-            .run
-            .to_output(cwd.as_deref())
+        let mut outputs = Vec::with_capacity(sequence.steps.len());
+        let mut prior_step_failed = false;
+        for step in &mut sequence.steps {
+            if prior_step_failed {
+                step.expected_status = Some(crate::schema::CommandStatus::Skipped);
+            }
+
+            let step_status = self.run_step(step, cwd.as_deref(), mode, bins);
+            if step_status.is_err() {
+                prior_step_failed = true;
+            }
+            outputs.push(step_status);
+        }
+
+        if sequence.fs.sandbox() {
+            let mut ok = true;
+            let mut output = Output::step(self.path.clone(), "teardown".into());
+
+            output.fs = match self.validate_fs(
+                fs_context.path().expect("sandbox must be filled"),
+                output.fs,
+                mode,
+            ) {
+                Ok(fs) => fs,
+                Err(fs) => {
+                    ok = false;
+                    fs
+                }
+            };
+            if let Err(err) = fs_context.close() {
+                ok = false;
+                output.fs.context.push(FileStatus::Failure(format!(
+                    "Failed to cleanup sandbox: {}",
+                    err
+                )));
+            }
+
+            let output = if ok {
+                output.spawn.status = SpawnStatus::Ok;
+                Ok(output)
+            } else {
+                output.spawn.status = SpawnStatus::Failure("Files left in unexpected state".into());
+                Err(output)
+            };
+            outputs.push(output);
+        }
+
+        outputs
+    }
+
+    pub(crate) fn run_step(
+        &self,
+        step: &mut crate::schema::Step,
+        cwd: Option<&std::path::Path>,
+        mode: &Mode,
+        bins: &crate::BinRegistry,
+    ) -> Result<Output, Output> {
+        let output = if let Some(id) = step.id.clone() {
+            Output::step(self.path.clone(), id)
+        } else {
+            Output::sequence(self.path.clone())
+        };
+
+        let mut bin = step.bin.take();
+        if bin.is_none() {
+            bin = self.default_bin.clone()
+        }
+        bin = bin
+            .map(|name| bins.resolve_bin(name))
+            .transpose()
             .map_err(|e| output.clone().error(e))?;
+        step.bin = bin;
+        if step.timeout.is_none() {
+            step.timeout = self.timeout;
+        }
+        if self.expected.is_some() {
+            step.expected_status = self.expected;
+        }
+        step.env.update(&self.env);
+
+        if step.expected_status() == crate::schema::CommandStatus::Skipped {
+            assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+            return Ok(output);
+        }
+
+        let cmd_output = step.to_output(cwd).map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
         // For dump mode's sake, allow running all
         let mut ok = output.is_ok();
-        let mut output = match self.validate_spawn(output, sequence.run.status()) {
+        let mut output = match self.validate_spawn(output, step.expected_status()) {
             Ok(output) => output,
             Err(output) => {
                 ok = false;
@@ -177,55 +270,34 @@ impl Case {
             }
         };
         if let Some(mut stdout) = output.stdout {
-            if !sequence.run.binary {
+            if !step.binary {
                 stdout = stdout.utf8();
             }
             if stdout.is_ok() {
-                stdout =
-                    match self.validate_stream(stdout, sequence.run.expected_stdout.as_ref(), mode)
-                    {
-                        Ok(stdout) => stdout,
-                        Err(stdout) => {
-                            ok = false;
-                            stdout
-                        }
-                    };
+                stdout = match self.validate_stream(stdout, step.expected_stdout.as_ref(), mode) {
+                    Ok(stdout) => stdout,
+                    Err(stdout) => {
+                        ok = false;
+                        stdout
+                    }
+                };
             }
             output.stdout = Some(stdout);
         }
         if let Some(mut stderr) = output.stderr {
-            if !sequence.run.binary {
+            if !step.binary {
                 stderr = stderr.utf8();
             }
             if stderr.is_ok() {
-                stderr =
-                    match self.validate_stream(stderr, sequence.run.expected_stderr.as_ref(), mode)
-                    {
-                        Ok(stderr) => stderr,
-                        Err(stderr) => {
-                            ok = false;
-                            stderr
-                        }
-                    };
-            }
-            output.stderr = Some(stderr);
-        }
-        if sequence.fs.sandbox() {
-            output.fs =
-                match self.validate_fs(fs.path().expect("sandbox must be filled"), output.fs, mode)
-                {
-                    Ok(fs) => fs,
-                    Err(fs) => {
+                stderr = match self.validate_stream(stderr, step.expected_stderr.as_ref(), mode) {
+                    Ok(stderr) => stderr,
+                    Err(stderr) => {
                         ok = false;
-                        fs
+                        stderr
                     }
                 };
-        }
-        if let Err(err) = fs.close() {
-            output.fs.context.push(FileStatus::Failure(format!(
-                "Failed to cleanup sandbox: {}",
-                err
-            )));
+            }
+            output.stderr = Some(stderr);
         }
 
         if ok {
@@ -482,6 +554,8 @@ impl Case {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Output {
+    path: std::path::PathBuf,
+    id: Option<String>,
     spawn: Spawn,
     stdout: Option<Stream>,
     stderr: Option<Stream>,
@@ -489,6 +563,31 @@ pub(crate) struct Output {
 }
 
 impl Output {
+    fn sequence(path: std::path::PathBuf) -> Self {
+        Self {
+            path,
+            id: None,
+            spawn: Spawn {
+                exit: None,
+                status: SpawnStatus::Skipped,
+            },
+            stdout: None,
+            stderr: None,
+            fs: Default::default(),
+        }
+    }
+
+    fn step(path: std::path::PathBuf, step: String) -> Self {
+        Self {
+            path,
+            id: Some(step),
+            spawn: Default::default(),
+            stdout: None,
+            stderr: None,
+            fs: Default::default(),
+        }
+    }
+
     fn output(mut self, output: std::process::Output) -> Self {
         self.spawn.exit = Some(output.status);
         assert_eq!(self.spawn.status, SpawnStatus::Skipped);
@@ -513,23 +612,16 @@ impl Output {
 
     fn is_ok(&self) -> bool {
         self.spawn.is_ok()
-            && self.stdout.as_ref().map(|s| s.is_ok()).unwrap_or_default()
-            && self.stderr.as_ref().map(|s| s.is_ok()).unwrap_or_default()
+            && self.stdout.as_ref().map(|s| s.is_ok()).unwrap_or(true)
+            && self.stderr.as_ref().map(|s| s.is_ok()).unwrap_or(true)
             && self.fs.is_ok()
     }
-}
 
-impl Default for Output {
-    fn default() -> Self {
-        Self {
-            spawn: Spawn {
-                exit: None,
-                status: SpawnStatus::Skipped,
-            },
-            stdout: None,
-            stderr: None,
-            fs: Default::default(),
-        }
+    fn name(&self) -> String {
+        self.id
+            .as_deref()
+            .map(|id| format!("{}:{}", self.path.display(), id))
+            .unwrap_or_else(|| self.path.display().to_string())
     }
 }
 
@@ -557,6 +649,15 @@ struct Spawn {
 impl Spawn {
     fn is_ok(&self) -> bool {
         self.status.is_ok()
+    }
+}
+
+impl Default for Spawn {
+    fn default() -> Self {
+        Self {
+            exit: None,
+            status: SpawnStatus::Skipped,
+        }
     }
 }
 
@@ -627,6 +728,15 @@ impl SpawnStatus {
         match self {
             Self::Ok | Self::Skipped => true,
             Self::Failure(_) | Self::Expected(_) => false,
+        }
+    }
+
+    fn summary(&self) -> impl std::fmt::Display {
+        let palette = crate::Palette::current();
+        match self {
+            Self::Ok => palette.info.paint("ok"),
+            Self::Skipped => palette.warn.paint("ignored"),
+            Self::Failure(_) | Self::Expected(_) => palette.error.paint("failed"),
         }
     }
 }
