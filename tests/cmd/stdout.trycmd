@@ -1,3 +1,5 @@
+```
 $ stdout='Hello' stderr='Goodbye' bin-fixture
 Hello
 Goodbye
+```

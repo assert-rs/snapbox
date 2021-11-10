@@ -1,6 +1,13 @@
+Basic test:
+```
 $ stdout='Hello' stderr='Goodbye' bin-fixture
 Hello
 Goodbye
+```
+
+Mess with the sandbox:
+```
 $ write='file.txt = Goodbye' bin-fixture
 $ cat='file.txt' bin-fixture
 Goodbye
+```
