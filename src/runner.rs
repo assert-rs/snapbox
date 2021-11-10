@@ -376,13 +376,19 @@ impl Case {
                     }
                     Mode::Overwrite => {
                         let stdout_path = self.path.with_extension(stream.stream.as_str());
-                        stream.content.write_to(&stdout_path).map_err(|e| {
-                            let mut stream = stream.clone();
-                            stream.status = StreamStatus::Failure(e);
-                            stream
-                        })?;
-                        stream.status = StreamStatus::Expected(expected_content.clone());
-                        return Ok(stream);
+                        if stdout_path.exists() {
+                            stream.content.write_to(&stdout_path).map_err(|e| {
+                                let mut stream = stream.clone();
+                                stream.status = StreamStatus::Failure(e);
+                                stream
+                            })?;
+                            stream.status = StreamStatus::Expected(expected_content.clone());
+                            return Ok(stream);
+                        } else {
+                            // `.trycmd` files do not support overwrite, see issue #23
+                            stream.status = StreamStatus::Expected(expected_content.clone());
+                            return Err(stream);
+                        }
                     }
                     Mode::Dump(_) => unreachable!("handled earlier"),
                 }
