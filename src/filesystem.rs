@@ -40,7 +40,7 @@ impl File {
         {
             if line_num == line_nums.start {
                 output_lines.push_str(text);
-                if !text.is_empty() && !text.ends_with("\n") {
+                if !text.is_empty() && !text.ends_with('\n') {
                     output_lines.push('\n');
                 }
             }
