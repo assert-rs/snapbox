@@ -185,11 +185,45 @@ impl Case {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
-            let step_status = self.run_step(step, cwd.as_deref(), mode, bins);
-            if step_status.is_err() {
+            let step_status = self.run_step(step, cwd.as_deref(), bins);
+            if step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
             outputs.push(step_status);
+        }
+        match mode {
+            Mode::Dump(root) => {
+                for output in &mut outputs {
+                    let output = match output {
+                        Ok(output) => output,
+                        Err(output) => output,
+                    };
+                    output.stdout =
+                        match self.dump_stream(root, output.id.as_deref(), output.stdout.take()) {
+                            Ok(stream) => stream,
+                            Err(stream) => stream,
+                        };
+                    output.stderr =
+                        match self.dump_stream(root, output.id.as_deref(), output.stderr.take()) {
+                            Ok(stream) => stream,
+                            Err(stream) => stream,
+                        };
+                }
+            }
+            Mode::Overwrite => {
+                // `rev()` to ensure we don't mess up our line number info
+                for output in outputs.iter().rev() {
+                    if let Err(output) = output {
+                        let _ = sequence.overwrite(
+                            &self.path,
+                            output.id.as_deref(),
+                            output.stdout.as_ref().map(|s| &s.content),
+                            output.stderr.as_ref().map(|s| &s.content),
+                        );
+                    }
+                }
+            }
+            Mode::Fail => {}
         }
 
         if sequence.fs.sandbox() {
@@ -232,7 +266,6 @@ impl Case {
         &self,
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
-        mode: &Mode,
         bins: &crate::BinRegistry,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
@@ -266,58 +299,18 @@ impl Case {
         let cmd_output = step.to_output(cwd).map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
-        // For dump mode's sake, allow running all
-        let mut ok = output.is_ok();
-        let mut output = match self.validate_spawn(output, step.expected_status()) {
-            Ok(output) => output,
-            Err(output) => {
-                ok = false;
-                output
-            }
-        };
-        if let Some(mut stdout) = output.stdout {
-            if !step.binary {
-                stdout = stdout.utf8();
-            }
-            if stdout.is_ok() {
-                stdout = match self.validate_stream(stdout, step.expected_stdout.as_ref(), mode) {
-                    Ok(stdout) => stdout,
-                    Err(stdout) => {
-                        ok = false;
-                        stdout
-                    }
-                };
-            }
-            output.stdout = Some(stdout);
-        }
-        if let Some(mut stderr) = output.stderr {
-            if !step.binary {
-                stderr = stderr.utf8();
-            }
-            if stderr.is_ok() {
-                stderr = match self.validate_stream(stderr, step.expected_stderr.as_ref(), mode) {
-                    Ok(stderr) => stderr,
-                    Err(stderr) => {
-                        ok = false;
-                        stderr
-                    }
-                };
-            }
-            output.stderr = Some(stderr);
-        }
+        // For Mode::Dump's sake, allow running all
+        let output = self.validate_spawn(output, step.expected_status());
+        let output = self.validate_streams(output, step);
 
-        if ok {
+        if output.is_ok() {
             Ok(output)
         } else {
             Err(output)
         }
     }
 
-    fn validate_spawn(
-        &self,
-        mut output: Output,
-        expected: crate::schema::CommandStatus,
-    ) -> Result<Output, Output> {
+    fn validate_spawn(&self, mut output: Output, expected: crate::schema::CommandStatus) -> Output {
         let status = output.spawn.exit.expect("bale out before now");
         match expected {
             crate::schema::CommandStatus::Success => {
@@ -343,59 +336,82 @@ impl Case {
             }
         }
 
-        Ok(output)
+        output
+    }
+
+    fn validate_streams(&self, mut output: Output, step: &crate::schema::Step) -> Output {
+        output.stdout =
+            self.validate_stream(output.stdout, step.expected_stdout.as_ref(), step.binary);
+        output.stderr =
+            self.validate_stream(output.stderr, step.expected_stderr.as_ref(), step.binary);
+
+        output
     }
 
     fn validate_stream(
         &self,
-        mut stream: Stream,
+        stream: Option<Stream>,
         expected_content: Option<&crate::File>,
-        mode: &Mode,
-    ) -> Result<Stream, Stream> {
-        if let Mode::Dump(root) = mode {
-            let stdout_path = root.join(
-                self.path
-                    .with_extension(stream.stream.as_str())
-                    .file_name()
-                    .unwrap(),
-            );
-            stream.content.write_to(&stdout_path).map_err(|e| {
-                let mut stream = stream.clone();
-                stream.status = StreamStatus::Failure(e);
-                stream
-            })?;
-        } else if let Some(expected_content) = expected_content {
+        binary: bool,
+    ) -> Option<Stream> {
+        let mut stream = stream?;
+
+        if !binary {
+            stream = stream.utf8();
+            if !stream.is_ok() {
+                return Some(stream);
+            }
+        }
+
+        if let Some(expected_content) = expected_content {
             if let crate::File::Text(e) = &expected_content {
                 stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
             }
             if stream.content != *expected_content {
-                match mode {
-                    Mode::Fail => {
-                        stream.status = StreamStatus::Expected(expected_content.clone());
-                        return Err(stream);
-                    }
-                    Mode::Overwrite => {
-                        let stdout_path = self.path.with_extension(stream.stream.as_str());
-                        if stdout_path.exists() {
-                            stream.content.write_to(&stdout_path).map_err(|e| {
-                                let mut stream = stream.clone();
-                                stream.status = StreamStatus::Failure(e);
-                                stream
-                            })?;
-                            stream.status = StreamStatus::Expected(expected_content.clone());
-                            return Ok(stream);
-                        } else {
-                            // `.trycmd` files do not support overwrite, see issue #23
-                            stream.status = StreamStatus::Expected(expected_content.clone());
-                            return Err(stream);
-                        }
-                    }
-                    Mode::Dump(_) => unreachable!("handled earlier"),
-                }
+                stream.status = StreamStatus::Expected(expected_content.clone());
+                return Some(stream);
             }
         }
 
-        Ok(stream)
+        Some(stream)
+    }
+
+    fn dump_stream(
+        &self,
+        root: &std::path::Path,
+        id: Option<&str>,
+        stream: Option<Stream>,
+    ) -> Result<Option<Stream>, Option<Stream>> {
+        if let Some(stream) = stream {
+            let file_name = match id {
+                Some(id) => {
+                    format!(
+                        "{}-{}.{}",
+                        self.path.file_stem().unwrap().to_string_lossy(),
+                        id,
+                        stream.stream.as_str(),
+                    )
+                }
+                None => {
+                    format!(
+                        "{}.{}",
+                        self.path.file_stem().unwrap().to_string_lossy(),
+                        stream.stream.as_str(),
+                    )
+                }
+            };
+            let stream_path = root.join(file_name);
+            stream.content.write_to(&stream_path).map_err(|e| {
+                let mut stream = stream.clone();
+                if stream.is_ok() {
+                    stream.status = StreamStatus::Failure(e);
+                }
+                stream
+            })?;
+            Ok(Some(stream))
+        } else {
+            Ok(None)
+        }
     }
 
     fn validate_fs(

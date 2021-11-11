@@ -24,6 +24,35 @@ impl File {
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e))
     }
 
+    pub(crate) fn replace_lines(
+        &mut self,
+        line_nums: std::ops::Range<usize>,
+        text: &str,
+    ) -> Result<(), String> {
+        let mut output_lines = String::new();
+
+        let s = self
+            .as_str()
+            .ok_or("Binary file can't have lines replaced")?;
+        for (line_num, line) in crate::lines::LinesWithTerminator::new(s)
+            .enumerate()
+            .map(|(i, l)| (i + 1, l))
+        {
+            if line_num == line_nums.start {
+                output_lines.push_str(text);
+                if !text.is_empty() && !text.ends_with('\n') {
+                    output_lines.push('\n');
+                }
+            }
+            if !line_nums.contains(&line_num) {
+                output_lines.push_str(line);
+            }
+        }
+
+        *self = Self::Text(output_lines);
+        Ok(())
+    }
+
     pub(crate) fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
         match self {
             Self::Binary(data) => Self::Binary(data),
@@ -67,6 +96,13 @@ impl File {
                 Ok(data)
             }
             Self::Text(data) => Ok(data),
+        }
+    }
+
+    pub(crate) fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::Binary(_) => None,
+            Self::Text(data) => Some(data.as_str()),
         }
     }
 
@@ -248,4 +284,69 @@ fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(
 #[cfg(not(windows))]
 fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(), std::io::Error> {
     std::os::unix::fs::symlink(target, link)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn replace_lines_same_line_count() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "World\n";
+        let expected = File::Text("One\nWorld\nThree".into());
+
+        let mut actual = File::Text(input.into());
+        actual.replace_lines(line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_grow() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "World\nTrees\n";
+        let expected = File::Text("One\nWorld\nTrees\nThree".into());
+
+        let mut actual = File::Text(input.into());
+        actual.replace_lines(line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_shrink() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "";
+        let expected = File::Text("One\nThree".into());
+
+        let mut actual = File::Text(input.into());
+        actual.replace_lines(line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_no_trailing() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "World";
+        let expected = File::Text("One\nWorld\nThree".into());
+
+        let mut actual = File::Text(input.into());
+        actual.replace_lines(line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_empty_range() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..2;
+        let replacement = "World\n";
+        let expected = File::Text("One\nWorld\nTwo\nThree".into());
+
+        let mut actual = File::Text(input.into());
+        actual.replace_lines(line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
 }
