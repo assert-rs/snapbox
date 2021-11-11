@@ -330,35 +330,52 @@ impl Case {
         mode: &Mode,
     ) -> Result<Output, Output> {
         let mut ok = true;
-        if let Some(mut stdout) = output.stdout {
-            stdout = match self.validate_stream(
-                stdout,
-                step.expected_stdout.as_ref(),
-                step.binary,
-                mode,
-            ) {
-                Ok(stdout) => stdout,
-                Err(stdout) => {
+
+        output.stdout =
+            match self.validate_stream(output.stdout, step.expected_stdout.as_ref(), step.binary) {
+                Ok(stream) => stream,
+                Err(stream) => {
                     ok = false;
-                    stdout
+                    stream
                 }
             };
-            output.stdout = Some(stdout);
-        }
-        if let Some(mut stderr) = output.stderr {
-            stderr = match self.validate_stream(
-                stderr,
-                step.expected_stderr.as_ref(),
-                step.binary,
-                mode,
-            ) {
-                Ok(stderr) => stderr,
-                Err(stderr) => {
+        output.stderr =
+            match self.validate_stream(output.stderr, step.expected_stderr.as_ref(), step.binary) {
+                Ok(stream) => stream,
+                Err(stream) => {
                     ok = false;
-                    stderr
+                    stream
                 }
             };
-            output.stderr = Some(stderr);
+
+        match mode {
+            Mode::Dump(root) => {
+                output.stdout = match self.dump_stream(root, output.stdout) {
+                    Ok(stream) => stream,
+                    Err(stream) => {
+                        ok = false;
+                        stream
+                    }
+                };
+                output.stderr = match self.dump_stream(root, output.stderr) {
+                    Ok(stream) => stream,
+                    Err(stream) => {
+                        ok = false;
+                        stream
+                    }
+                };
+            }
+            Mode::Overwrite => {
+                if let Err(_) = crate::schema::TryCmd::overwrite(
+                    &self.path,
+                    step.id.as_deref(),
+                    output.stdout.as_ref().map(|s| &s.content),
+                    output.stderr.as_ref().map(|s| &s.content),
+                ) {
+                    ok = false;
+                }
+            }
+            Mode::Fail => {}
         }
 
         if ok {
@@ -370,71 +387,57 @@ impl Case {
 
     fn validate_stream(
         &self,
-        mut stream: Stream,
+        stream: Option<Stream>,
         expected_content: Option<&crate::File>,
         binary: bool,
-        mode: &Mode,
-    ) -> Result<Stream, Stream> {
-        if let Mode::Dump(root) = mode {
-            return self.dump_stream(root, stream);
-        }
-
-        if !binary {
-            stream = stream.utf8();
-            if !stream.is_ok() {
-                return Err(stream);
-            }
-        }
-
-        if let Some(expected_content) = expected_content {
-            if let crate::File::Text(e) = &expected_content {
-                stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
-            }
-            if stream.content != *expected_content {
-                match mode {
-                    Mode::Fail => {
-                        stream.status = StreamStatus::Expected(expected_content.clone());
-                        return Err(stream);
-                    }
-                    Mode::Overwrite => {
-                        let stdout_path = self.path.with_extension(stream.stream.as_str());
-                        if stdout_path.exists() {
-                            stream.content.write_to(&stdout_path).map_err(|e| {
-                                let mut stream = stream.clone();
-                                stream.status = StreamStatus::Failure(e);
-                                stream
-                            })?;
-                            stream.status = StreamStatus::Expected(expected_content.clone());
-                            return Ok(stream);
-                        } else {
-                            // `.trycmd` files do not support overwrite, see issue #23
-                            stream.status = StreamStatus::Expected(expected_content.clone());
-                            return Err(stream);
-                        }
-                    }
-                    Mode::Dump(_) => unreachable!("handled earlier"),
+    ) -> Result<Option<Stream>, Option<Stream>> {
+        if let Some(mut stream) = stream {
+            if !binary {
+                stream = stream.utf8();
+                if !stream.is_ok() {
+                    return Err(Some(stream));
                 }
             }
-        }
 
-        Ok(stream)
+            if let Some(expected_content) = expected_content {
+                if let crate::File::Text(e) = &expected_content {
+                    stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+                }
+                if stream.content != *expected_content {
+                    stream.status = StreamStatus::Expected(expected_content.clone());
+                    return Err(Some(stream));
+                }
+            }
+
+            Ok(Some(stream))
+        } else {
+            Ok(None)
+        }
     }
 
-    fn dump_stream(&self, root: &std::path::Path, stream: Stream) -> Result<Stream, Stream> {
-        let stream_path = root.join(
-            self.path
-                .with_extension(stream.stream.as_str())
-                .file_name()
-                .unwrap(),
-        );
-        stream.content.write_to(&stream_path).map_err(|e| {
-            let mut stream = stream.clone();
-            if stream.is_ok() {
-                stream.status = StreamStatus::Failure(e);
-            }
-            stream
-        })?;
-        return Ok(stream);
+    fn dump_stream(
+        &self,
+        root: &std::path::Path,
+        stream: Option<Stream>,
+    ) -> Result<Option<Stream>, Option<Stream>> {
+        if let Some(stream) = stream {
+            let stream_path = root.join(
+                self.path
+                    .with_extension(stream.stream.as_str())
+                    .file_name()
+                    .unwrap(),
+            );
+            stream.content.write_to(&stream_path).map_err(|e| {
+                let mut stream = stream.clone();
+                if stream.is_ok() {
+                    stream.status = StreamStatus::Failure(e);
+                }
+                stream
+            })?;
+            Ok(Some(stream))
+        } else {
+            Ok(None)
+        }
     }
 
     fn validate_fs(

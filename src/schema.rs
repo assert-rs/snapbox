@@ -81,6 +81,34 @@ impl TryCmd {
         Ok(sequence)
     }
 
+    pub(crate) fn overwrite(
+        path: &std::path::Path,
+        id: Option<&str>,
+        stdout: Option<&crate::File>,
+        stderr: Option<&crate::File>,
+    ) -> Result<(), String> {
+        if let Some(ext) = path.extension() {
+            if ext == std::ffi::OsStr::new("toml") {
+                assert_eq!(id, None);
+                if let Some(stdout) = stdout {
+                    let stdout_path = path.with_extension("stdout");
+                    stdout.write_to(&stdout_path)?;
+                }
+                if let Some(stderr) = stderr {
+                    let stderr_path = path.with_extension("stderr");
+                    stderr.write_to(&stderr_path)?;
+                }
+            } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
+            } else {
+                return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
+            }
+        } else {
+            return Err("No extension".into());
+        }
+
+        Ok(())
+    }
+
     fn parse_trycmd(s: &str) -> Result<Self, String> {
         let mut steps = Vec::new();
 
