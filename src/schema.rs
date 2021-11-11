@@ -82,6 +82,7 @@ impl TryCmd {
     }
 
     pub(crate) fn overwrite(
+        &self,
         path: &std::path::Path,
         id: Option<&str>,
         stdout: Option<&crate::File>,
@@ -90,15 +91,33 @@ impl TryCmd {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
                 assert_eq!(id, None);
+
                 if let Some(stdout) = stdout {
                     let stdout_path = path.with_extension("stdout");
                     stdout.write_to(&stdout_path)?;
                 }
+
                 if let Some(stderr) = stderr {
                     let stderr_path = path.with_extension("stderr");
                     stderr.write_to(&stderr_path)?;
                 }
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
+                assert_eq!(stderr, Some(&crate::File::Text("".into())));
+                if let (Some(id), Some(stdout)) = (id, stdout) {
+                    let step = self
+                        .steps
+                        .iter()
+                        .find(|s| s.id.as_deref() == Some(id))
+                        .expect("id is valid");
+                    let line_nums = step
+                        .expected_stdout_source
+                        .clone()
+                        .expect("always present for .trycmd");
+                    let stdout = stdout.as_str().expect("already converted to Text");
+                    let mut raw = crate::File::read_from(path, false)?;
+                    raw.replace_lines(line_nums, stdout)?;
+                    raw.write_to(path)?;
+                }
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
             }
@@ -149,11 +168,13 @@ impl TryCmd {
                 let mut expected_status = Some(CommandStatus::Success);
                 let mut stdout = String::new();
                 let cmd_start;
+                let mut stdout_start;
 
                 if let Some((line_num, line)) = lines.pop_front() {
                     if let Some(raw) = line.strip_prefix("$ ") {
                         cmdline.extend(shlex::Shlex::new(raw.trim()));
                         cmd_start = line_num;
+                        stdout_start = line_num + 1;
                     } else {
                         return Err(format!("Expected `$` on line {}, got `{}`", line_num, line));
                     }
@@ -163,6 +184,7 @@ impl TryCmd {
                 while let Some((line_num, line)) = lines.pop_front() {
                     if let Some(raw) = line.strip_prefix("> ") {
                         cmdline.extend(shlex::Shlex::new(raw.trim()));
+                        stdout_start = line_num + 1;
                     } else {
                         lines.push_front((line_num, line));
                         break;
@@ -171,20 +193,25 @@ impl TryCmd {
                 if let Some((line_num, line)) = lines.pop_front() {
                     if let Some(raw) = line.strip_prefix("? ") {
                         expected_status = Some(raw.trim().parse::<CommandStatus>()?);
+                        stdout_start = line_num + 1;
                     } else {
                         lines.push_front((line_num, line));
                     }
                 }
+                let mut post_stdout_start = stdout_start;
                 let mut block_done = false;
                 while let Some((line_num, line)) = lines.pop_front() {
                     if line.starts_with("$ ") {
                         lines.push_front((line_num, line));
+                        post_stdout_start = line_num;
                         break;
                     } else if line.starts_with("```") {
                         block_done = true;
+                        post_stdout_start = line_num;
                         break;
                     } else {
                         stdout.push_str(line);
+                        post_stdout_start = line_num + 1;
                     }
                 }
 
@@ -206,10 +233,15 @@ impl TryCmd {
                     bin: Some(Bin::Name(bin)),
                     args: cmdline,
                     env,
-                    expected_status,
+                    stdin: None,
                     stderr_to_stdout: true,
+                    expected_status,
+                    expected_stdout_source: Some(stdout_start..post_stdout_start),
                     expected_stdout: Some(crate::File::Text(stdout)),
-                    ..Default::default()
+                    expected_stderr_source: None,
+                    expected_stderr: None,
+                    binary: false,
+                    timeout: None,
                 };
                 steps.push(step);
                 if block_done {
@@ -254,7 +286,9 @@ impl From<OneShot> for TryCmd {
                 stdin: None,
                 stderr_to_stdout,
                 expected_status: status,
+                expected_stdout_source: None,
                 expected_stdout: None,
+                expected_stderr_source: None,
                 expected_stderr: None,
                 binary,
                 timeout,
@@ -273,7 +307,9 @@ pub(crate) struct Step {
     pub(crate) stdin: Option<crate::File>,
     pub(crate) stderr_to_stdout: bool,
     pub(crate) expected_status: Option<CommandStatus>,
+    pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
     pub(crate) expected_stdout: Option<crate::File>,
+    pub(crate) expected_stderr_source: Option<std::ops::Range<usize>>,
     pub(crate) expected_stderr: Option<crate::File>,
     pub(crate) binary: bool,
     pub(crate) timeout: Option<std::time::Duration>,
@@ -634,6 +670,7 @@ mod test {
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(4..4),
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -660,6 +697,7 @@ $ cmd
                 args: vec!["arg1".into(), "arg with space".into()],
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(4..4),
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -686,6 +724,7 @@ $ cmd arg1 'arg with space'
                 args: vec!["arg1".into(), "arg with space".into()],
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(5..5),
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -720,6 +759,7 @@ $ cmd arg1
                 },
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(4..4),
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -745,6 +785,7 @@ $ KEY1=VALUE1 KEY2='VALUE2 with space' cmd
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(5..5),
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -771,6 +812,7 @@ $ cmd
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(5..5),
                 expected_stdout: Some(crate::File::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -797,6 +839,7 @@ $ cmd
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
+                expected_stdout_source: Some(4..5),
                 expected_stdout: Some(crate::File::Text("Hello World\n".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -823,6 +866,7 @@ Hello World
                     bin: Some(Bin::Name("cmd1".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
+                    expected_stdout_source: Some(5..5),
                     expected_stdout: Some(crate::File::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
@@ -832,6 +876,7 @@ Hello World
                     bin: Some(Bin::Name("cmd2".into())),
                     expected_status: Some(CommandStatus::Success),
                     stderr_to_stdout: true,
+                    expected_stdout_source: Some(6..6),
                     expected_stdout: Some(crate::File::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
@@ -861,6 +906,7 @@ $ cmd2
                     bin: Some(Bin::Name("bare-cmd".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
+                    expected_stdout_source: Some(5..5),
                     expected_stdout: Some(crate::File::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
@@ -870,6 +916,7 @@ $ cmd2
                     bin: Some(Bin::Name("trycmd-cmd".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
+                    expected_stdout_source: Some(10..10),
                     expected_stdout: Some(crate::File::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
@@ -879,6 +926,7 @@ $ cmd2
                     bin: Some(Bin::Name("sh-cmd".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
+                    expected_stdout_source: Some(15..15),
                     expected_stdout: Some(crate::File::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
@@ -888,6 +936,7 @@ $ cmd2
                     bin: Some(Bin::Name("bash-cmd".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
+                    expected_stdout_source: Some(20..20),
                     expected_stdout: Some(crate::File::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()

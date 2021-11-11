@@ -185,11 +185,43 @@ impl Case {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
-            let step_status = self.run_step(step, cwd.as_deref(), mode, bins);
-            if step_status.is_err() {
+            let step_status = self.run_step(step, cwd.as_deref(), bins);
+            if step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
             outputs.push(step_status);
+        }
+        match mode {
+            Mode::Dump(root) => {
+                for output in &mut outputs {
+                    let output = match output {
+                        Ok(output) => output,
+                        Err(output) => output,
+                    };
+                    output.stdout = match self.dump_stream(root, output.stdout.take()) {
+                        Ok(stream) => stream,
+                        Err(stream) => stream,
+                    };
+                    output.stderr = match self.dump_stream(root, output.stderr.take()) {
+                        Ok(stream) => stream,
+                        Err(stream) => stream,
+                    };
+                }
+            }
+            Mode::Overwrite => {
+                // `rev()` to ensure we don't mess up our line number info
+                for output in outputs.iter().rev() {
+                    if let Err(output) = output {
+                        let _ = sequence.overwrite(
+                            &self.path,
+                            output.id.as_deref(),
+                            output.stdout.as_ref().map(|s| &s.content),
+                            output.stderr.as_ref().map(|s| &s.content),
+                        );
+                    }
+                }
+            }
+            Mode::Fail => {}
         }
 
         if sequence.fs.sandbox() {
@@ -232,7 +264,6 @@ impl Case {
         &self,
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
-        mode: &Mode,
         bins: &crate::BinRegistry,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
@@ -266,7 +297,7 @@ impl Case {
         let cmd_output = step.to_output(cwd).map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
-        // For dump mode's sake, allow running all
+        // For Mode::Dump's sake, allow running all
         let mut ok = output.is_ok();
         let output = match self.validate_spawn(output, step.expected_status()) {
             Ok(output) => output,
@@ -275,7 +306,7 @@ impl Case {
                 output
             }
         };
-        let output = match self.validate_streams(output, step, mode) {
+        let output = match self.validate_streams(output, step) {
             Ok(output) => output,
             Err(output) => {
                 ok = false;
@@ -327,7 +358,6 @@ impl Case {
         &self,
         mut output: Output,
         step: &crate::schema::Step,
-        mode: &Mode,
     ) -> Result<Output, Output> {
         let mut ok = true;
 
@@ -347,36 +377,6 @@ impl Case {
                     stream
                 }
             };
-
-        match mode {
-            Mode::Dump(root) => {
-                output.stdout = match self.dump_stream(root, output.stdout) {
-                    Ok(stream) => stream,
-                    Err(stream) => {
-                        ok = false;
-                        stream
-                    }
-                };
-                output.stderr = match self.dump_stream(root, output.stderr) {
-                    Ok(stream) => stream,
-                    Err(stream) => {
-                        ok = false;
-                        stream
-                    }
-                };
-            }
-            Mode::Overwrite => {
-                if let Err(_) = crate::schema::TryCmd::overwrite(
-                    &self.path,
-                    step.id.as_deref(),
-                    output.stdout.as_ref().map(|s| &s.content),
-                    output.stderr.as_ref().map(|s| &s.content),
-                ) {
-                    ok = false;
-                }
-            }
-            Mode::Fail => {}
-        }
 
         if ok {
             Ok(output)
