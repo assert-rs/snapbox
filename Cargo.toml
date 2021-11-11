@@ -39,6 +39,7 @@ schema = ["schemars", "serde_json"]
 diff = ["difflib"]
 filesystem = ["tempfile", "walkdir"]
 examples = ["escargot"]
+debug = []
 
 [[bin]]
 name = "bin-fixture"
