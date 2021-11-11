@@ -198,14 +198,16 @@ impl Case {
                         Ok(output) => output,
                         Err(output) => output,
                     };
-                    output.stdout = match self.dump_stream(root, output.stdout.take()) {
-                        Ok(stream) => stream,
-                        Err(stream) => stream,
-                    };
-                    output.stderr = match self.dump_stream(root, output.stderr.take()) {
-                        Ok(stream) => stream,
-                        Err(stream) => stream,
-                    };
+                    output.stdout =
+                        match self.dump_stream(root, output.id.as_deref(), output.stdout.take()) {
+                            Ok(stream) => stream,
+                            Err(stream) => stream,
+                        };
+                    output.stderr =
+                        match self.dump_stream(root, output.id.as_deref(), output.stderr.take()) {
+                            Ok(stream) => stream,
+                            Err(stream) => stream,
+                        };
                 }
             }
             Mode::Overwrite => {
@@ -418,15 +420,28 @@ impl Case {
     fn dump_stream(
         &self,
         root: &std::path::Path,
+        id: Option<&str>,
         stream: Option<Stream>,
     ) -> Result<Option<Stream>, Option<Stream>> {
         if let Some(stream) = stream {
-            let stream_path = root.join(
-                self.path
-                    .with_extension(stream.stream.as_str())
-                    .file_name()
-                    .unwrap(),
-            );
+            let file_name = match id {
+                Some(id) => {
+                    format!(
+                        "{}-{}.{}",
+                        self.path.file_stem().unwrap().to_string_lossy(),
+                        id,
+                        stream.stream.as_str(),
+                    )
+                }
+                None => {
+                    format!(
+                        "{}.{}",
+                        self.path.file_stem().unwrap().to_string_lossy(),
+                        stream.stream.as_str(),
+                    )
+                }
+            };
+            let stream_path = root.join(file_name);
             stream.content.write_to(&stream_path).map_err(|e| {
                 let mut stream = stream.clone();
                 if stream.is_ok() {
