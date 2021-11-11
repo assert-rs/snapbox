@@ -376,18 +376,7 @@ impl Case {
         mode: &Mode,
     ) -> Result<Stream, Stream> {
         if let Mode::Dump(root) = mode {
-            let stdout_path = root.join(
-                self.path
-                    .with_extension(stream.stream.as_str())
-                    .file_name()
-                    .unwrap(),
-            );
-            stream.content.write_to(&stdout_path).map_err(|e| {
-                let mut stream = stream.clone();
-                stream.status = StreamStatus::Failure(e);
-                stream
-            })?;
-            return Ok(stream);
+            return self.dump_stream(root, stream);
         }
 
         if !binary {
@@ -429,6 +418,23 @@ impl Case {
         }
 
         Ok(stream)
+    }
+
+    fn dump_stream(&self, root: &std::path::Path, stream: Stream) -> Result<Stream, Stream> {
+        let stream_path = root.join(
+            self.path
+                .with_extension(stream.stream.as_str())
+                .file_name()
+                .unwrap(),
+        );
+        stream.content.write_to(&stream_path).map_err(|e| {
+            let mut stream = stream.clone();
+            if stream.is_ok() {
+                stream.status = StreamStatus::Failure(e);
+            }
+            stream
+        })?;
+        return Ok(stream);
     }
 
     fn validate_fs(
