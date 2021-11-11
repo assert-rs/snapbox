@@ -276,33 +276,33 @@ impl Case {
             }
         };
         if let Some(mut stdout) = output.stdout {
-            if !step.binary {
-                stdout = stdout.utf8();
-            }
-            if stdout.is_ok() {
-                stdout = match self.validate_stream(stdout, step.expected_stdout.as_ref(), mode) {
-                    Ok(stdout) => stdout,
-                    Err(stdout) => {
-                        ok = false;
-                        stdout
-                    }
-                };
-            }
+            stdout = match self.validate_stream(
+                stdout,
+                step.expected_stdout.as_ref(),
+                step.binary,
+                mode,
+            ) {
+                Ok(stdout) => stdout,
+                Err(stdout) => {
+                    ok = false;
+                    stdout
+                }
+            };
             output.stdout = Some(stdout);
         }
         if let Some(mut stderr) = output.stderr {
-            if !step.binary {
-                stderr = stderr.utf8();
-            }
-            if stderr.is_ok() {
-                stderr = match self.validate_stream(stderr, step.expected_stderr.as_ref(), mode) {
-                    Ok(stderr) => stderr,
-                    Err(stderr) => {
-                        ok = false;
-                        stderr
-                    }
-                };
-            }
+            stderr = match self.validate_stream(
+                stderr,
+                step.expected_stderr.as_ref(),
+                step.binary,
+                mode,
+            ) {
+                Ok(stderr) => stderr,
+                Err(stderr) => {
+                    ok = false;
+                    stderr
+                }
+            };
             output.stderr = Some(stderr);
         }
 
@@ -350,6 +350,7 @@ impl Case {
         &self,
         mut stream: Stream,
         expected_content: Option<&crate::File>,
+        binary: bool,
         mode: &Mode,
     ) -> Result<Stream, Stream> {
         if let Mode::Dump(root) = mode {
@@ -364,7 +365,17 @@ impl Case {
                 stream.status = StreamStatus::Failure(e);
                 stream
             })?;
-        } else if let Some(expected_content) = expected_content {
+            return Ok(stream);
+        }
+
+        if !binary {
+            stream = stream.utf8();
+            if !stream.is_ok() {
+                return Err(stream);
+            }
+        }
+
+        if let Some(expected_content) = expected_content {
             if let crate::File::Text(e) = &expected_content {
                 stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
             }
