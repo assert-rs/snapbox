@@ -56,6 +56,7 @@ pub(crate) mod examples {
         target_name: &str,
         args: impl IntoIterator<Item = &'a str>,
     ) -> Result<crate::schema::Bin, crate::Error> {
+        #[cfg(feature = "debug")]
         eprintln!("Compiling example {}", target_name);
         let messages = escargot::CargoBuild::new()
             .current_target()
@@ -69,6 +70,7 @@ pub(crate) mod examples {
             let message = message
                 .decode()
                 .map_err(|e| crate::Error::new(e.to_string()))?;
+            #[cfg(feature = "debug")]
             eprintln!("Message: {:?}", message);
             if let Some(bin) = decode_example_message(&message) {
                 let (name, bin) = bin?;
@@ -102,6 +104,7 @@ pub(crate) mod examples {
     pub fn compile_examples<'a>(
         args: impl IntoIterator<Item = &'a str>,
     ) -> Result<impl Iterator<Item = (String, crate::schema::Bin)>, crate::Error> {
+        #[cfg(feature = "debug")]
         eprintln!("Compiling examples");
         let mut examples = std::collections::BTreeMap::new();
 
@@ -117,6 +120,7 @@ pub(crate) mod examples {
             let message = message
                 .decode()
                 .map_err(|e| crate::Error::new(e.to_string()))?;
+            #[cfg(feature = "debug")]
             eprintln!("Message: {:?}", message);
             if let Some(bin) = decode_example_message(&message) {
                 let (name, bin) = bin?;
