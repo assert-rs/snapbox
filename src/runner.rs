@@ -268,43 +268,20 @@ impl Case {
 
         // For dump mode's sake, allow running all
         let mut ok = output.is_ok();
-        let mut output = match self.validate_spawn(output, step.expected_status()) {
+        let output = match self.validate_spawn(output, step.expected_status()) {
             Ok(output) => output,
             Err(output) => {
                 ok = false;
                 output
             }
         };
-        if let Some(mut stdout) = output.stdout {
-            stdout = match self.validate_stream(
-                stdout,
-                step.expected_stdout.as_ref(),
-                step.binary,
-                mode,
-            ) {
-                Ok(stdout) => stdout,
-                Err(stdout) => {
-                    ok = false;
-                    stdout
-                }
-            };
-            output.stdout = Some(stdout);
-        }
-        if let Some(mut stderr) = output.stderr {
-            stderr = match self.validate_stream(
-                stderr,
-                step.expected_stderr.as_ref(),
-                step.binary,
-                mode,
-            ) {
-                Ok(stderr) => stderr,
-                Err(stderr) => {
-                    ok = false;
-                    stderr
-                }
-            };
-            output.stderr = Some(stderr);
-        }
+        let output = match self.validate_streams(output, step, mode) {
+            Ok(output) => output,
+            Err(output) => {
+                ok = false;
+                output
+            }
+        };
 
         if ok {
             Ok(output)
@@ -344,6 +321,51 @@ impl Case {
         }
 
         Ok(output)
+    }
+
+    fn validate_streams(
+        &self,
+        mut output: Output,
+        step: &crate::schema::Step,
+        mode: &Mode,
+    ) -> Result<Output, Output> {
+        let mut ok = true;
+        if let Some(mut stdout) = output.stdout {
+            stdout = match self.validate_stream(
+                stdout,
+                step.expected_stdout.as_ref(),
+                step.binary,
+                mode,
+            ) {
+                Ok(stdout) => stdout,
+                Err(stdout) => {
+                    ok = false;
+                    stdout
+                }
+            };
+            output.stdout = Some(stdout);
+        }
+        if let Some(mut stderr) = output.stderr {
+            stderr = match self.validate_stream(
+                stderr,
+                step.expected_stderr.as_ref(),
+                step.binary,
+                mode,
+            ) {
+                Ok(stderr) => stderr,
+                Err(stderr) => {
+                    ok = false;
+                    stderr
+                }
+            };
+            output.stderr = Some(stderr);
+        }
+
+        if ok {
+            Ok(output)
+        } else {
+            Err(output)
+        }
     }
 
     fn validate_stream(
