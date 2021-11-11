@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Reduce example-build output by relegating it to the new `debug` feature flag
+
 ## [0.4.1] - 2021-11-11
 
 ### Fixes
