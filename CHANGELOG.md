@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- `TRYCMD=overwrite` support for `*.trycmd` files
+- `TRYCMD=dump` creates a file per step in `*.trycmd`, rather than overwriting the file from a prior step
+
+### Regressions
+
+- `TRYCMD=overwrite` will report corrected test cases as failures
+
 ## [0.4.0] - 2021-11-10
 
 ### Breaking Changes
@@ -25,14 +34,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Ignore `.keep` files in `*.in` and `*.out`
 - Support redirecting stderr to stdout
 
-### Fix
+### Fixes
 
 - Cleaned up tenses
 - On failure, direct people to `TRYCMD` env variable
 
 ## [0.3.1] - 2021-11-08
 
-### Fix
+### Fixes
 
 - docs.rs to include the full API
 
