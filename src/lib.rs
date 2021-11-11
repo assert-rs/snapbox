@@ -54,11 +54,12 @@
 //! ```
 //! This will overwrite any existing `.stdout` and `.stderr` file in `tests/cmd`
 //!
-//! When iterating on a test, you can run:
+//! To filter the tests to those with `name1`, `name2`, etc in their file names, you can run:
 //! ```bash
 //! cargo test --test cli_tests -- cli_tests trycmd=name1 trycmd=name2...
 //! ```
-//! To filter the tests to those with `name1`, `name2`, etc in their file names.
+//!
+//! To debug what `trycmd` is doing, add the feature flag `debug`.
 //!
 //! ## File Formats
 //!
