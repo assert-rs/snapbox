@@ -300,34 +300,17 @@ impl Case {
         let output = output.output(cmd_output);
 
         // For Mode::Dump's sake, allow running all
-        let mut ok = output.is_ok();
-        let output = match self.validate_spawn(output, step.expected_status()) {
-            Ok(output) => output,
-            Err(output) => {
-                ok = false;
-                output
-            }
-        };
-        let output = match self.validate_streams(output, step) {
-            Ok(output) => output,
-            Err(output) => {
-                ok = false;
-                output
-            }
-        };
+        let output = self.validate_spawn(output, step.expected_status());
+        let output = self.validate_streams(output, step);
 
-        if ok {
+        if output.is_ok() {
             Ok(output)
         } else {
             Err(output)
         }
     }
 
-    fn validate_spawn(
-        &self,
-        mut output: Output,
-        expected: crate::schema::CommandStatus,
-    ) -> Result<Output, Output> {
+    fn validate_spawn(&self, mut output: Output, expected: crate::schema::CommandStatus) -> Output {
         let status = output.spawn.exit.expect("bale out before now");
         match expected {
             crate::schema::CommandStatus::Success => {
@@ -353,38 +336,16 @@ impl Case {
             }
         }
 
-        Ok(output)
+        output
     }
 
-    fn validate_streams(
-        &self,
-        mut output: Output,
-        step: &crate::schema::Step,
-    ) -> Result<Output, Output> {
-        let mut ok = true;
-
+    fn validate_streams(&self, mut output: Output, step: &crate::schema::Step) -> Output {
         output.stdout =
-            match self.validate_stream(output.stdout, step.expected_stdout.as_ref(), step.binary) {
-                Ok(stream) => stream,
-                Err(stream) => {
-                    ok = false;
-                    stream
-                }
-            };
+            self.validate_stream(output.stdout, step.expected_stdout.as_ref(), step.binary);
         output.stderr =
-            match self.validate_stream(output.stderr, step.expected_stderr.as_ref(), step.binary) {
-                Ok(stream) => stream,
-                Err(stream) => {
-                    ok = false;
-                    stream
-                }
-            };
+            self.validate_stream(output.stderr, step.expected_stderr.as_ref(), step.binary);
 
-        if ok {
-            Ok(output)
-        } else {
-            Err(output)
-        }
+        output
     }
 
     fn validate_stream(
@@ -392,29 +353,27 @@ impl Case {
         stream: Option<Stream>,
         expected_content: Option<&crate::File>,
         binary: bool,
-    ) -> Result<Option<Stream>, Option<Stream>> {
-        if let Some(mut stream) = stream {
-            if !binary {
-                stream = stream.utf8();
-                if !stream.is_ok() {
-                    return Err(Some(stream));
-                }
-            }
+    ) -> Option<Stream> {
+        let mut stream = stream?;
 
-            if let Some(expected_content) = expected_content {
-                if let crate::File::Text(e) = &expected_content {
-                    stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
-                }
-                if stream.content != *expected_content {
-                    stream.status = StreamStatus::Expected(expected_content.clone());
-                    return Err(Some(stream));
-                }
+        if !binary {
+            stream = stream.utf8();
+            if !stream.is_ok() {
+                return Some(stream);
             }
-
-            Ok(Some(stream))
-        } else {
-            Ok(None)
         }
+
+        if let Some(expected_content) = expected_content {
+            if let crate::File::Text(e) = &expected_content {
+                stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+            }
+            if stream.content != *expected_content {
+                stream.status = StreamStatus::Expected(expected_content.clone());
+                return Some(stream);
+            }
+        }
+
+        Some(stream)
     }
 
     fn dump_stream(
