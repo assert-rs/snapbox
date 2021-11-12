@@ -26,7 +26,7 @@ impl BinRegistry {
     pub(crate) fn resolve_bin(
         &self,
         bin: crate::schema::Bin,
-    ) -> Result<crate::schema::Bin, String> {
+    ) -> Result<crate::schema::Bin, crate::Error> {
         match bin {
             crate::schema::Bin::Path(path) => {
                 let bin = crate::schema::Bin::Path(path);
@@ -38,7 +38,7 @@ impl BinRegistry {
                     .ok_or_else(|| format!("Unknown bin.name = {}", name))?;
                 Ok(bin)
             }
-            crate::schema::Bin::Error(err) => Err(err.into_string()),
+            crate::schema::Bin::Error(err) => Err(err),
         }
     }
 

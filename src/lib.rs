@@ -164,6 +164,9 @@
 // Doesn't distinguish between incidental sharing vs essential sharing
 #![allow(clippy::branches_sharing_code)]
 
+#[macro_use]
+mod macros;
+
 pub mod cargo;
 pub mod schema;
 

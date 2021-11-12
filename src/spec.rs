@@ -74,13 +74,14 @@ impl RunnerSpec {
                                 }
                                 Err(err) => {
                                     let path = err.path().to_owned();
-                                    let err = err.into_error();
+                                    let err = crate::Error::new(err.into_error().to_string());
                                     cases.insert(path.clone(), crate::Case::with_error(path, err));
                                 }
                             }
                         }
                     }
                     Err(err) => {
+                        let err = crate::Error::new(err.to_string());
                         cases.insert(
                             spec.glob.clone(),
                             crate::Case::with_error(spec.glob.clone(), err),
