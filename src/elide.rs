@@ -28,7 +28,7 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
         if input_line == pattern_line {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
-            normalized.push(input_line);
+            normalized.push(pattern_line);
             continue 'outer;
         }
 
@@ -54,6 +54,11 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
                 normalized.extend(&input_lines[input_index..]);
                 break 'outer;
             }
+        } else if line_matches(input_line, pattern_line) {
+            pattern_index = next_pattern_index;
+            input_index = next_input_index;
+            normalized.push(pattern_line);
+            continue 'outer;
         }
 
         for future_input_index in next_input_index..input_lines.len() {
@@ -80,6 +85,27 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
 
 fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
+}
+
+fn line_matches(mut line: &str, pattern: &str) -> bool {
+    let mut sections = pattern.split("...").peekable();
+    while let Some(section) = sections.next() {
+        if let Some(remainder) = line.strip_prefix(section) {
+            if let Some(next_section) = sections.peek() {
+                if next_section.is_empty() {
+                    line = "";
+                } else if let Some(restart_index) = remainder.find(next_section) {
+                    line = &remainder[restart_index..];
+                }
+            } else {
+                return remainder.is_empty();
+            }
+        } else {
+            return false;
+        }
+    }
+
+    false
 }
 
 #[cfg(test)]
@@ -183,5 +209,47 @@ mod test {
         let expected = "Hello\nWorld\nGoodbye\n...";
         let actual = normalize(input, pattern);
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn inline_elide() {
+        let input = "Hello\nWorld\nGoodbye\nSir";
+        let pattern = "Hello\nW...d\nGoodbye\nSir";
+        let expected = "Hello\nW...d\nGoodbye\nSir";
+        let actual = normalize(input, pattern);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn line_matches_cases() {
+        let cases = [
+            ("", "", true),
+            ("", "...", true),
+            ("hello", "hello", true),
+            ("hello", "goodbye", false),
+            ("hello", "...", true),
+            ("hello", "he...", true),
+            ("hello", "go...", false),
+            ("hello", "...o", true),
+            ("hello", "...e", false),
+            ("hello", "he...o", true),
+            ("hello", "he...e", false),
+            ("hello", "go...o", false),
+            ("hello", "go...e", false),
+            ("hello world, goodbye moon", "hello ..., goodbye ...", true),
+            (
+                "hello world, goodbye moon",
+                "goodbye ..., goodbye ...",
+                false,
+            ),
+            ("hello world, goodbye moon", "goodbye ..., hello ...", false),
+            ("hello world, goodbye moon", "hello ..., ... moon", true),
+            ("hello world, goodbye moon", "goodbye ..., ... moon", false),
+            ("hello world, goodbye moon", "hello ..., ... world", false),
+        ];
+        for (line, pattern, expected) in cases {
+            let actual = line_matches(line, pattern);
+            assert_eq!(actual, expected, "line={:?}  pattern={:?}", line, pattern);
+        }
     }
 }
