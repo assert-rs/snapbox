@@ -103,7 +103,9 @@ impl TryCmd {
                     stderr.write_to(&stderr_path)?;
                 }
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                assert_eq!(stderr, Some(&crate::File::Text("".into())));
+                if stderr.is_some() && stderr != Some(&crate::File::Text("".into())) {
+                    panic!("stderr should have been merged: {:?}", stderr);
+                }
                 if let (Some(id), Some(stdout)) = (id, stdout) {
                     let step = self
                         .steps
