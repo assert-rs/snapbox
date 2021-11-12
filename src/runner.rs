@@ -61,7 +61,7 @@ impl Runner {
                                         "{} {} ... {}",
                                         palette.hint.paint("Testing"),
                                         status.name(),
-                                        status.spawn.status.summary()
+                                        palette.error.paint("failed"),
                                     );
                                     // Assuming `status` will print the newline
                                     let _ = write!(stderr, "{}", &status);
