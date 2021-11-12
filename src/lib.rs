@@ -164,6 +164,23 @@
 // Doesn't distinguish between incidental sharing vs essential sharing
 #![allow(clippy::branches_sharing_code)]
 
+#[cfg(feature = "debug")]
+#[allow(unused_macros)]
+macro_rules! debug {
+    ($($arg:tt)*) => ({
+        // The `print!` line will make clippy complain about duplicates.
+        #[allow(clippy::branches_sharing_code)]
+        eprint!("[{:>w$}] \t", module_path!(), w = 28);
+        eprintln!($($arg)*);
+    })
+}
+
+#[cfg(not(feature = "debug"))]
+#[allow(unused_macros)]
+macro_rules! debug {
+    ($($arg:tt)*) => {};
+}
+
 pub mod cargo;
 pub mod schema;
 
