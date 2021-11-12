@@ -39,6 +39,7 @@ impl Runner {
                     results
                         .into_iter()
                         .filter_map(|s| {
+                            debug!("Case: {:#?}", s);
                             match s {
                                 Ok(status) => {
                                     let _ = writeln!(

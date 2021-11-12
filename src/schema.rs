@@ -149,11 +149,15 @@ impl TryCmd {
                         let lang = info.next().unwrap();
                         match lang {
                             "trycmd" | "bash" | "sh" => {
-                                if !info.any(|i| i == "ignore") {
+                                if info.any(|i| i == "ignore") {
+                                    debug!("ignore from infostring: {:?}", info);
+                                } else {
                                     break;
                                 }
                             }
-                            _ => {}
+                            _ => {
+                                debug!("ignore from lang: {:?}", lang);
+                            }
                         }
                     }
 
