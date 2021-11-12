@@ -13,10 +13,11 @@ pub(crate) struct TryCmd {
 }
 
 impl TryCmd {
-    pub(crate) fn load(path: &std::path::Path) -> Result<Self, String> {
+    pub(crate) fn load(path: &std::path::Path) -> Result<Self, crate::Error> {
         let mut sequence = if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
-                let raw = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+                let raw = std::fs::read_to_string(path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                 let one_shot = OneShot::parse_toml(&raw)?;
                 let mut sequence: Self = one_shot.into();
                 let is_binary = sequence.steps[0].binary;
@@ -50,7 +51,7 @@ impl TryCmd {
                 let raw = crate::File::read_from(path, false)?.into_utf8().unwrap();
                 Self::parse_trycmd(&raw)?
             } else {
-                return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
+                return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
             }
         } else {
             return Err("No extension".into());
@@ -87,7 +88,7 @@ impl TryCmd {
         id: Option<&str>,
         stdout: Option<&crate::File>,
         stderr: Option<&crate::File>,
-    ) -> Result<(), String> {
+    ) -> Result<(), crate::Error> {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
                 assert_eq!(id, None);
@@ -119,7 +120,7 @@ impl TryCmd {
                     raw.write_to(path)?;
                 }
             } else {
-                return Err(format!("Unsupported extension: {}", ext.to_string_lossy()));
+                return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
             }
         } else {
             return Err("No extension".into());
@@ -128,7 +129,7 @@ impl TryCmd {
         Ok(())
     }
 
-    fn parse_trycmd(s: &str) -> Result<Self, String> {
+    fn parse_trycmd(s: &str) -> Result<Self, crate::Error> {
         let mut steps = Vec::new();
 
         let mut lines: VecDeque<_> = crate::lines::LinesWithTerminator::new(s)
@@ -176,7 +177,9 @@ impl TryCmd {
                         cmd_start = line_num;
                         stdout_start = line_num + 1;
                     } else {
-                        return Err(format!("Expected `$` on line {}, got `{}`", line_num, line));
+                        return Err(
+                            format!("Expected `$` on line {}, got `{}`", line_num, line).into()
+                        );
                     }
                 } else {
                     break 'outer;
@@ -219,7 +222,7 @@ impl TryCmd {
 
                 let bin = loop {
                     if cmdline.is_empty() {
-                        return Err(format!("No bin specified on line {}", cmd_start));
+                        return Err(format!("No bin specified on line {}", cmd_start).into());
                     }
                     let next = cmdline.remove(0);
                     if let Some((key, value)) = next.split_once('=') {
@@ -258,7 +261,7 @@ impl TryCmd {
 }
 
 impl std::str::FromStr for TryCmd {
-    type Err = String;
+    type Err = crate::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::parse_trycmd(s)
@@ -319,15 +322,15 @@ impl Step {
     pub(crate) fn to_command(
         &self,
         cwd: Option<&std::path::Path>,
-    ) -> Result<std::process::Command, String> {
+    ) -> Result<std::process::Command, crate::Error> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
-            Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name)),
-            Some(Bin::Error(err)) => Err(err.clone().into_string()),
-            None => Err(String::from("No bin specified")),
+            Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name).into()),
+            Some(Bin::Error(err)) => Err(err.clone()),
+            None => Err("No bin specified".into()),
         }?;
         if !bin.exists() {
-            return Err(format!("Bin doesn't exist: {}", bin.display()));
+            return Err(format!("Bin doesn't exist: {}", bin.display()).into());
         }
 
         let mut cmd = std::process::Command::new(bin);
@@ -343,7 +346,7 @@ impl Step {
     pub(crate) fn to_output(
         &self,
         cwd: Option<&std::path::Path>,
-    ) -> Result<std::process::Output, String> {
+    ) -> Result<std::process::Output, crate::Error> {
         let mut cmd = self.to_command(cwd)?;
 
         if self.stderr_to_stdout {
@@ -373,7 +376,7 @@ impl Step {
             cmd.stderr(std::process::Stdio::piped());
             let child = cmd.spawn().map_err(|e| e.to_string())?;
             crate::wait_with_input_output(child, self.stdin(), self.timeout)
-                .map_err(|e| e.to_string())
+                .map_err(|e| e.to_string().into())
         }
     }
 
@@ -409,8 +412,8 @@ pub struct OneShot {
 }
 
 impl OneShot {
-    fn parse_toml(s: &str) -> Result<Self, String> {
-        toml_edit::de::from_str(s).map_err(|e| e.to_string())
+    fn parse_toml(s: &str) -> Result<Self, crate::Error> {
+        toml_edit::de::from_str(s).map_err(|e| e.to_string().into())
     }
 }
 
@@ -524,14 +527,14 @@ impl Filesystem {
         self.sandbox.unwrap_or_default()
     }
 
-    pub(crate) fn rel_cwd(&self) -> Result<&std::path::Path, String> {
+    pub(crate) fn rel_cwd(&self) -> Result<&std::path::Path, crate::Error> {
         if let (Some(orig_cwd), Some(orig_base)) = (self.cwd.as_deref(), self.base.as_deref()) {
             let rel_cwd = orig_cwd.strip_prefix(orig_base).map_err(|_| {
-                format!(
+                crate::Error::new(format!(
                     "fs.cwd ({}) must be within fs.base ({})",
                     orig_cwd.display(),
                     orig_base.display()
-                )
+                ))
             })?;
             Ok(rel_cwd)
         } else {
@@ -642,7 +645,7 @@ impl Default for CommandStatus {
 }
 
 impl std::str::FromStr for CommandStatus {
-    type Err = String;
+    type Err = crate::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -653,7 +656,7 @@ impl std::str::FromStr for CommandStatus {
             _ => s
                 .parse::<i32>()
                 .map(Self::Code)
-                .map_err(|_| format!("Expected an exit code, got {}", s)),
+                .map_err(|_| crate::Error::new(format!("Expected an exit code, got {}", s))),
         }
     }
 }

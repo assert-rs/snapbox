@@ -5,7 +5,7 @@ pub(crate) enum File {
 }
 
 impl File {
-    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, String> {
+    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, crate::Error> {
         let data = if binary {
             let data = std::fs::read(&path)
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -19,16 +19,16 @@ impl File {
         Ok(data)
     }
 
-    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), String> {
+    pub(crate) fn write_to(&self, path: &std::path::Path) -> Result<(), crate::Error> {
         std::fs::write(path, self.as_bytes())
-            .map_err(|e| format!("Failed to write {}: {}", path.display(), e))
+            .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
     pub(crate) fn replace_lines(
         &mut self,
         line_nums: std::ops::Range<usize>,
         text: &str,
-    ) -> Result<(), String> {
+    ) -> Result<(), crate::Error> {
         let mut output_lines = String::new();
 
         let s = self

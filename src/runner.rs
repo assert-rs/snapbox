@@ -110,14 +110,14 @@ pub(crate) struct Case {
 }
 
 impl Case {
-    pub(crate) fn with_error(path: std::path::PathBuf, error: impl std::fmt::Display) -> Self {
+    pub(crate) fn with_error(path: std::path::PathBuf, error: crate::Error) -> Self {
         Self {
             path,
             expected: None,
             timeout: None,
             default_bin: None,
             env: Default::default(),
-            error: Some(SpawnStatus::Failure(error.to_string())),
+            error: Some(SpawnStatus::Failure(error)),
         }
     }
 
@@ -162,7 +162,7 @@ impl Case {
             Err(e) => {
                 let output = Output::step(self.path.clone(), "setup".into());
                 return vec![Err(
-                    output.error(format!("Failed to initialize sandbox: {}", e))
+                    output.error(format!("Failed to initialize sandbox: {}", e).into())
                 )];
             }
         };
@@ -243,10 +243,9 @@ impl Case {
             };
             if let Err(err) = fs_context.close() {
                 ok = false;
-                output.fs.context.push(FileStatus::Failure(format!(
-                    "Failed to cleanup sandbox: {}",
-                    err
-                )));
+                output.fs.context.push(FileStatus::Failure(
+                    format!("Failed to cleanup sandbox: {}", err).into(),
+                ));
             }
 
             let output = if ok {
@@ -497,10 +496,10 @@ impl Case {
         fixture_root: &std::path::Path,
         actual_root: &std::path::Path,
     ) -> Result<FileStatus, FileStatus> {
-        let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string()))?;
+        let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
         let expected_meta = expected_path
             .symlink_metadata()
-            .map_err(|e| FileStatus::Failure(e.to_string()))?;
+            .map_err(|e| FileStatus::Failure(e.to_string().into()))?;
         let expected_target = std::fs::read_link(&expected_path).ok();
 
         let rel = expected_path.strip_prefix(&fixture_root).unwrap();
@@ -633,8 +632,8 @@ impl Output {
         self
     }
 
-    fn error(mut self, msg: impl std::fmt::Display) -> Self {
-        self.spawn.status = SpawnStatus::Failure(msg.to_string());
+    fn error(mut self, msg: crate::Error) -> Self {
+        self.spawn.status = SpawnStatus::Failure(msg);
         self
     }
 
@@ -747,7 +746,7 @@ impl std::fmt::Display for Spawn {
 pub(crate) enum SpawnStatus {
     Ok,
     Skipped,
-    Failure(String),
+    Failure(crate::Error),
     Expected(String),
 }
 
@@ -779,7 +778,7 @@ struct Stream {
 impl Stream {
     fn utf8(mut self) -> Self {
         if self.content.utf8().is_err() {
-            self.status = StreamStatus::Failure("invalid UTF-8".to_string());
+            self.status = StreamStatus::Failure("invalid UTF-8".into());
         }
         self
     }
@@ -836,7 +835,7 @@ impl std::fmt::Display for Stream {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum StreamStatus {
     Ok,
-    Failure(String),
+    Failure(crate::Error),
     Expected(crate::File),
 }
 
@@ -901,7 +900,7 @@ enum FileStatus {
         expected_path: std::path::PathBuf,
         actual_path: std::path::PathBuf,
     },
-    Failure(String),
+    Failure(crate::Error),
     TypeMismatch {
         expected_path: std::path::PathBuf,
         actual_path: std::path::PathBuf,

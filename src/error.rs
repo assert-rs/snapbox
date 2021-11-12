@@ -8,10 +8,6 @@ impl Error {
     pub(crate) fn new(inner: String) -> Self {
         Self { inner }
     }
-
-    pub(crate) fn into_string(self) -> String {
-        self.inner
-    }
 }
 
 impl std::fmt::Display for Error {
@@ -21,3 +17,21 @@ impl std::fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+impl<'s> From<&'s str> for Error {
+    fn from(other: &'s str) -> Self {
+        Self::new(other.into())
+    }
+}
+
+impl<'s> From<&'s String> for Error {
+    fn from(other: &'s String) -> Self {
+        Self::new(other.clone())
+    }
+}
+
+impl From<String> for Error {
+    fn from(other: String) -> Self {
+        Self::new(other)
+    }
+}
