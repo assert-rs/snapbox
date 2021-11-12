@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.0] - 2021-11-12
+
 ### Features
 
 - Exposed additional information through the `debug` feature flag
@@ -105,7 +107,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/assert-rs/trycmd/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/assert-rs/trycmd/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/assert-rs/trycmd/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/assert-rs/trycmd/compare/v0.3.1...v0.4.0
