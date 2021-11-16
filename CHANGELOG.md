@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- `...` for character matching (and not line matching) has switched to `[..]`.
+
+### Features
+
+- Variable substitutions for easier maintenance
+  - User defined with `TestCases::insert_var`
+  - Built-in with `[..]`, `[EXE]`, `[ROOT]`, and `[CWD]`.
+
 ## [0.6.0] - 2021-11-12
 
 ### Features
