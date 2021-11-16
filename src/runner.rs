@@ -18,7 +18,12 @@ impl Runner {
         self.cases.push(case);
     }
 
-    pub(crate) fn run(&self, mode: &Mode, bins: &crate::BinRegistry) {
+    pub(crate) fn run(
+        &self,
+        mode: &Mode,
+        bins: &crate::BinRegistry,
+        substitutions: &crate::elide::Substitutions,
+    ) {
         let palette = crate::Palette::current();
 
         if self.cases.is_empty() {
@@ -31,7 +36,7 @@ impl Runner {
                 .cases
                 .par_iter()
                 .flat_map(|c| {
-                    let results = c.run(mode, bins);
+                    let results = c.run(mode, bins, substitutions);
 
                     let stderr = std::io::stderr();
                     let mut stderr = stderr.lock();
@@ -126,6 +131,7 @@ impl Case {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
+        substitutions: &crate::elide::Substitutions,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -172,12 +178,30 @@ impl Case {
             .map(|p| sequence.fs.rel_cwd().map(|rel| p.join(rel)))
             .transpose()
         {
-            Ok(cwd) => cwd,
+            Ok(cwd) => cwd.or_else(|| std::env::current_dir().ok()),
             Err(e) => {
                 let output = Output::step(self.path.clone(), "setup".into());
                 return vec![Err(output.error(e))];
             }
         };
+        let mut substitutions = substitutions.clone();
+        if let Some(root) = fs_context
+            .path()
+            .map(|p| p.to_owned())
+            .or_else(|| std::env::current_dir().ok())
+        {
+            substitutions
+                .insert("[ROOT]", root.display().to_string())
+                .unwrap();
+        }
+        if let Some(cwd) = cwd.as_deref() {
+            substitutions
+                .insert("[CWD]", cwd.display().to_string())
+                .unwrap();
+        }
+        substitutions
+            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
+            .unwrap();
 
         let mut outputs = Vec::with_capacity(sequence.steps.len());
         let mut prior_step_failed = false;
@@ -186,7 +210,7 @@ impl Case {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
-            let step_status = self.run_step(step, cwd.as_deref(), bins);
+            let step_status = self.run_step(step, cwd.as_deref(), bins, &substitutions);
             if step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
@@ -235,6 +259,7 @@ impl Case {
                 fs_context.path().expect("sandbox must be filled"),
                 output.fs,
                 mode,
+                &substitutions,
             ) {
                 Ok(fs) => fs,
                 Err(fs) => {
@@ -267,6 +292,7 @@ impl Case {
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
+        substitutions: &crate::elide::Substitutions,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -301,7 +327,7 @@ impl Case {
 
         // For Mode::Dump's sake, allow running all
         let output = self.validate_spawn(output, step.expected_status());
-        let output = self.validate_streams(output, step);
+        let output = self.validate_streams(output, step, substitutions);
 
         if output.is_ok() {
             Ok(output)
@@ -339,11 +365,24 @@ impl Case {
         output
     }
 
-    fn validate_streams(&self, mut output: Output, step: &crate::schema::Step) -> Output {
-        output.stdout =
-            self.validate_stream(output.stdout, step.expected_stdout.as_ref(), step.binary);
-        output.stderr =
-            self.validate_stream(output.stderr, step.expected_stderr.as_ref(), step.binary);
+    fn validate_streams(
+        &self,
+        mut output: Output,
+        step: &crate::schema::Step,
+        substitutions: &crate::elide::Substitutions,
+    ) -> Output {
+        output.stdout = self.validate_stream(
+            output.stdout,
+            step.expected_stdout.as_ref(),
+            step.binary,
+            substitutions,
+        );
+        output.stderr = self.validate_stream(
+            output.stderr,
+            step.expected_stderr.as_ref(),
+            step.binary,
+            substitutions,
+        );
 
         output
     }
@@ -353,6 +392,7 @@ impl Case {
         stream: Option<Stream>,
         expected_content: Option<&crate::File>,
         binary: bool,
+        substitutions: &crate::elide::Substitutions,
     ) -> Option<Stream> {
         let mut stream = stream?;
 
@@ -365,7 +405,9 @@ impl Case {
 
         if let Some(expected_content) = expected_content {
             if let crate::File::Text(e) = &expected_content {
-                stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+                stream.content = stream
+                    .content
+                    .map_text(|t| crate::elide::normalize(t, e, substitutions));
             }
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -419,6 +461,7 @@ impl Case {
         actual_root: &std::path::Path,
         mut fs: Filesystem,
         mode: &Mode,
+        substitutions: &crate::elide::Substitutions,
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 
@@ -436,7 +479,12 @@ impl Case {
                         continue;
                     }
 
-                    match self.validate_path(expected_path, &fixture_root, actual_root) {
+                    match self.validate_path(
+                        expected_path,
+                        &fixture_root,
+                        actual_root,
+                        substitutions,
+                    ) {
                         Ok(status) => {
                             fs.context.push(status);
                         }
@@ -496,6 +544,7 @@ impl Case {
         expected_path: Result<std::path::PathBuf, std::io::Error>,
         fixture_root: &std::path::Path,
         actual_root: &std::path::Path,
+        substitutions: &crate::elide::Substitutions,
     ) -> Result<FileStatus, FileStatus> {
         let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
         let expected_meta = expected_path
@@ -559,7 +608,8 @@ impl Case {
                     .try_utf8();
 
                 if let crate::File::Text(e) = &expected_content {
-                    actual_content = actual_content.map_text(|t| crate::elide::normalize(t, e));
+                    actual_content =
+                        actual_content.map_text(|t| crate::elide::normalize(t, e, substitutions));
                 }
                 if expected_content != actual_content {
                     return Err(FileStatus::ContentMismatch {

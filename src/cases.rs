@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+
 /// Entry point for running tests
 #[derive(Debug, Default)]
 pub struct TestCases {
     runner: std::cell::RefCell<crate::RunnerSpec>,
     bins: std::cell::RefCell<crate::BinRegistry>,
+    substitutions: std::cell::RefCell<crate::elide::Substitutions>,
     has_run: std::cell::Cell<bool>,
 }
 
@@ -103,6 +106,52 @@ impl TestCases {
         self
     }
 
+    /// Add a variable for normalizing output
+    ///
+    /// Variable names must be
+    /// - Surrounded by `[]`
+    /// - Consist of uppercase letters
+    ///
+    /// Variables will be preserved through `TRYCMD=overwrite` / `TRYCMD=dump`.
+    ///
+    /// **NOTE:** We do basic search/replaces so new any new output will blindly be replaced.
+    ///
+    /// Reserved names:
+    /// - `[..]`
+    /// - `[EXE]`
+    /// - `[CWD]`
+    /// - `[ROOT]`
+    ///
+    /// ## Example
+    ///
+    /// ```rust,no_run
+    /// #[test]
+    /// fn cli_tests() {
+    ///     trycmd::TestCases::new()
+    ///         .case("tests/cmd/*.trycmd")
+    ///         .insert_var("[VAR]", "value");
+    /// }
+    /// ```
+    pub fn insert_var(
+        &self,
+        var: &'static str,
+        value: impl Into<Cow<'static, str>>,
+    ) -> Result<&Self, crate::Error> {
+        self.substitutions.borrow_mut().insert(var, value)?;
+        Ok(self)
+    }
+
+    /// Batch add variables for normalizing output
+    ///
+    /// See `insert_var`.
+    pub fn extend_vars(
+        &self,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
+    ) -> Result<&Self, crate::Error> {
+        self.substitutions.borrow_mut().extend(vars)?;
+        Ok(self)
+    }
+
     /// Run tests
     ///
     /// This will happen on `drop` if not done explicitly
@@ -113,7 +162,7 @@ impl TestCases {
         mode.initialize().unwrap();
 
         let runner = self.runner.borrow_mut().prepare();
-        runner.run(&mode, &self.bins.borrow());
+        runner.run(&mode, &self.bins.borrow(), &self.substitutions.borrow());
     }
 }
 

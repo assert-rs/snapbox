@@ -1,9 +1,83 @@
-pub(crate) fn normalize(input: &str, pattern: &str) -> String {
+use std::borrow::Cow;
+
+pub(crate) trait Substitute {
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str>;
+}
+
+pub(crate) struct NoOp;
+
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Substitutions {
+    vars: std::collections::HashMap<&'static str, Cow<'static, str>>,
+}
+
+impl Substitutions {
+    pub(crate) fn insert(
+        &mut self,
+        key: &'static str,
+        value: impl Into<Cow<'static, str>>,
+    ) -> Result<(), crate::Error> {
+        let key = validate_key(key)?;
+        let value = value.into();
+        if !value.is_empty() {
+            self.vars.insert(key, value);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn extend(
+        &mut self,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
+    ) -> Result<(), crate::Error> {
+        for (key, value) in vars {
+            let key = validate_key(key)?;
+            let value = value.into();
+            if !value.is_empty() {
+                self.vars.insert(key, value);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Substitute for Substitutions {
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
+        let mut value = Cow::Borrowed(value);
+        for (var, replace) in self.vars.iter() {
+            debug_assert!(!replace.is_empty());
+            value = Cow::Owned(value.replace(replace.as_ref(), var));
+        }
+        value
+    }
+}
+
+fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
+    if !key.starts_with('[') || !key.ends_with(']') {
+        return Err(format!("Key `{}` is not enclosed in []", key).into());
+    }
+
+    if key[1..(key.len() - 1)]
+        .find(|c: char| !c.is_ascii_uppercase())
+        .is_some()
+    {
+        return Err(format!("Key `{}` can only be A-Z but ", key).into());
+    }
+
+    Ok(key)
+}
+
+impl Substitute for NoOp {
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
+        Cow::Borrowed(value)
+    }
+}
+
+pub(crate) fn normalize(input: &str, pattern: &str, substitutions: &dyn Substitute) -> String {
     if input == pattern {
         return input.to_owned();
     }
 
-    let mut normalized: Vec<&str> = Vec::new();
+    let mut normalized: Vec<Cow<str>> = Vec::new();
     let input_lines: Vec<_> = crate::lines::LinesWithTerminator::new(input).collect();
     let pattern_lines: Vec<_> = crate::lines::LinesWithTerminator::new(pattern).collect();
 
@@ -13,7 +87,12 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
         let pattern_line = if let Some(pattern_line) = pattern_lines.get(pattern_index) {
             *pattern_line
         } else {
-            normalized.extend(&input_lines[input_index..]);
+            normalized.extend(
+                input_lines[input_index..]
+                    .iter()
+                    .copied()
+                    .map(|s| substitutions.substitute(s)),
+            );
             break 'outer;
         };
         let next_pattern_index = pattern_index + 1;
@@ -28,16 +107,14 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
         if input_line == pattern_line {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
-            normalized.push(pattern_line);
+            normalized.push(Cow::Borrowed(pattern_line));
             continue 'outer;
-        }
-
-        if is_line_elide(pattern_line) {
+        } else if is_line_elide(pattern_line) {
             let next_pattern_line: &str =
                 if let Some(pattern_line) = pattern_lines.get(next_pattern_index) {
                     pattern_line
                 } else {
-                    normalized.push(pattern_line);
+                    normalized.push(Cow::Borrowed(pattern_line));
                     break 'outer;
                 };
             if let Some(future_input_index) = input_lines[input_index..]
@@ -46,38 +123,54 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
                 .find(|(_, l)| **l == next_pattern_line)
                 .map(|(i, _)| input_index + i)
             {
-                normalized.push(pattern_line);
+                normalized.push(Cow::Borrowed(pattern_line));
                 pattern_index = next_pattern_index;
                 input_index = future_input_index;
                 continue 'outer;
             } else {
-                normalized.extend(&input_lines[input_index..]);
+                normalized.extend(
+                    input_lines[input_index..]
+                        .iter()
+                        .copied()
+                        .map(|s| substitutions.substitute(s)),
+                );
                 break 'outer;
             }
-        } else if line_matches(input_line, pattern_line) {
+        } else if line_matches(input_line, pattern_line, substitutions) {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
-            normalized.push(pattern_line);
+            normalized.push(Cow::Borrowed(pattern_line));
             continue 'outer;
-        }
-
-        for future_input_index in next_input_index..input_lines.len() {
-            let future_input_line = input_lines[future_input_index];
-            if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
-                .iter()
-                .enumerate()
-                .find(|(_, l)| **l == future_input_line || is_line_elide(**l))
-                .map(|(i, _)| next_pattern_index + i)
-            {
-                normalized.extend(&input_lines[input_index..future_input_index]);
-                pattern_index = future_pattern_index;
-                input_index = future_input_index;
-                continue 'outer;
+        } else {
+            // Find where we can pick back up for normalizing
+            for future_input_index in next_input_index..input_lines.len() {
+                let future_input_line = input_lines[future_input_index];
+                if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
+                    .iter()
+                    .enumerate()
+                    .find(|(_, l)| **l == future_input_line || is_line_elide(**l))
+                    .map(|(i, _)| next_pattern_index + i)
+                {
+                    normalized.extend(
+                        input_lines[input_index..future_input_index]
+                            .iter()
+                            .copied()
+                            .map(|s| substitutions.substitute(s)),
+                    );
+                    pattern_index = future_pattern_index;
+                    input_index = future_input_index;
+                    continue 'outer;
+                }
             }
-        }
 
-        normalized.extend(&input_lines[input_index..]);
-        break 'outer;
+            normalized.extend(
+                input_lines[input_index..]
+                    .iter()
+                    .copied()
+                    .map(|s| substitutions.substitute(s)),
+            );
+            break 'outer;
+        }
     }
 
     normalized.join("")
@@ -87,8 +180,8 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(mut line: &str, pattern: &str) -> bool {
-    let mut sections = pattern.split("...").peekable();
+fn line_matches(mut line: &str, pattern: &str, _substitutions: &dyn Substitute) -> bool {
+    let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
         if let Some(remainder) = line.strip_prefix(section) {
             if let Some(next_section) = sections.peek() {
@@ -117,7 +210,7 @@ mod test {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -126,7 +219,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -135,7 +228,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -144,7 +237,7 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -153,7 +246,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -162,7 +255,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -171,7 +264,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -180,7 +273,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -189,7 +282,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -198,7 +291,7 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -207,16 +300,16 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\n...";
-        let actual = normalize(input, pattern);
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn inline_elide() {
         let input = "Hello\nWorld\nGoodbye\nSir";
-        let pattern = "Hello\nW...d\nGoodbye\nSir";
-        let expected = "Hello\nW...d\nGoodbye\nSir";
-        let actual = normalize(input, pattern);
+        let pattern = "Hello\nW[..]d\nGoodbye\nSir";
+        let expected = "Hello\nW[..]d\nGoodbye\nSir";
+        let actual = normalize(input, pattern, &NoOp);
         assert_eq!(expected, actual);
     }
 
@@ -224,32 +317,59 @@ mod test {
     fn line_matches_cases() {
         let cases = [
             ("", "", true),
-            ("", "...", true),
+            ("", "[..]", true),
             ("hello", "hello", true),
             ("hello", "goodbye", false),
-            ("hello", "...", true),
-            ("hello", "he...", true),
-            ("hello", "go...", false),
-            ("hello", "...o", true),
-            ("hello", "...e", false),
-            ("hello", "he...o", true),
-            ("hello", "he...e", false),
-            ("hello", "go...o", false),
-            ("hello", "go...e", false),
-            ("hello world, goodbye moon", "hello ..., goodbye ...", true),
+            ("hello", "[..]", true),
+            ("hello", "he[..]", true),
+            ("hello", "go[..]", false),
+            ("hello", "[..]o", true),
+            ("hello", "[..]e", false),
+            ("hello", "he[..]o", true),
+            ("hello", "he[..]e", false),
+            ("hello", "go[..]o", false),
+            ("hello", "go[..]e", false),
             (
                 "hello world, goodbye moon",
-                "goodbye ..., goodbye ...",
+                "hello [..], goodbye [..]",
+                true,
+            ),
+            (
+                "hello world, goodbye moon",
+                "goodbye [..], goodbye [..]",
                 false,
             ),
-            ("hello world, goodbye moon", "goodbye ..., hello ...", false),
-            ("hello world, goodbye moon", "hello ..., ... moon", true),
-            ("hello world, goodbye moon", "goodbye ..., ... moon", false),
-            ("hello world, goodbye moon", "hello ..., ... world", false),
+            (
+                "hello world, goodbye moon",
+                "goodbye [..], hello [..]",
+                false,
+            ),
+            ("hello world, goodbye moon", "hello [..], [..] moon", true),
+            (
+                "hello world, goodbye moon",
+                "goodbye [..], [..] moon",
+                false,
+            ),
+            ("hello world, goodbye moon", "hello [..], [..] world", false),
         ];
         for (line, pattern, expected) in cases {
-            let actual = line_matches(line, pattern);
+            let actual = line_matches(line, pattern, &NoOp);
             assert_eq!(actual, expected, "line={:?}  pattern={:?}", line, pattern);
+        }
+    }
+
+    #[test]
+    fn test_validate_key() {
+        let cases = [
+            ("[HELLO", false),
+            ("HELLO]", false),
+            ("[HELLO]", true),
+            ("[hello]", false),
+            ("[HE  O]", false),
+        ];
+        for (key, expected) in cases {
+            let actual = validate_key(key).is_ok();
+            assert_eq!(actual, expected, "key={:?}", key);
         }
     }
 }
