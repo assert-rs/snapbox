@@ -144,6 +144,10 @@
 //! - `...` as its own line: match all lines until the next one.  This is equivalent of
 //!   `\n(([^\n]*\n)*?`.
 //! - `[..]` as part of a line: match any characters.  This is equivalent of `[^\n]*?`.
+//! - `[EXE]` as part of the line: On Windows, matches `.exe`, ignored otherwise
+//! - `[ROOT]` as part of the line: The root directory for where the test is running
+//! - `[CWD]` as part of the line: The current working directory within the root
+//! - `[YOUR_NAME_HERE]` as part of the line: See [`TestCases::insert_var`]
 //!
 //! We will preserve these with `TRYCMD=dump` and will make a best-effort at preserving them with
 //! `TRYCMD=overwrite`.

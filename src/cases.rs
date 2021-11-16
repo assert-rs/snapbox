@@ -116,14 +116,22 @@ impl TestCases {
     ///
     /// **NOTE:** We do basic search/replaces so new any new output will blindly be replaced.
     ///
+    /// Reserved names:
+    /// - `[..]`
+    /// - `[EXE]`
+    /// - `[CWD]`
+    /// - `[ROOT]`
+    ///
     /// ## Example
     ///
+    /// ```rust,no_run
     /// #[test]
     /// fn cli_tests() {
     ///     trycmd::TestCases::new()
     ///         .case("tests/cmd/*.trycmd")
     ///         .insert_var("[VAR]", "value");
     /// }
+    /// ```
     pub fn insert_var(
         &self,
         var: &'static str,

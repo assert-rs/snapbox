@@ -178,12 +178,30 @@ impl Case {
             .map(|p| sequence.fs.rel_cwd().map(|rel| p.join(rel)))
             .transpose()
         {
-            Ok(cwd) => cwd,
+            Ok(cwd) => cwd.or_else(|| std::env::current_dir().ok()),
             Err(e) => {
                 let output = Output::step(self.path.clone(), "setup".into());
                 return vec![Err(output.error(e))];
             }
         };
+        let mut substitutions = substitutions.clone();
+        if let Some(root) = fs_context
+            .path()
+            .map(|p| p.to_owned())
+            .or_else(|| std::env::current_dir().ok())
+        {
+            substitutions
+                .insert("[ROOT]", root.display().to_string())
+                .unwrap();
+        }
+        if let Some(cwd) = cwd.as_deref() {
+            substitutions
+                .insert("[CWD]", cwd.display().to_string())
+                .unwrap();
+        }
+        substitutions
+            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
+            .unwrap();
 
         let mut outputs = Vec::with_capacity(sequence.steps.len());
         let mut prior_step_failed = false;
@@ -192,7 +210,7 @@ impl Case {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
-            let step_status = self.run_step(step, cwd.as_deref(), bins, substitutions);
+            let step_status = self.run_step(step, cwd.as_deref(), bins, &substitutions);
             if step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
@@ -241,7 +259,7 @@ impl Case {
                 fs_context.path().expect("sandbox must be filled"),
                 output.fs,
                 mode,
-                substitutions,
+                &substitutions,
             ) {
                 Ok(fs) => fs,
                 Err(fs) => {
