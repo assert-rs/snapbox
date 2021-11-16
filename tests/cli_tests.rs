@@ -17,4 +17,5 @@ fn cli_tests() {
         // On windows, crashes are returned as code=1
         t.skip("tests/cmd/timeout.toml");
     }
+    t.extend_vars([("[EXAMPLE]", "example")]).unwrap();
 }

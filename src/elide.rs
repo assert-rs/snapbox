@@ -1,13 +1,73 @@
 use std::borrow::Cow;
 
 pub(crate) trait Substitute {
-    fn substitute<'v>(&self, value: &'v str) -> std::borrow::Cow<'v, str>;
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str>;
 }
 
 pub(crate) struct NoOp;
 
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
+pub(crate) struct Substitutions {
+    vars: std::collections::HashMap<&'static str, Cow<'static, str>>,
+}
+
+impl Substitutions {
+    pub(crate) fn insert(
+        &mut self,
+        key: &'static str,
+        value: impl Into<Cow<'static, str>>,
+    ) -> Result<(), crate::Error> {
+        let key = validate_key(key)?;
+        let value = value.into();
+        if !value.is_empty() {
+            self.vars.insert(key, value);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn extend(
+        &mut self,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
+    ) -> Result<(), crate::Error> {
+        for (key, value) in vars {
+            let key = validate_key(key)?;
+            let value = value.into();
+            if !value.is_empty() {
+                self.vars.insert(key, value);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Substitute for Substitutions {
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
+        let mut value = Cow::Borrowed(value);
+        for (var, replace) in self.vars.iter() {
+            debug_assert!(!replace.is_empty());
+            value = Cow::Owned(value.replace(replace.as_ref(), var));
+        }
+        value
+    }
+}
+
+fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
+    if !key.starts_with('[') || !key.ends_with(']') {
+        return Err(format!("Key `{}` is not enclosed in []", key).into());
+    }
+
+    if key[1..(key.len() - 1)]
+        .find(|c: char| !c.is_ascii_uppercase())
+        .is_some()
+    {
+        return Err(format!("Key `{}` can only be A-Z but ", key).into());
+    }
+
+    Ok(key)
+}
+
 impl Substitute for NoOp {
-    fn substitute<'v>(&self, value: &'v str) -> std::borrow::Cow<'v, str> {
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
         Cow::Borrowed(value)
     }
 }
@@ -295,6 +355,21 @@ mod test {
         for (line, pattern, expected) in cases {
             let actual = line_matches(line, pattern, &NoOp);
             assert_eq!(actual, expected, "line={:?}  pattern={:?}", line, pattern);
+        }
+    }
+
+    #[test]
+    fn test_validate_key() {
+        let cases = [
+            ("[HELLO", false),
+            ("HELLO]", false),
+            ("[HELLO]", true),
+            ("[hello]", false),
+            ("[HE  O]", false),
+        ];
+        for (key, expected) in cases {
+            let actual = validate_key(key).is_ok();
+            assert_eq!(actual, expected, "key={:?}", key);
         }
     }
 }
