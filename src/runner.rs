@@ -365,7 +365,9 @@ impl Case {
 
         if let Some(expected_content) = expected_content {
             if let crate::File::Text(e) = &expected_content {
-                stream.content = stream.content.map_text(|t| crate::elide::normalize(t, e));
+                stream.content = stream
+                    .content
+                    .map_text(|t| crate::elide::normalize(t, e, &crate::elide::NoOp));
             }
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -559,7 +561,8 @@ impl Case {
                     .try_utf8();
 
                 if let crate::File::Text(e) = &expected_content {
-                    actual_content = actual_content.map_text(|t| crate::elide::normalize(t, e));
+                    actual_content = actual_content
+                        .map_text(|t| crate::elide::normalize(t, e, &crate::elide::NoOp));
                 }
                 if expected_content != actual_content {
                     return Err(FileStatus::ContentMismatch {
