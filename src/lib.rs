@@ -143,7 +143,7 @@
 //! To elide a section of content:
 //! - `...` as its own line: match all lines until the next one.  This is equivalent of
 //!   `\n(([^\n]*\n)*?`.
-//! - `...` as part of a line: match any characters.  This is equivalent of `[^\n]*?`.
+//! - `[..]` as part of a line: match any characters.  This is equivalent of `[^\n]*?`.
 //!
 //! We will preserve these with `TRYCMD=dump` and will make a best-effort at preserving them with
 //! `TRYCMD=overwrite`.

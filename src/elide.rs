@@ -88,7 +88,7 @@ fn is_line_elide(line: &str) -> bool {
 }
 
 fn line_matches(mut line: &str, pattern: &str) -> bool {
-    let mut sections = pattern.split("...").peekable();
+    let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
         if let Some(remainder) = line.strip_prefix(section) {
             if let Some(next_section) = sections.peek() {
@@ -214,8 +214,8 @@ mod test {
     #[test]
     fn inline_elide() {
         let input = "Hello\nWorld\nGoodbye\nSir";
-        let pattern = "Hello\nW...d\nGoodbye\nSir";
-        let expected = "Hello\nW...d\nGoodbye\nSir";
+        let pattern = "Hello\nW[..]d\nGoodbye\nSir";
+        let expected = "Hello\nW[..]d\nGoodbye\nSir";
         let actual = normalize(input, pattern);
         assert_eq!(expected, actual);
     }
@@ -224,28 +224,40 @@ mod test {
     fn line_matches_cases() {
         let cases = [
             ("", "", true),
-            ("", "...", true),
+            ("", "[..]", true),
             ("hello", "hello", true),
             ("hello", "goodbye", false),
-            ("hello", "...", true),
-            ("hello", "he...", true),
-            ("hello", "go...", false),
-            ("hello", "...o", true),
-            ("hello", "...e", false),
-            ("hello", "he...o", true),
-            ("hello", "he...e", false),
-            ("hello", "go...o", false),
-            ("hello", "go...e", false),
-            ("hello world, goodbye moon", "hello ..., goodbye ...", true),
+            ("hello", "[..]", true),
+            ("hello", "he[..]", true),
+            ("hello", "go[..]", false),
+            ("hello", "[..]o", true),
+            ("hello", "[..]e", false),
+            ("hello", "he[..]o", true),
+            ("hello", "he[..]e", false),
+            ("hello", "go[..]o", false),
+            ("hello", "go[..]e", false),
             (
                 "hello world, goodbye moon",
-                "goodbye ..., goodbye ...",
+                "hello [..], goodbye [..]",
+                true,
+            ),
+            (
+                "hello world, goodbye moon",
+                "goodbye [..], goodbye [..]",
                 false,
             ),
-            ("hello world, goodbye moon", "goodbye ..., hello ...", false),
-            ("hello world, goodbye moon", "hello ..., ... moon", true),
-            ("hello world, goodbye moon", "goodbye ..., ... moon", false),
-            ("hello world, goodbye moon", "hello ..., ... world", false),
+            (
+                "hello world, goodbye moon",
+                "goodbye [..], hello [..]",
+                false,
+            ),
+            ("hello world, goodbye moon", "hello [..], [..] moon", true),
+            (
+                "hello world, goodbye moon",
+                "goodbye [..], [..] moon",
+                false,
+            ),
+            ("hello world, goodbye moon", "hello [..], [..] world", false),
         ];
         for (line, pattern, expected) in cases {
             let actual = line_matches(line, pattern);
