@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 pub(crate) fn normalize(input: &str, pattern: &str) -> String {
     if input == pattern {
         return input.to_owned();
     }
 
-    let mut normalized: Vec<&str> = Vec::new();
+    let mut normalized: Vec<Cow<str>> = Vec::new();
     let input_lines: Vec<_> = crate::lines::LinesWithTerminator::new(input).collect();
     let pattern_lines: Vec<_> = crate::lines::LinesWithTerminator::new(pattern).collect();
 
@@ -13,7 +15,12 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
         let pattern_line = if let Some(pattern_line) = pattern_lines.get(pattern_index) {
             *pattern_line
         } else {
-            normalized.extend(&input_lines[input_index..]);
+            normalized.extend(
+                input_lines[input_index..]
+                    .iter()
+                    .copied()
+                    .map(Cow::Borrowed),
+            );
             break 'outer;
         };
         let next_pattern_index = pattern_index + 1;
@@ -28,14 +35,14 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
         if input_line == pattern_line {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
-            normalized.push(pattern_line);
+            normalized.push(Cow::Borrowed(pattern_line));
             continue 'outer;
         } else if is_line_elide(pattern_line) {
             let next_pattern_line: &str =
                 if let Some(pattern_line) = pattern_lines.get(next_pattern_index) {
                     pattern_line
                 } else {
-                    normalized.push(pattern_line);
+                    normalized.push(Cow::Borrowed(pattern_line));
                     break 'outer;
                 };
             if let Some(future_input_index) = input_lines[input_index..]
@@ -44,18 +51,23 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
                 .find(|(_, l)| **l == next_pattern_line)
                 .map(|(i, _)| input_index + i)
             {
-                normalized.push(pattern_line);
+                normalized.push(Cow::Borrowed(pattern_line));
                 pattern_index = next_pattern_index;
                 input_index = future_input_index;
                 continue 'outer;
             } else {
-                normalized.extend(&input_lines[input_index..]);
+                normalized.extend(
+                    input_lines[input_index..]
+                        .iter()
+                        .copied()
+                        .map(Cow::Borrowed),
+                );
                 break 'outer;
             }
         } else if line_matches(input_line, pattern_line) {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
-            normalized.push(pattern_line);
+            normalized.push(Cow::Borrowed(pattern_line));
             continue 'outer;
         } else {
             // Find where we can pick back up for normalizing
@@ -67,14 +79,24 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
                     .find(|(_, l)| **l == future_input_line || is_line_elide(**l))
                     .map(|(i, _)| next_pattern_index + i)
                 {
-                    normalized.extend(&input_lines[input_index..future_input_index]);
+                    normalized.extend(
+                        input_lines[input_index..future_input_index]
+                            .iter()
+                            .copied()
+                            .map(Cow::Borrowed),
+                    );
                     pattern_index = future_pattern_index;
                     input_index = future_input_index;
                     continue 'outer;
                 }
             }
 
-            normalized.extend(&input_lines[input_index..]);
+            normalized.extend(
+                input_lines[input_index..]
+                    .iter()
+                    .copied()
+                    .map(Cow::Borrowed),
+            );
             break 'outer;
         }
     }
