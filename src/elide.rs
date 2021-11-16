@@ -30,9 +30,7 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
             input_index = next_input_index;
             normalized.push(pattern_line);
             continue 'outer;
-        }
-
-        if is_line_elide(pattern_line) {
+        } else if is_line_elide(pattern_line) {
             let next_pattern_line: &str =
                 if let Some(pattern_line) = pattern_lines.get(next_pattern_index) {
                     pattern_line
@@ -59,25 +57,26 @@ pub(crate) fn normalize(input: &str, pattern: &str) -> String {
             input_index = next_input_index;
             normalized.push(pattern_line);
             continue 'outer;
-        }
-
-        for future_input_index in next_input_index..input_lines.len() {
-            let future_input_line = input_lines[future_input_index];
-            if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
-                .iter()
-                .enumerate()
-                .find(|(_, l)| **l == future_input_line || is_line_elide(**l))
-                .map(|(i, _)| next_pattern_index + i)
-            {
-                normalized.extend(&input_lines[input_index..future_input_index]);
-                pattern_index = future_pattern_index;
-                input_index = future_input_index;
-                continue 'outer;
+        } else {
+            // Find where we can pick back up for normalizing
+            for future_input_index in next_input_index..input_lines.len() {
+                let future_input_line = input_lines[future_input_index];
+                if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
+                    .iter()
+                    .enumerate()
+                    .find(|(_, l)| **l == future_input_line || is_line_elide(**l))
+                    .map(|(i, _)| next_pattern_index + i)
+                {
+                    normalized.extend(&input_lines[input_index..future_input_index]);
+                    pattern_index = future_pattern_index;
+                    input_index = future_input_index;
+                    continue 'outer;
+                }
             }
-        }
 
-        normalized.extend(&input_lines[input_index..]);
-        break 'outer;
+            normalized.extend(&input_lines[input_index..]);
+            break 'outer;
+        }
     }
 
     normalized.join("")
