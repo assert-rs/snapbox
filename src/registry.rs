@@ -33,28 +33,26 @@ impl BinRegistry {
                 Ok(bin)
             }
             crate::schema::Bin::Name(name) => {
-                let bin = self
-                    .resolve_name(&name)
-                    .ok_or_else(|| format!("Unknown bin.name = {}", name))?;
+                let bin = self.resolve_name(&name);
                 Ok(bin)
             }
             crate::schema::Bin::Error(err) => Err(err),
         }
     }
 
-    pub(crate) fn resolve_name(&self, name: &str) -> Option<crate::schema::Bin> {
+    pub(crate) fn resolve_name(&self, name: &str) -> crate::schema::Bin {
         if let Some(path) = self.bins.get(name) {
-            return Some(path.clone());
+            return path.clone();
         }
 
         if self.fallback {
             let path = crate::cargo::cargo_bin(name);
             if path.exists() {
-                return Some(crate::schema::Bin::Path(path));
+                return crate::schema::Bin::Path(path);
             }
         }
 
-        None
+        crate::schema::Bin::Name(name.to_owned())
     }
 }
 

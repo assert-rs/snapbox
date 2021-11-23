@@ -1,0 +1,4 @@
+Gracefully handle a non-existent name:
+```
+$ non-existent-name
+```
