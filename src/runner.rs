@@ -322,6 +322,20 @@ impl Case {
             return Ok(output);
         }
 
+        #[allow(unused_variables)]
+        match &step.bin {
+            Some(crate::schema::Bin::Path(_)) => {}
+            Some(crate::schema::Bin::Name(name)) => {
+                // Unhandled by resolve
+                debug!("bin={:?} not found", name);
+                assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+                return Ok(output);
+            }
+            Some(crate::schema::Bin::Error(_)) => {}
+            // Unlike `Name`, this always represents a bug
+            None => {}
+        }
+
         let cmd_output = step.to_output(cwd).map_err(|e| output.clone().error(e))?;
         let output = output.output(cmd_output);
 
