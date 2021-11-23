@@ -65,7 +65,7 @@ impl Substitute for Substitutions {
         if pattern.contains('[') {
             let mut pattern = Cow::Borrowed(pattern);
             for var in self.unused.iter() {
-                pattern = Cow::Owned(pattern.replace("", var));
+                pattern = Cow::Owned(pattern.replace(var, ""));
             }
             pattern
         } else {
