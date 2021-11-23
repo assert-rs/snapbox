@@ -104,7 +104,7 @@ pub(crate) fn normalize(input: &str, pattern: &str, substitutions: &dyn Substitu
         };
         let next_input_index = input_index + 1;
 
-        if input_line == pattern_line {
+        if line_matches(input_line, pattern_line, substitutions) {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
             normalized.push(Cow::Borrowed(pattern_line));
@@ -136,11 +136,6 @@ pub(crate) fn normalize(input: &str, pattern: &str, substitutions: &dyn Substitu
                 );
                 break 'outer;
             }
-        } else if line_matches(input_line, pattern_line, substitutions) {
-            pattern_index = next_pattern_index;
-            input_index = next_input_index;
-            normalized.push(Cow::Borrowed(pattern_line));
-            continue 'outer;
         } else {
             // Find where we can pick back up for normalizing
             for future_input_index in next_input_index..input_lines.len() {
@@ -181,6 +176,10 @@ fn is_line_elide(line: &str) -> bool {
 }
 
 fn line_matches(mut line: &str, pattern: &str, _substitutions: &dyn Substitute) -> bool {
+    if input_line == pattern_line {
+        return true;
+    }
+
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
         if let Some(remainder) = line.strip_prefix(section) {
