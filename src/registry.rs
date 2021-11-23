@@ -48,7 +48,10 @@ impl BinRegistry {
         }
 
         if self.fallback {
-            return Some(crate::schema::Bin::Path(crate::cargo::cargo_bin(name)));
+            let path = crate::cargo::cargo_bin(name);
+            if path.exists() {
+                return Some(crate::schema::Bin::Path(path));
+            }
         }
 
         None
