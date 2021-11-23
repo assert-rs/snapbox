@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- Instead of hard erroring on unknown bins, we ignore
+
+### Fixes
+
+- Always apply substitutions (we were missing one spot)
+- Don't fail because a substitution evaluates to ""
+- Ignore tests with unknown bins to work better with feature flags
+
 ## [0.7.0] - 2021-11-16
 
 ### Breaking Change
