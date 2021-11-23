@@ -32,7 +32,9 @@ impl Substitutions {
     ) -> Result<(), crate::Error> {
         let key = validate_key(key)?;
         let value = value.into();
-        if !value.is_empty() {
+        if value.is_empty() {
+            self.unused.insert(key);
+        } else {
             self.vars.insert(key, value);
         }
         Ok(())
@@ -43,13 +45,7 @@ impl Substitutions {
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
     ) -> Result<(), crate::Error> {
         for (key, value) in vars {
-            let key = validate_key(key)?;
-            let value = value.into();
-            if value.is_empty() {
-                self.unused.insert(key);
-            } else {
-                self.vars.insert(key, value);
-            }
+            self.insert(key, value)?;
         }
         Ok(())
     }
@@ -69,7 +65,7 @@ impl Substitute for Substitutions {
         if pattern.contains('[') {
             let mut pattern = Cow::Borrowed(pattern);
             for var in self.unused.iter() {
-                pattern = Cow::Owned(pattern.replace("", var));
+                pattern = Cow::Owned(pattern.replace(var, ""));
             }
             pattern
         } else {
