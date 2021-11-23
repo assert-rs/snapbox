@@ -2,13 +2,26 @@ use std::borrow::Cow;
 
 pub(crate) trait Substitute {
     fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str>;
+
+    fn clear<'v>(&self, value: &'v str) -> Cow<'v, str>;
 }
 
 pub(crate) struct NoOp;
 
+impl Substitute for NoOp {
+    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
+        Cow::Borrowed(value)
+    }
+
+    fn clear<'v>(&self, value: &'v str) -> Cow<'v, str> {
+        Cow::Borrowed(value)
+    }
+}
+
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Substitutions {
     vars: std::collections::HashMap<&'static str, Cow<'static, str>>,
+    unused: std::collections::HashSet<&'static str>,
 }
 
 impl Substitutions {
@@ -32,7 +45,9 @@ impl Substitutions {
         for (key, value) in vars {
             let key = validate_key(key)?;
             let value = value.into();
-            if !value.is_empty() {
+            if value.is_empty() {
+                self.unused.insert(key);
+            } else {
                 self.vars.insert(key, value);
             }
         }
@@ -49,6 +64,18 @@ impl Substitute for Substitutions {
         }
         value
     }
+
+    fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
+        if pattern.contains('[') {
+            let mut pattern = Cow::Borrowed(pattern);
+            for var in self.unused.iter() {
+                pattern = Cow::Owned(pattern.replace("", var));
+            }
+            pattern
+        } else {
+            Cow::Borrowed(pattern)
+        }
+    }
 }
 
 fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
@@ -64,12 +91,6 @@ fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
     }
 
     Ok(key)
-}
-
-impl Substitute for NoOp {
-    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
-        Cow::Borrowed(value)
-    }
 }
 
 pub(crate) fn normalize(input: &str, pattern: &str, substitutions: &dyn Substitute) -> String {
@@ -182,6 +203,8 @@ fn line_matches(line: &str, pattern: &str, substitutions: &dyn Substitute) -> bo
 
     let subbed = substitutions.substitute(line);
     let mut line = subbed.as_ref();
+
+    let pattern = substitutions.clear(pattern);
 
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
