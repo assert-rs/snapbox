@@ -175,10 +175,13 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(mut line: &str, pattern: &str, _substitutions: &dyn Substitute) -> bool {
-    if input_line == pattern_line {
+fn line_matches(line: &str, pattern: &str, substitutions: &dyn Substitute) -> bool {
+    if line == pattern {
         return true;
     }
+
+    let subbed = substitutions.substitute(line);
+    let mut line = subbed.as_ref();
 
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
