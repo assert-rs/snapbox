@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Only skip after a failure when they share mutable state (the file system).
+
 ## [0.8.1] - 2021-11-23
 
 ### Fixes
