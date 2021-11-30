@@ -211,7 +211,7 @@ impl Case {
             }
 
             let step_status = self.run_step(step, cwd.as_deref(), bins, &substitutions);
-            if step_status.is_err() && *mode == Mode::Fail {
+            if fs_context.is_sandbox() && step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
             outputs.push(step_status);

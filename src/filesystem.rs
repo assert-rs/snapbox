@@ -126,8 +126,9 @@ impl std::fmt::Display for File {
 pub(crate) enum FilesystemContext {
     Default,
     Path(std::path::PathBuf),
+    SandboxPath(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
-    Temp(tempfile::TempDir),
+    SandboxTemp(tempfile::TempDir),
 }
 
 impl FilesystemContext {
@@ -148,14 +149,14 @@ impl FilesystemContext {
                     if let Some(cwd) = cwd {
                         copy_dir(cwd, &target)?;
                     }
-                    Ok(Self::Path(target))
+                    Ok(Self::SandboxPath(target))
                 }
                 crate::Mode::Fail | crate::Mode::Overwrite => {
                     let temp = tempfile::tempdir()?;
                     if let Some(cwd) = cwd {
                         copy_dir(cwd, temp.path())?;
                     }
-                    Ok(Self::Temp(temp))
+                    Ok(Self::SandboxTemp(temp))
                 }
             }
             #[cfg(not(feature = "filesystem"))]
@@ -168,20 +169,30 @@ impl FilesystemContext {
         }
     }
 
+    pub(crate) fn is_sandbox(&self) -> bool {
+        match self {
+            Self::Default | Self::Path(_) => false,
+            Self::SandboxPath(_) => true,
+            #[cfg(feature = "filesystem")]
+            Self::SandboxTemp(_) => true,
+        }
+    }
+
     pub(crate) fn path(&self) -> Option<&std::path::Path> {
         match self {
             Self::Default => None,
             Self::Path(path) => Some(path.as_path()),
+            Self::SandboxPath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            Self::Temp(temp) => Some(temp.path()),
+            Self::SandboxTemp(temp) => Some(temp.path()),
         }
     }
 
     pub(crate) fn close(self) -> Result<(), std::io::Error> {
         match self {
-            Self::Default | Self::Path(_) => Ok(()),
+            Self::Default | Self::Path(_) | Self::SandboxPath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
-            Self::Temp(temp) => temp.close(),
+            Self::SandboxTemp(temp) => temp.close(),
         }
     }
 }
