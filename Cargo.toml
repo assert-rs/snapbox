@@ -59,7 +59,7 @@ serde = { version = "1.0", features = ["derive"] }
 shlex = "1.1.0"
 humantime = "2"
 humantime-serde = "1"
-toml_edit = { version = "0.8", features = ["serde"] }
+toml_edit = { version = "0.10", features = ["serde"] }
 escargot = { version = "0.5.6", optional = true }
 
 normalize-line-endings = "0.3.0"
