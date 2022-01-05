@@ -116,9 +116,14 @@ impl TryCmd {
                         .expected_stdout_source
                         .clone()
                         .expect("always present for .trycmd");
-                    let stdout = stdout.as_str().expect("already converted to Text");
+                    let mut stdout = stdout
+                        .as_str()
+                        .expect("already converted to Text")
+                        .to_owned();
+                    // Add back trailing newline removed when parsing
+                    stdout.push('\n');
                     let mut raw = crate::File::read_from(path, false)?;
-                    raw.replace_lines(line_nums, stdout)?;
+                    raw.replace_lines(line_nums, &stdout)?;
                     raw.write_to(path)?;
                 }
             } else {
@@ -222,6 +227,11 @@ impl TryCmd {
                         stdout.push_str(line);
                         post_stdout_start = line_num + 1;
                     }
+                }
+                if stdout.ends_with('\n') {
+                    // Last newline is for formatting purposes so tests can verify cases without a
+                    // trailing newline.
+                    stdout.pop();
                 }
 
                 let mut env = Env::default();
@@ -848,7 +858,7 @@ $ cmd
                 bin: Some(Bin::Name("cmd".into())),
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
-                expected_stdout_source: Some(4..5),
+                expected_stdout_source: Some(4..6),
                 expected_stdout: Some(crate::File::Text("Hello World\n".into())),
                 expected_stderr: None,
                 ..Default::default()
@@ -860,6 +870,7 @@ $ cmd
 ```
 $ cmd
 Hello World
+
 ```",
         )
         .unwrap();
