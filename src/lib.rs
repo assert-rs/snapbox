@@ -41,7 +41,7 @@
 //! ## Workflow
 //!
 //! To generate snapshots, run
-//! ```bash
+//! ```console
 //! $ TRYCMD=dump cargo test --test cli_tests
 //! ```
 //! This will write all of the `.stdout` and `.stderr` files in a `dump/` directory.
@@ -49,13 +49,13 @@
 //! You can then copy over to `tests/cmd` the cases you want to test
 //!
 //! To update snapshots, run
-//! ```bash
+//! ```console
 //! $ TRYCMD=overwrite cargo test --test cli_tests
 //! ```
 //! This will overwrite any existing `.stdout` and `.stderr` file in `tests/cmd`
 //!
 //! To filter the tests to those with `name1`, `name2`, etc in their file names, you can run:
-//! ```bash
+//! ```console
 //! cargo test --test cli_tests -- cli_tests trycmd=name1 trycmd=name2...
 //! ```
 //!
@@ -85,7 +85,7 @@
 //! The syntax is:
 //! - Test cases live inside of ` ``` ` fenced code blocks
 //!   - Everything out of them is ignored
-//!   - Blocks with info strings with an unsupported language (not `trycmd`, `bash`, `sh`) or the
+//!   - Blocks with info strings with an unsupported language (not `trycmd`, `console`) or the
 //!     `ignore` attribute are ignored
 //! - "`$ `" line prefix starts a new command
 //! - "`> `" line prefix appends to the prior command

@@ -148,7 +148,7 @@ impl TryCmd {
                         let mut info = raw.split(',');
                         let lang = info.next().unwrap();
                         match lang {
-                            "trycmd" | "bash" | "sh" => {
+                            "trycmd" | "console" => {
                                 if info.any(|i| i == "ignore") {
                                     debug!("ignore from infostring: {:?}", info);
                                 } else {
@@ -931,18 +931,8 @@ $ cmd2
                     ..Default::default()
                 },
                 Step {
-                    id: Some("13".into()),
-                    bin: Some(Bin::Name("sh-cmd".into())),
-                    expected_status: Some(CommandStatus::Code(1)),
-                    stderr_to_stdout: true,
-                    expected_stdout_source: Some(15..15),
-                    expected_stdout: Some(crate::File::Text("".into())),
-                    expected_stderr: None,
-                    ..Default::default()
-                },
-                Step {
                     id: Some("18".into()),
-                    bin: Some(Bin::Name("bash-cmd".into())),
+                    bin: Some(Bin::Name("console-cmd".into())),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(20..20),
@@ -970,8 +960,8 @@ $ sh-cmd
 ? 1
 ```
 
-```bash
-$ bash-cmd
+```console
+$ console-cmd
 ? 1
 ```
 
