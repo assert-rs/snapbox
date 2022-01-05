@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- `md`: `bash` and `sh` info strings are now ignored, switch to `console`
+- `md`: A blank line is needed after each command's output
+
+### Fixes
+
+- Use more appropriate `console` info string for `md`
+- Allow testing commands without trailing newline in `md` files
+
 ## [0.8.3] - 2021-12-16
 
 ### Fixes
