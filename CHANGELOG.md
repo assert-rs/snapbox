@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+Config
+- Re-defined `fs.base` root to the `.toml`'s directory, like `fs.cwd`
+
+### Fixes
+
+Config
+- Support `.in` directories that were symlinks on Linux but Windows checked out as files.
+- Re-defined `fs.base` root to the `.toml`'s directory, like `fs.cwd`
+
 ## [0.9.1] - 2022-01-11
 
 ## [0.9.0] - 2022-01-05
