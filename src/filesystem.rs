@@ -298,27 +298,29 @@ fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(
     std::os::unix::fs::symlink(target, link)
 }
 
-pub(crate) fn resolve_path(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
+pub(crate) fn resolve_dir(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
     let meta = std::fs::symlink_metadata(&path)?;
     if meta.is_dir() {
-        Ok(path)
+        canonicalize(path)
     } else if meta.is_file() {
         // Git might checkout symlinks as files
         let target = std::fs::read_to_string(&path)?;
         let target_path = path.parent().unwrap().join(target);
-        resolve_path(target_path)
+        resolve_dir(target_path)
     } else {
-        #[cfg(feature = "filesystem")]
-        {
-            dunce::canonicalize(path)
-        }
-        #[cfg(not(feature = "filesystem"))]
-        {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                format!("Could not resolve {}", path.display()),
-            ))
-        }
+        canonicalize(path)
+    }
+}
+
+fn canonicalize(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
+    #[cfg(feature = "filesystem")]
+    {
+        dunce::canonicalize(path)
+    }
+    #[cfg(not(feature = "filesystem"))]
+    {
+        // Hope for the best
+        Ok(path)
     }
 }
 
