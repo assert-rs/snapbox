@@ -57,20 +57,16 @@ impl TryCmd {
             return Err("No extension".into());
         };
 
-        if let Some(base) = sequence.fs.base.take() {
-            sequence.fs.base = Some(
-                path.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join(base),
-            );
-        }
-        if let Some(cwd) = sequence.fs.cwd.take() {
-            sequence.fs.cwd = Some(
-                path.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join(cwd),
-            );
-        }
+        sequence.fs.base = sequence.fs.base.take().map(|base| {
+            path.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join(base)
+        });
+        sequence.fs.cwd = sequence.fs.cwd.take().map(|cwd| {
+            path.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join(cwd)
+        });
 
         if sequence.fs.base.is_none() {
             let base_path = path.with_extension("in");
