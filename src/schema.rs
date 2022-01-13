@@ -57,6 +57,13 @@ impl TryCmd {
             return Err("No extension".into());
         };
 
+        if let Some(base) = sequence.fs.base.take() {
+            sequence.fs.base = Some(
+                path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join(base),
+            );
+        }
         if let Some(cwd) = sequence.fs.cwd.take() {
             sequence.fs.cwd = Some(
                 path.parent()
