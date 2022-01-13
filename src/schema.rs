@@ -67,7 +67,8 @@ impl TryCmd {
         if sequence.fs.base.is_none() {
             let base_path = path.with_extension("in");
             if base_path.exists() {
-                sequence.fs.base = Some(base_path);
+                sequence.fs.base =
+                    Some(crate::filesystem::resolve_path(base_path).map_err(|e| e.to_string())?);
             } else if sequence.fs.cwd.is_some() {
                 sequence.fs.base = sequence.fs.cwd.clone();
             }
