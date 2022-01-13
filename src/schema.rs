@@ -71,11 +71,11 @@ impl TryCmd {
                     .join(cwd),
             );
         }
+
         if sequence.fs.base.is_none() {
             let base_path = path.with_extension("in");
             if base_path.exists() {
-                sequence.fs.base =
-                    Some(crate::filesystem::resolve_path(base_path).map_err(|e| e.to_string())?);
+                sequence.fs.base = Some(base_path);
             } else if sequence.fs.cwd.is_some() {
                 sequence.fs.base = sequence.fs.cwd.clone();
             }
@@ -86,6 +86,19 @@ impl TryCmd {
         if sequence.fs.sandbox.is_none() {
             sequence.fs.sandbox = Some(path.with_extension("out").exists());
         }
+
+        sequence.fs.base = sequence
+            .fs
+            .base
+            .take()
+            .map(|p| crate::filesystem::resolve_path(p).map_err(|e| e.to_string()))
+            .transpose()?;
+        sequence.fs.cwd = sequence
+            .fs
+            .cwd
+            .take()
+            .map(|p| crate::filesystem::resolve_path(p).map_err(|e| e.to_string()))
+            .transpose()?;
 
         Ok(sequence)
     }
