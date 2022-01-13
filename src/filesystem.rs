@@ -123,6 +123,7 @@ impl std::fmt::Display for File {
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum FilesystemContext {
     Default,
     Path(std::path::PathBuf),
@@ -295,6 +296,32 @@ fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(
 #[cfg(not(windows))]
 fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(), std::io::Error> {
     std::os::unix::fs::symlink(target, link)
+}
+
+pub(crate) fn resolve_dir(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
+    let meta = std::fs::symlink_metadata(&path)?;
+    if meta.is_dir() {
+        canonicalize(path)
+    } else if meta.is_file() {
+        // Git might checkout symlinks as files
+        let target = std::fs::read_to_string(&path)?;
+        let target_path = path.parent().unwrap().join(target);
+        resolve_dir(target_path)
+    } else {
+        canonicalize(path)
+    }
+}
+
+fn canonicalize(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
+    #[cfg(feature = "filesystem")]
+    {
+        dunce::canonicalize(path)
+    }
+    #[cfg(not(feature = "filesystem"))]
+    {
+        // Hope for the best
+        Ok(path)
+    }
 }
 
 #[cfg(test)]

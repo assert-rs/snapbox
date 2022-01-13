@@ -57,13 +57,17 @@ impl TryCmd {
             return Err("No extension".into());
         };
 
-        if let Some(cwd) = sequence.fs.cwd.take() {
-            sequence.fs.cwd = Some(
-                path.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join(cwd),
-            );
-        }
+        sequence.fs.base = sequence.fs.base.take().map(|base| {
+            path.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join(base)
+        });
+        sequence.fs.cwd = sequence.fs.cwd.take().map(|cwd| {
+            path.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join(cwd)
+        });
+
         if sequence.fs.base.is_none() {
             let base_path = path.with_extension("in");
             if base_path.exists() {
@@ -78,6 +82,19 @@ impl TryCmd {
         if sequence.fs.sandbox.is_none() {
             sequence.fs.sandbox = Some(path.with_extension("out").exists());
         }
+
+        sequence.fs.base = sequence
+            .fs
+            .base
+            .take()
+            .map(|p| crate::filesystem::resolve_dir(p).map_err(|e| e.to_string()))
+            .transpose()?;
+        sequence.fs.cwd = sequence
+            .fs
+            .cwd
+            .take()
+            .map(|p| crate::filesystem::resolve_dir(p).map_err(|e| e.to_string()))
+            .transpose()?;
 
         Ok(sequence)
     }
