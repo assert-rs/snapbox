@@ -126,13 +126,13 @@
 //!
 //! Data to pass to `stdin`.
 //! - If not present, nothing will be written to `stdin`
-//! - If `binary = false` in `*.toml` (the default), newlines will be normalized.
+//! - If `binary = false` in `*.toml` (the default), newlines and path separators will be normalized.
 //!
 //! #### `*.stdout` and `*.stderr`
 //!
 //! Expected results for `stdout` or `stderr`.
 //! - If not present, we'll not verify the output
-//! - If `binary = false` in `*.toml` (the default), newlines will be normalized before comparing
+//! - If `binary = false` in `*.toml` (the default), newlines and path separators will be normalized before comparing
 //!
 //! **Eliding Content**
 //!

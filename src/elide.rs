@@ -35,7 +35,10 @@ impl Substitutions {
         if value.is_empty() {
             self.unused.insert(key);
         } else {
-            self.vars.insert(key, value);
+            self.vars.insert(
+                key,
+                crate::filesystem::normalize_text(value.as_ref()).into(),
+            );
         }
         Ok(())
     }
