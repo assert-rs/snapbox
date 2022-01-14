@@ -162,8 +162,8 @@ impl FilesystemContext {
             }
             #[cfg(not(feature = "filesystem"))]
             Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "sandboxing is disabled",
+                std::io::ErrorKind::Unsupported,
+                "Sandboxing is disabled",
             ))
         } else {
             Ok(cwd.map(|p| Self::Path(p.to_owned())).unwrap_or_default())
