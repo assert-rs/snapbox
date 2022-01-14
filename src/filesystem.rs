@@ -148,6 +148,7 @@ impl FilesystemContext {
                     let _ = std::fs::remove_dir_all(&target);
                     std::fs::create_dir_all(&target)?;
                     if let Some(cwd) = cwd {
+                        debug!("Initializing {} from {}", target.display(), cwd.display());
                         copy_dir(cwd, &target)?;
                     }
                     Ok(Self::SandboxPath(target))
@@ -155,6 +156,11 @@ impl FilesystemContext {
                 crate::Mode::Fail | crate::Mode::Overwrite => {
                     let temp = tempfile::tempdir()?;
                     if let Some(cwd) = cwd {
+                        debug!(
+                            "Initializing {} from {}",
+                            temp.path().display(),
+                            cwd.display()
+                        );
                         copy_dir(cwd, temp.path())?;
                     }
                     Ok(Self::SandboxTemp(temp))
@@ -162,8 +168,8 @@ impl FilesystemContext {
             }
             #[cfg(not(feature = "filesystem"))]
             Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "sandboxing is disabled",
+                std::io::ErrorKind::Unsupported,
+                "Sandboxing is disabled",
             ))
         } else {
             Ok(cwd.map(|p| Self::Path(p.to_owned())).unwrap_or_default())
@@ -185,7 +191,7 @@ impl FilesystemContext {
             Self::Path(path) => Some(path.as_path()),
             Self::SandboxPath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp(temp) => Some(temp.path()),
+            Self::SandboxTemp(temp) => Some(strip_trailing_slash(temp.path())),
         }
     }
 
@@ -320,8 +326,12 @@ fn canonicalize(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io:
     #[cfg(not(feature = "filesystem"))]
     {
         // Hope for the best
-        Ok(path)
+        Ok(strip_trailing_slash(&path).to_owned())
     }
+}
+
+pub(crate) fn strip_trailing_slash(path: &std::path::Path) -> &std::path::Path {
+    path.components().as_path()
 }
 
 #[cfg(test)]
@@ -386,5 +396,16 @@ mod test {
         let mut actual = File::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn strips_trailing_slash() {
+        let path = std::path::Path::new("/foo/bar/");
+        let rendered = path.display().to_string();
+        assert_eq!(rendered.as_bytes()[rendered.len() - 1], b'/');
+
+        let stripped = strip_trailing_slash(path);
+        let rendered = stripped.display().to_string();
+        assert_eq!(rendered.as_bytes()[rendered.len() - 1], b'r');
     }
 }

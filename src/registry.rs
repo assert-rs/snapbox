@@ -1,6 +1,6 @@
 #[derive(Clone, Debug)]
 pub(crate) struct BinRegistry {
-    bins: std::collections::HashMap<String, crate::schema::Bin>,
+    bins: std::collections::BTreeMap<String, crate::schema::Bin>,
     fallback: bool,
 }
 

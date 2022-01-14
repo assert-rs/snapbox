@@ -20,8 +20,8 @@ impl Substitute for NoOp {
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Substitutions {
-    vars: std::collections::HashMap<&'static str, Cow<'static, str>>,
-    unused: std::collections::HashSet<&'static str>,
+    vars: std::collections::BTreeMap<&'static str, Cow<'static, str>>,
+    unused: std::collections::BTreeSet<&'static str>,
 }
 
 impl Substitutions {

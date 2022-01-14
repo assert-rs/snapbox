@@ -175,7 +175,12 @@ impl Case {
         };
         let cwd = match fs_context
             .path()
-            .map(|p| sequence.fs.rel_cwd().map(|rel| p.join(rel)))
+            .map(|p| {
+                sequence.fs.rel_cwd().map(|rel| {
+                    let p = p.join(rel);
+                    crate::filesystem::strip_trailing_slash(&p).to_owned()
+                })
+            })
             .transpose()
         {
             Ok(cwd) => cwd.or_else(|| std::env::current_dir().ok()),
@@ -185,16 +190,12 @@ impl Case {
             }
         };
         let mut substitutions = substitutions.clone();
-        if let Some(root) = fs_context
-            .path()
-            .map(|p| p.to_owned())
-            .or_else(|| std::env::current_dir().ok())
-        {
+        if let Some(root) = fs_context.path() {
             substitutions
                 .insert("[ROOT]", root.display().to_string())
                 .unwrap();
         }
-        if let Some(cwd) = cwd.as_deref() {
+        if let Some(cwd) = cwd.clone().or_else(|| std::env::current_dir().ok()) {
             substitutions
                 .insert("[CWD]", cwd.display().to_string())
                 .unwrap();
@@ -202,6 +203,7 @@ impl Case {
         substitutions
             .insert("[EXE]", std::env::consts::EXE_SUFFIX)
             .unwrap();
+        debug!("{:?}", substitutions);
 
         let mut outputs = Vec::with_capacity(sequence.steps.len());
         let mut prior_step_failed = false;
