@@ -114,8 +114,11 @@ impl File {
     }
 }
 
-fn normalize_text(data: &str) -> String {
-    normalize_line_endings::normalized(data.chars()).collect()
+pub(crate) fn normalize_text(data: &str) -> String {
+    normalize_line_endings::normalized(data.chars())
+        // Also help out with Windows paths
+        .map(|c| if c == '\\' { '/' } else { c })
+        .collect()
 }
 
 impl std::fmt::Display for File {
