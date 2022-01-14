@@ -13,7 +13,7 @@ impl File {
         } else {
             let data = std::fs::read_to_string(&path)
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-            let data = normalize_line_endings::normalized(data.chars()).collect();
+            let data = normalize_text(&data);
             Self::Text(data)
         };
         Ok(data)
@@ -64,7 +64,7 @@ impl File {
         match self {
             Self::Binary(data) => {
                 let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
-                let data = normalize_line_endings::normalized(data.chars()).collect();
+                let data = normalize_text(&data);
                 *self = Self::Text(data);
                 Ok(())
             }
@@ -76,7 +76,7 @@ impl File {
         match self {
             Self::Binary(data) => match String::from_utf8(data) {
                 Ok(data) => {
-                    let data = normalize_line_endings::normalized(data.chars()).collect();
+                    let data = normalize_text(&data);
                     Self::Text(data)
                 }
                 Err(err) => {
@@ -92,7 +92,7 @@ impl File {
         match self {
             Self::Binary(data) => {
                 let data = String::from_utf8(data).map_err(|e| e.utf8_error())?;
-                let data = normalize_line_endings::normalized(data.chars()).collect();
+                let data = normalize_text(&data);
                 Ok(data)
             }
             Self::Text(data) => Ok(data),
@@ -112,6 +112,10 @@ impl File {
             Self::Text(data) => data.as_bytes(),
         }
     }
+}
+
+fn normalize_text(data: &str) -> String {
+    normalize_line_endings::normalized(data.chars()).collect()
 }
 
 impl std::fmt::Display for File {
