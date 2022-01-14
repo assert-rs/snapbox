@@ -1,0 +1,5 @@
+bin.name = "bin-fixture"
+fs.cwd = "subst-cwd.in/foo"
+
+[env.add]
+echo_cwd = "1"

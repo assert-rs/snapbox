@@ -12,6 +12,7 @@ fn cli_tests() {
         t.skip("tests/cmd/multistep.trycmd");
         t.skip("tests/cmd/normalize.toml");
         t.skip("tests/cmd/symlink.toml");
+        t.skip("tests/cmd/subst-cwd.toml");
     }
     #[cfg(target_os = "windows")]
     {

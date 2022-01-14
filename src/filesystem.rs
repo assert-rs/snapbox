@@ -129,7 +129,10 @@ pub(crate) enum FilesystemContext {
     Path(std::path::PathBuf),
     SandboxPath(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
-    SandboxTemp(tempfile::TempDir),
+    SandboxTemp {
+        temp: tempfile::TempDir,
+        path: std::path::PathBuf,
+    },
 }
 
 impl FilesystemContext {
@@ -155,15 +158,14 @@ impl FilesystemContext {
                 }
                 crate::Mode::Fail | crate::Mode::Overwrite => {
                     let temp = tempfile::tempdir()?;
+                    // We need to get the `/private` prefix on Mac so variable substitutions work
+                    // correctly
+                    let path = canonicalize(temp.path())?;
                     if let Some(cwd) = cwd {
-                        debug!(
-                            "Initializing {} from {}",
-                            temp.path().display(),
-                            cwd.display()
-                        );
-                        copy_dir(cwd, temp.path())?;
+                        debug!("Initializing {} from {}", path.display(), cwd.display());
+                        copy_dir(cwd, &path)?;
                     }
-                    Ok(Self::SandboxTemp(temp))
+                    Ok(Self::SandboxTemp { temp, path })
                 }
             }
             #[cfg(not(feature = "filesystem"))]
@@ -181,7 +183,7 @@ impl FilesystemContext {
             Self::Default | Self::Path(_) => false,
             Self::SandboxPath(_) => true,
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp(_) => true,
+            Self::SandboxTemp { .. } => true,
         }
     }
 
@@ -191,7 +193,7 @@ impl FilesystemContext {
             Self::Path(path) => Some(path.as_path()),
             Self::SandboxPath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp(temp) => Some(strip_trailing_slash(temp.path())),
+            Self::SandboxTemp { path, .. } => Some(path.as_path()),
         }
     }
 
@@ -199,7 +201,7 @@ impl FilesystemContext {
         match self {
             Self::Default | Self::Path(_) | Self::SandboxPath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp(temp) => temp.close(),
+            Self::SandboxTemp { temp, .. } => temp.close(),
         }
     }
 }
