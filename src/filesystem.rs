@@ -185,7 +185,7 @@ impl FilesystemContext {
             Self::Path(path) => Some(path.as_path()),
             Self::SandboxPath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp(temp) => Some(temp.path()),
+            Self::SandboxTemp(temp) => Some(strip_trailing_slash(temp.path())),
         }
     }
 
@@ -320,8 +320,12 @@ fn canonicalize(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io:
     #[cfg(not(feature = "filesystem"))]
     {
         // Hope for the best
-        Ok(path)
+        Ok(strip_trailing_slash(&path).to_owned())
     }
+}
+
+pub(crate) fn strip_trailing_slash(path: &std::path::Path) -> &std::path::Path {
+    path.components().as_path()
 }
 
 #[cfg(test)]
@@ -386,5 +390,16 @@ mod test {
         let mut actual = File::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn strips_trailing_slash() {
+        let path = std::path::Path::new("/foo/bar/");
+        let rendered = path.display().to_string();
+        assert_eq!(rendered.as_bytes()[rendered.len() - 1], b'/');
+
+        let stripped = strip_trailing_slash(path);
+        let rendered = stripped.display().to_string();
+        assert_eq!(rendered.as_bytes()[rendered.len() - 1], b'r');
     }
 }
