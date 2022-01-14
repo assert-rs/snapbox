@@ -185,16 +185,12 @@ impl Case {
             }
         };
         let mut substitutions = substitutions.clone();
-        if let Some(root) = fs_context
-            .path()
-            .map(|p| p.to_owned())
-            .or_else(|| std::env::current_dir().ok())
-        {
+        if let Some(root) = fs_context.path().as_deref() {
             substitutions
                 .insert("[ROOT]", root.display().to_string())
                 .unwrap();
         }
-        if let Some(cwd) = cwd.as_deref() {
+        if let Some(cwd) = cwd.clone().or_else(|| std::env::current_dir().ok()) {
             substitutions
                 .insert("[CWD]", cwd.display().to_string())
                 .unwrap();
