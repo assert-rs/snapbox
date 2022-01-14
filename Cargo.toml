@@ -1,6 +1,6 @@
 [package]
 name = "trycmd"
-version = "0.11.0"
+version = "0.11.1"
 description = "Snapshot testing for a herd of CLI tests"
 authors = ["Ed Page <eopage@gmail.com>"]
 license = "MIT OR Apache-2.0"
