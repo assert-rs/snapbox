@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- Normalize `\\` to `/` to help with paths on Windows
+
+### Fixes
+
+- Normalize `\\` to `/` to help with paths on Windows
+
 ## [0.11.1] - 2022-01-14
 
 ### Fixes
