@@ -148,6 +148,7 @@ impl FilesystemContext {
                     let _ = std::fs::remove_dir_all(&target);
                     std::fs::create_dir_all(&target)?;
                     if let Some(cwd) = cwd {
+                        debug!("Initializing {} from {}", target.display(), cwd.display());
                         copy_dir(cwd, &target)?;
                     }
                     Ok(Self::SandboxPath(target))
@@ -155,6 +156,11 @@ impl FilesystemContext {
                 crate::Mode::Fail | crate::Mode::Overwrite => {
                     let temp = tempfile::tempdir()?;
                     if let Some(cwd) = cwd {
+                        debug!(
+                            "Initializing {} from {}",
+                            temp.path().display(),
+                            cwd.display()
+                        );
                         copy_dir(cwd, temp.path())?;
                     }
                     Ok(Self::SandboxTemp(temp))
