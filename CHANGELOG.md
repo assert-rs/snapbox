@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- Any of the below fixes could break
+
+### Fixes
+
+Substitutions
+- Ensure consistent choice between `[ROOT]` and `[CWD]` when they are the same
+- Prefer `[CWD]` to `[ROOT]` without sandbox
+- Consistently exclude trailing `/` with `[CWD]` / `[ROOT]`
+- Improve sandbox-unsupported error
+
 ## [0.10.0] - 2022-01-13
 
 ### Breaking Change
