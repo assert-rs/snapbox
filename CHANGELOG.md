@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+Substitutions
+- Ensure `[CWD]` captures `/private` on macOS when sandboxing
+
 ## [0.11.0] - 2022-01-14
 
 ### Breaking Change
