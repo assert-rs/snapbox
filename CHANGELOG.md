@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Allow `stdin`, `stdout`, and `stderr` in toml file
+
 ## [0.12.0] - 2022-01-14
 
 ### Breaking Change
