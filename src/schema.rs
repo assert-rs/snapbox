@@ -22,29 +22,35 @@ impl TryCmd {
                 let mut sequence: Self = one_shot.into();
                 let is_binary = sequence.steps[0].binary;
 
-                let stdin_path = path.with_extension("stdin");
-                let stdin = if stdin_path.exists() {
-                    Some(crate::File::read_from(&stdin_path, is_binary)?)
-                } else {
-                    None
-                };
-                sequence.steps[0].stdin = stdin;
+                if sequence.steps[0].stdin.is_none() {
+                    let stdin_path = path.with_extension("stdin");
+                    let stdin = if stdin_path.exists() {
+                        Some(crate::File::read_from(&stdin_path, is_binary)?)
+                    } else {
+                        None
+                    };
+                    sequence.steps[0].stdin = stdin;
+                }
 
-                let stdout_path = path.with_extension("stdout");
-                let stdout = if stdout_path.exists() {
-                    Some(crate::File::read_from(&stdout_path, is_binary)?)
-                } else {
-                    None
-                };
-                sequence.steps[0].expected_stdout = stdout;
+                if sequence.steps[0].expected_stdout.is_none() {
+                    let stdout_path = path.with_extension("stdout");
+                    let stdout = if stdout_path.exists() {
+                        Some(crate::File::read_from(&stdout_path, is_binary)?)
+                    } else {
+                        None
+                    };
+                    sequence.steps[0].expected_stdout = stdout;
+                }
 
-                let stderr_path = path.with_extension("stderr");
-                let stderr = if stderr_path.exists() {
-                    Some(crate::File::read_from(&stderr_path, is_binary)?)
-                } else {
-                    None
-                };
-                sequence.steps[0].expected_stderr = stderr;
+                if sequence.steps[0].expected_stderr.is_none() {
+                    let stderr_path = path.with_extension("stderr");
+                    let stderr = if stderr_path.exists() {
+                        Some(crate::File::read_from(&stderr_path, is_binary)?)
+                    } else {
+                        None
+                    };
+                    sequence.steps[0].expected_stderr = stderr;
+                }
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
@@ -110,15 +116,8 @@ impl TryCmd {
             if ext == std::ffi::OsStr::new("toml") {
                 assert_eq!(id, None);
 
-                if let Some(stdout) = stdout {
-                    let stdout_path = path.with_extension("stdout");
-                    stdout.write_to(&stdout_path)?;
-                }
-
-                if let Some(stderr) = stderr {
-                    let stderr_path = path.with_extension("stderr");
-                    stderr.write_to(&stderr_path)?;
-                }
+                overwrite_toml_output(path, id, stdout, "stdout", "stdout")?;
+                overwrite_toml_output(path, id, stderr, "stderr", "stderr")?;
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 if stderr.is_some() && stderr != Some(&crate::File::Text("".into())) {
                     panic!("stderr should have been merged: {:?}", stderr);
@@ -293,6 +292,50 @@ impl TryCmd {
     }
 }
 
+fn overwrite_toml_output(
+    path: &std::path::Path,
+    _id: Option<&str>,
+    output: Option<&crate::File>,
+    output_ext: &str,
+    output_field: &str,
+) -> Result<(), crate::Error> {
+    if let Some(output) = output {
+        let output_path = path.with_extension(output_ext);
+        if output_path.exists() {
+            output.write_to(&output_path)?;
+        } else {
+            match output {
+                crate::File::Binary(_) => {
+                    output.write_to(&output_path)?;
+
+                    let raw = std::fs::read_to_string(path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    let mut doc = raw
+                        .parse::<toml_edit::Document>()
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    doc[output_field] = toml_edit::Item::None;
+                    std::fs::write(path, doc.to_string())
+                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+                }
+                crate::File::Text(output) => {
+                    let raw = std::fs::read_to_string(path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    let mut doc = raw
+                        .parse::<toml_edit::Document>()
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    if let Some(output_value) = doc.get_mut(output_field) {
+                        *output_value = toml_edit::value(output);
+                    }
+                    std::fs::write(path, doc.to_string())
+                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 impl std::str::FromStr for TryCmd {
     type Err = crate::Error;
 
@@ -307,6 +350,9 @@ impl From<OneShot> for TryCmd {
             bin,
             args,
             env,
+            stdin,
+            stdout,
+            stderr,
             stderr_to_stdout,
             status,
             binary,
@@ -319,13 +365,13 @@ impl From<OneShot> for TryCmd {
                 bin,
                 args: args.into_vec(),
                 env,
-                stdin: None,
+                stdin: stdin.map(crate::File::Text),
                 stderr_to_stdout,
                 expected_status: status,
                 expected_stdout_source: None,
-                expected_stdout: None,
+                expected_stdout: stdout.map(crate::File::Text),
                 expected_stderr_source: None,
-                expected_stderr: None,
+                expected_stderr: stderr.map(crate::File::Text),
                 binary,
                 timeout,
             }],
@@ -432,6 +478,12 @@ pub struct OneShot {
     pub(crate) args: Args,
     #[serde(default)]
     pub(crate) env: Env,
+    #[serde(default)]
+    pub(crate) stdin: Option<String>,
+    #[serde(default)]
+    pub(crate) stdout: Option<String>,
+    #[serde(default)]
+    pub(crate) stderr: Option<String>,
     #[serde(default)]
     pub(crate) stderr_to_stdout: bool,
     pub(crate) status: Option<CommandStatus>,

@@ -34,6 +34,27 @@
         }
       ]
     },
+    "stdin": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stdout": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stderr": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "stderr-to-stdout": {
       "default": false,
       "type": "boolean"
