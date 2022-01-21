@@ -35,9 +35,10 @@ pre-release-replacements = [
 default = ["color-auto", "filesystem", "diff"]
 color = ["yansi", "concolor/std"]
 color-auto = ["color", "concolor/auto"]
-schema = ["schemars", "serde_json"]
 diff = ["difflib"]
 filesystem = ["tempfile", "walkdir", "dunce"]
+
+schema = ["schemars", "serde_json"]
 examples = ["escargot"]
 debug = ["backtrace"]
 
