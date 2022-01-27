@@ -25,7 +25,7 @@ impl TryCmd {
                 if sequence.steps[0].stdin.is_none() {
                     let stdin_path = path.with_extension("stdin");
                     let stdin = if stdin_path.exists() {
-                        Some(crate::File::read_from(&stdin_path, is_binary)?)
+                        Some(crate::File::read_from(&stdin_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -35,7 +35,7 @@ impl TryCmd {
                 if sequence.steps[0].expected_stdout.is_none() {
                     let stdout_path = path.with_extension("stdout");
                     let stdout = if stdout_path.exists() {
-                        Some(crate::File::read_from(&stdout_path, is_binary)?)
+                        Some(crate::File::read_from(&stdout_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -45,7 +45,7 @@ impl TryCmd {
                 if sequence.steps[0].expected_stderr.is_none() {
                     let stderr_path = path.with_extension("stderr");
                     let stderr = if stderr_path.exists() {
-                        Some(crate::File::read_from(&stderr_path, is_binary)?)
+                        Some(crate::File::read_from(&stderr_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -54,7 +54,9 @@ impl TryCmd {
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                let raw = crate::File::read_from(path, false)?.into_utf8().unwrap();
+                let raw = crate::File::read_from(path, Some(false))?
+                    .into_utf8()
+                    .unwrap();
                 Self::parse_trycmd(&raw)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
@@ -138,7 +140,7 @@ impl TryCmd {
                         .to_owned();
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
-                    let mut raw = crate::File::read_from(path, false)?;
+                    let mut raw = crate::File::read_from(path, Some(false))?;
                     raw.replace_lines(line_nums, &stdout)?;
                     raw.write_to(path)?;
                 }
