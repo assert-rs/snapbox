@@ -5,16 +5,27 @@ pub(crate) enum File {
 }
 
 impl File {
-    pub(crate) fn read_from(path: &std::path::Path, binary: bool) -> Result<Self, crate::Error> {
-        let data = if binary {
-            let data = std::fs::read(&path)
-                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-            Self::Binary(data)
-        } else {
-            let data = std::fs::read_to_string(&path)
-                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-            let data = normalize_text(&data);
-            Self::Text(data)
+    pub(crate) fn read_from(
+        path: &std::path::Path,
+        binary: Option<bool>,
+    ) -> Result<Self, crate::Error> {
+        let data = match binary {
+            Some(true) => {
+                let data = std::fs::read(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                Self::Binary(data)
+            }
+            Some(false) => {
+                let data = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                let data = normalize_text(&data);
+                Self::Text(data)
+            }
+            None => {
+                let data = std::fs::read(&path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                Self::Binary(data).try_utf8()
+            }
         };
         Ok(data)
     }
@@ -74,16 +85,22 @@ impl File {
 
     pub(crate) fn try_utf8(self) -> Self {
         match self {
-            Self::Binary(data) => match String::from_utf8(data) {
-                Ok(data) => {
-                    let data = normalize_text(&data);
-                    Self::Text(data)
-                }
-                Err(err) => {
-                    let data = err.into_bytes();
+            Self::Binary(data) => {
+                if is_binary(&data) {
                     Self::Binary(data)
+                } else {
+                    match String::from_utf8(data) {
+                        Ok(data) => {
+                            let data = normalize_text(&data);
+                            Self::Text(data)
+                        }
+                        Err(err) => {
+                            let data = err.into_bytes();
+                            Self::Binary(data)
+                        }
+                    }
                 }
-            },
+            }
             Self::Text(data) => Self::Text(data),
         }
     }
@@ -127,6 +144,29 @@ impl std::fmt::Display for File {
             Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             Self::Text(data) => data.fmt(f),
         }
+    }
+}
+
+#[cfg(not(feature = "filesystem"))]
+fn is_binary(data: &[u8]) -> bool {
+    false
+}
+
+#[cfg(feature = "filesystem")]
+fn is_binary(data: &[u8]) -> bool {
+    match content_inspector::inspect(data) {
+        content_inspector::ContentType::BINARY |
+        // We don't support these
+        content_inspector::ContentType::UTF_16LE |
+        content_inspector::ContentType::UTF_16BE |
+        content_inspector::ContentType::UTF_32LE |
+        content_inspector::ContentType::UTF_32BE => {
+            true
+        },
+        content_inspector::ContentType::UTF_8 |
+        content_inspector::ContentType::UTF_8_BOM => {
+            false
+        },
     }
 }
 

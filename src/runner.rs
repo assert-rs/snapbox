@@ -616,10 +616,10 @@ impl Case {
                 }
             }
             FileType::File => {
-                let expected_content = crate::File::read_from(&expected_path, true)
+                let expected_content = crate::File::read_from(&expected_path, None)
                     .map_err(FileStatus::Failure)?
                     .try_utf8();
-                let mut actual_content = crate::File::read_from(&actual_path, true)
+                let mut actual_content = crate::File::read_from(&actual_path, None)
                     .map_err(FileStatus::Failure)?
                     .try_utf8();
 
