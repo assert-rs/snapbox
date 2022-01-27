@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Auto-detect binary files and don't diff them
+
 ## [0.12.1] - 2022-01-21
 
 ### Features
