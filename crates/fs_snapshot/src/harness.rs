@@ -30,6 +30,18 @@ where
         self
     }
 
+    pub fn action_env(mut self, var_name: &str) -> Self {
+        let var_value = std::env::var_os(var_name);
+        self.action = match var_value.as_ref().and_then(|s| s.to_str()) {
+            Some("skip") => crate::Action::Skip,
+            Some("ignore") => crate::Action::Ignore,
+            Some("verify") => crate::Action::Verify,
+            Some("overwrite") => crate::Action::Overwrite,
+            Some(_) | None => self.action,
+        };
+        self
+    }
+
     pub fn action(mut self, action: crate::Action) -> Self {
         self.action = action;
         self
