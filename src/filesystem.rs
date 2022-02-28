@@ -24,7 +24,7 @@ impl File {
             None => {
                 let data = std::fs::read(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::Binary(data).try_utf8()
+                Self::Binary(data).try_text()
             }
         };
         Ok(data)
@@ -71,7 +71,7 @@ impl File {
         }
     }
 
-    pub(crate) fn utf8(&mut self) -> Result<(), std::str::Utf8Error> {
+    pub(crate) fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
         match self {
             Self::Binary(data) => {
                 let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
@@ -83,7 +83,7 @@ impl File {
         }
     }
 
-    pub(crate) fn try_utf8(self) -> Self {
+    pub(crate) fn try_text(self) -> Self {
         match self {
             Self::Binary(data) => {
                 if is_binary(&data) {
@@ -105,7 +105,7 @@ impl File {
         }
     }
 
-    pub(crate) fn into_utf8(self) -> Result<String, std::str::Utf8Error> {
+    pub(crate) fn into_string(self) -> Result<String, std::str::Utf8Error> {
         match self {
             Self::Binary(data) => {
                 let data = String::from_utf8(data).map_err(|e| e.utf8_error())?;

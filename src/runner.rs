@@ -618,10 +618,10 @@ impl Case {
             FileType::File => {
                 let expected_content = crate::File::read_from(&expected_path, None)
                     .map_err(FileStatus::Failure)?
-                    .try_utf8();
+                    .try_text();
                 let mut actual_content = crate::File::read_from(&actual_path, None)
                     .map_err(FileStatus::Failure)?
-                    .try_utf8();
+                    .try_text();
 
                 if let crate::File::Text(e) = &expected_content {
                     actual_content =
@@ -844,7 +844,7 @@ struct Stream {
 
 impl Stream {
     fn utf8(mut self) -> Self {
-        if self.content.utf8().is_err() {
+        if self.content.make_text().is_err() {
             self.status = StreamStatus::Failure("invalid UTF-8".into());
         }
         self

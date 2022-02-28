@@ -55,7 +55,7 @@ impl TryCmd {
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 let raw = crate::File::read_from(path, Some(false))?
-                    .into_utf8()
+                    .into_string()
                     .unwrap();
                 Self::parse_trycmd(&raw)?
             } else {
