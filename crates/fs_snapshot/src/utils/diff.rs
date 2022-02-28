@@ -1,4 +1,4 @@
-pub(crate) fn diff(
+pub(crate) fn render_diff(
     expected: &str,
     actual: &str,
     expected_name: impl std::fmt::Display,
@@ -21,8 +21,8 @@ pub(crate) fn diff_inner(
     actual_name: &str,
     palette: crate::color::Palette,
 ) -> String {
-    let expected: Vec<_> = crate::lines::LinesWithTerminator::new(expected).collect();
-    let actual: Vec<_> = crate::lines::LinesWithTerminator::new(actual).collect();
+    let expected: Vec<_> = crate::utils::LinesWithTerminator::new(expected).collect();
+    let actual: Vec<_> = crate::utils::LinesWithTerminator::new(actual).collect();
     let diff = difflib::unified_diff(
         &expected,
         &actual,

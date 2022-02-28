@@ -161,7 +161,7 @@ impl Verifier {
         if actual != expected {
             #[cfg(feature = "diff")]
             {
-                let diff = crate::diff::diff(
+                let diff = crate::utils::render_diff(
                     &expected,
                     &actual,
                     expected_path.display(),
