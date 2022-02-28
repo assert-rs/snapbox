@@ -3,7 +3,7 @@ pub struct Harness<S, T> {
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
-    overwrite: bool,
+    action: crate::Action,
 }
 
 impl<S, T> Harness<S, T>
@@ -17,7 +17,7 @@ where
             overrides: None,
             setup,
             test,
-            overwrite: false,
+            action: crate::Action::Verify,
         }
     }
 
@@ -30,8 +30,19 @@ where
         self
     }
 
+    pub fn action(mut self, action: crate::Action) -> Self {
+        self.action = action;
+        self
+    }
+
+    /// Deprecated, replaced with [`Harness::action`]
+    #[deprecated = "Replaced with `Harness::action`"]
     pub fn overwrite(mut self, yes: bool) -> Self {
-        self.overwrite = yes;
+        if yes {
+            self.action = crate::Action::Overwrite;
+        } else {
+            self.action = crate::Action::Verify;
+        }
         self
     }
 
@@ -57,13 +68,15 @@ where
         let args = libtest_mimic::Arguments::from_args();
         libtest_mimic::run_tests(&args, tests, move |test| {
             match (self.test)(&test.data.fixture) {
-                Ok(actual) => {
-                    if self.overwrite {
-                        overwrite(&actual, &test.data)
-                    } else {
-                        verify(&actual, &test.data)
+                Ok(actual) => match self.action {
+                    crate::Action::Skip => libtest_mimic::Outcome::Ignored,
+                    crate::Action::Ignore => {
+                        let _ = verify(&actual, &test.data);
+                        libtest_mimic::Outcome::Ignored
                     }
-                }
+                    crate::Action::Verify => verify(&actual, &test.data),
+                    crate::Action::Overwrite => overwrite(&actual, &test.data),
+                },
                 Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
             }
         })
