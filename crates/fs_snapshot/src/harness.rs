@@ -82,7 +82,7 @@ where
             match (self.test)(&test.data.fixture) {
                 Ok(actual) => {
                     let verify = Verifier::new()
-                        .palette(crate::color::Palette::current())
+                        .palette(crate::color::Palette::auto())
                         .action(self.action);
                     verify.verify(&actual, &test.data.expected)
                 }
@@ -205,7 +205,7 @@ impl Verifier {
 impl Default for Verifier {
     fn default() -> Self {
         Self {
-            palette: crate::color::Palette::current(),
+            palette: crate::color::Palette::auto(),
             action: crate::Action::Verify,
         }
     }

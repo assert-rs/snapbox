@@ -8,21 +8,29 @@ pub(crate) struct Palette {
 
 impl Palette {
     #[cfg(feature = "color")]
-    pub(crate) fn current() -> Self {
-        if concolor::get(concolor::Stream::Either).ansi_color() {
-            Self {
-                info: styled::Style(yansi::Style::new(yansi::Color::Green)),
-                error: styled::Style(yansi::Style::new(yansi::Color::Red)),
-                hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
-            }
-        } else {
-            Self::default()
+    pub(crate) fn always() -> Self {
+        Self {
+            info: styled::Style(yansi::Style::new(yansi::Color::Green)),
+            error: styled::Style(yansi::Style::new(yansi::Color::Red)),
+            hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
         }
     }
 
     #[cfg(not(feature = "color"))]
-    pub(crate) fn current() -> Self {
+    pub(crate) fn always() -> Self {
+        Self::never()
+    }
+
+    pub(crate) fn never() -> Self {
         Self::default()
+    }
+
+    pub(crate) fn auto() -> Self {
+        if concolor::get(concolor::Stream::Either).ansi_color() {
+            Self::always()
+        } else {
+            Self::never()
+        }
     }
 }
 
