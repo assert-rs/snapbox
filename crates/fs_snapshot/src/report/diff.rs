@@ -4,7 +4,7 @@ pub fn render_diff(
     actual: &str,
     expected_name: impl std::fmt::Display,
     actual_name: impl std::fmt::Display,
-    palette: crate::Palette,
+    palette: crate::report::Palette,
 ) -> String {
     diff_inner(
         expected,
@@ -21,7 +21,7 @@ pub(crate) fn diff_inner(
     actual: &str,
     expected_name: &str,
     actual_name: &str,
-    palette: crate::color::Palette,
+    palette: crate::report::Palette,
 ) -> String {
     let expected: Vec<_> = crate::utils::LinesWithTerminator::new(expected).collect();
     let actual: Vec<_> = crate::utils::LinesWithTerminator::new(actual).collect();
@@ -41,7 +41,7 @@ pub(crate) fn diff_inner(
 }
 
 #[cfg(feature = "color")]
-fn colorize_diff(mut lines: Vec<String>, palette: crate::color::Palette) -> Vec<String> {
+fn colorize_diff(mut lines: Vec<String>, palette: crate::report::Palette) -> Vec<String> {
     for (i, line) in lines.iter_mut().enumerate() {
         match (i, line.as_bytes().get(0)) {
             (0, _) => {
@@ -73,6 +73,6 @@ fn colorize_diff(mut lines: Vec<String>, palette: crate::color::Palette) -> Vec<
 
 #[cfg(feature = "diff")]
 #[cfg(not(feature = "color"))]
-fn colorize_diff(lines: Vec<String>, _palette: crate::color::Palette) -> Vec<String> {
+fn colorize_diff(lines: Vec<String>, _palette: crate::report::Palette) -> Vec<String> {
     lines
 }

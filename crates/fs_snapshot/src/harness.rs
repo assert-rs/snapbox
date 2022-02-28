@@ -82,7 +82,7 @@ where
             match (self.test)(&test.data.fixture) {
                 Ok(actual) => {
                     let verify = Verifier::new()
-                        .palette(crate::color::Palette::auto())
+                        .palette(crate::report::Palette::auto())
                         .action(self.action);
                     verify.verify(&actual, &test.data.expected)
                 }
@@ -94,7 +94,7 @@ where
 }
 
 struct Verifier {
-    palette: crate::color::Palette,
+    palette: crate::report::Palette,
     action: crate::Action,
 }
 
@@ -103,7 +103,7 @@ impl Verifier {
         Default::default()
     }
 
-    fn palette(mut self, palette: crate::color::Palette) -> Self {
+    fn palette(mut self, palette: crate::report::Palette) -> Self {
         self.palette = palette;
         self
     }
@@ -161,7 +161,7 @@ impl Verifier {
         if actual != expected {
             #[cfg(feature = "diff")]
             {
-                let diff = crate::utils::render_diff(
+                let diff = crate::report::render_diff(
                     &expected,
                     &actual,
                     expected_path.display(),
@@ -205,7 +205,7 @@ impl Verifier {
 impl Default for Verifier {
     fn default() -> Self {
         Self {
-            palette: crate::color::Palette::auto(),
+            palette: crate::report::Palette::auto(),
             action: crate::Action::Verify,
         }
     }
