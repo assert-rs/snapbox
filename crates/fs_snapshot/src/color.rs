@@ -30,11 +30,23 @@ impl Palette {
     }
 
     pub fn auto() -> Self {
-        if concolor::get(concolor::Stream::Either).ansi_color() {
+        if is_colored() {
             Self::always()
         } else {
             Self::never()
         }
+    }
+}
+
+fn is_colored() -> bool {
+    #[cfg(feature = "color")]
+    {
+        concolor::get(concolor::Stream::Either).ansi_color()
+    }
+
+    #[cfg(not(feature = "color"))]
+    {
+        false
     }
 }
 

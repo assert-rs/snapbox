@@ -1,3 +1,4 @@
+#[cfg(feature = "diff")]
 pub fn render_diff(
     expected: &str,
     actual: &str,
@@ -14,6 +15,7 @@ pub fn render_diff(
     )
 }
 
+#[cfg(feature = "diff")]
 pub(crate) fn diff_inner(
     expected: &str,
     actual: &str,
@@ -69,6 +71,7 @@ fn colorize_diff(mut lines: Vec<String>, palette: crate::color::Palette) -> Vec<
     lines
 }
 
+#[cfg(feature = "diff")]
 #[cfg(not(feature = "color"))]
 fn colorize_diff(lines: Vec<String>, _palette: crate::color::Palette) -> Vec<String> {
     lines
