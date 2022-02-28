@@ -1,9 +1,9 @@
-pub(crate) fn render_diff(
+pub fn render_diff(
     expected: &str,
     actual: &str,
     expected_name: impl std::fmt::Display,
     actual_name: impl std::fmt::Display,
-    palette: crate::color::Palette,
+    palette: crate::Palette,
 ) -> String {
     diff_inner(
         expected,

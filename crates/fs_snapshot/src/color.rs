@@ -1,6 +1,6 @@
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
-pub(crate) struct Palette {
+pub struct Palette {
     pub(crate) info: styled::Style,
     pub(crate) error: styled::Style,
     pub(crate) hint: styled::Style,
@@ -8,7 +8,7 @@ pub(crate) struct Palette {
 
 impl Palette {
     #[cfg(feature = "color")]
-    pub(crate) fn always() -> Self {
+    pub fn always() -> Self {
         Self {
             info: styled::Style(yansi::Style::new(yansi::Color::Green)),
             error: styled::Style(yansi::Style::new(yansi::Color::Red)),
@@ -17,15 +17,19 @@ impl Palette {
     }
 
     #[cfg(not(feature = "color"))]
-    pub(crate) fn always() -> Self {
+    pub fn always() -> Self {
         Self::never()
     }
 
-    pub(crate) fn never() -> Self {
-        Self::default()
+    pub fn never() -> Self {
+        Self {
+            info: Default::default(),
+            error: Default::default(),
+            hint: Default::default(),
+        }
     }
 
-    pub(crate) fn auto() -> Self {
+    pub fn auto() -> Self {
         if concolor::get(concolor::Stream::Either).ansi_color() {
             Self::always()
         } else {
