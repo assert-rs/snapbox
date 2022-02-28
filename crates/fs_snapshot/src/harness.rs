@@ -80,15 +80,12 @@ where
         let args = libtest_mimic::Arguments::from_args();
         libtest_mimic::run_tests(&args, tests, move |test| {
             match (self.test)(&test.data.fixture) {
-                Ok(actual) => match self.action {
-                    crate::Action::Skip => libtest_mimic::Outcome::Ignored,
-                    crate::Action::Ignore => {
-                        let _ = verify(&actual, &test.data);
-                        libtest_mimic::Outcome::Ignored
-                    }
-                    crate::Action::Verify => verify(&actual, &test.data),
-                    crate::Action::Overwrite => overwrite(&actual, &test.data),
-                },
+                Ok(actual) => {
+                    let verify = Verifier::new()
+                        .palette(crate::color::Palette::current())
+                        .action(self.action);
+                    verify.verify(&actual, &test.data.expected)
+                }
                 Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
             }
         })
@@ -96,74 +93,121 @@ where
     }
 }
 
-fn overwrite(actual: &str, case: &Case) -> libtest_mimic::Outcome {
-    match try_overwrite(actual, case) {
-        Ok(()) => libtest_mimic::Outcome::Passed,
-        Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
+struct Verifier {
+    palette: crate::color::Palette,
+    action: crate::Action,
+}
+
+impl Verifier {
+    fn new() -> Self {
+        Default::default()
+    }
+
+    fn palette(mut self, palette: crate::color::Palette) -> Self {
+        self.palette = palette;
+        self
+    }
+
+    fn action(mut self, action: crate::Action) -> Self {
+        self.action = action;
+        self
+    }
+
+    fn verify(&self, actual: &str, expected_path: &std::path::Path) -> libtest_mimic::Outcome {
+        match self.action {
+            crate::Action::Skip => libtest_mimic::Outcome::Ignored,
+            crate::Action::Ignore => {
+                let _ = self.do_verify(&actual, expected_path);
+                libtest_mimic::Outcome::Ignored
+            }
+            crate::Action::Verify => self.do_verify(&actual, expected_path),
+            crate::Action::Overwrite => self.do_overwrite(&actual, expected_path),
+        }
+    }
+
+    fn do_overwrite(
+        &self,
+        actual: &str,
+        expected_path: &std::path::Path,
+    ) -> libtest_mimic::Outcome {
+        match self.try_overwrite(actual, expected_path) {
+            Ok(()) => libtest_mimic::Outcome::Passed,
+            Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
+        }
+    }
+
+    fn try_overwrite(&self, actual: &str, expected_path: &std::path::Path) -> Result<(), String> {
+        std::fs::write(
+            expected_path,
+            normalize_line_endings::normalized(actual.chars()).collect::<String>(),
+        )
+        .map_err(|e| format!("Failed to write to {}: {}", expected_path.display(), e))
+    }
+
+    fn do_verify(&self, actual: &str, expected_path: &std::path::Path) -> libtest_mimic::Outcome {
+        match self.try_verify(actual, expected_path) {
+            Ok(()) => libtest_mimic::Outcome::Passed,
+            Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
+        }
+    }
+
+    fn try_verify(&self, actual: &str, expected_path: &std::path::Path) -> Result<(), String> {
+        let expected = std::fs::read_to_string(expected_path)
+            .map_err(|e| format!("Failed to read {}: {}", expected_path.display(), e))?;
+        let expected: String = normalize_line_endings::normalized(expected.chars()).collect();
+
+        let actual: String = normalize_line_endings::normalized(actual.chars()).collect();
+
+        if actual != expected {
+            #[cfg(feature = "diff")]
+            {
+                let diff = crate::diff::diff(
+                    &expected,
+                    &actual,
+                    expected_path.display(),
+                    expected_path.display(),
+                    self.palette,
+                );
+                Err(diff)
+            }
+            #[cfg(not(feature = "diff"))]
+            {
+                use std::fmt::Write;
+
+                let mut buf = String::new();
+                writeln!(
+                    buf,
+                    "{} {}:",
+                    expected_path.display(),
+                    self.palette.info.paint("(expected)")
+                )
+                .map_err(|e| e.to_string())?;
+                writeln!(buf, "{}", self.palette.info.paint(&expected))
+                    .map_err(|e| e.to_string())?;
+                writeln!(
+                    buf,
+                    "{} {}:",
+                    expected_path.display(),
+                    self.palette.error.paint("(actual)")
+                )
+                .map_err(|e| e.to_string())?;
+                writeln!(buf, "{}", self.palette.error.paint(&actual))
+                    .map_err(|e| e.to_string())?;
+
+                Err(buf)
+            }
+        } else {
+            Ok(())
+        }
     }
 }
 
-fn try_overwrite(actual: &str, case: &Case) -> Result<(), String> {
-    std::fs::write(
-        &case.expected,
-        normalize_line_endings::normalized(actual.chars()).collect::<String>(),
-    )
-    .map_err(|e| format!("Failed to write to {}: {}", case.expected.display(), e))
-}
-
-fn verify(actual: &str, case: &Case) -> libtest_mimic::Outcome {
-    match try_verify(actual, case) {
-        Ok(()) => libtest_mimic::Outcome::Passed,
-        Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
-    }
-}
-
-fn try_verify(actual: &str, case: &Case) -> Result<(), String> {
-    let palette = crate::color::Palette::current();
-    let expected = std::fs::read_to_string(&case.expected)
-        .map_err(|e| format!("Failed to read {}: {}", case.expected.display(), e))?;
-    let expected: String = normalize_line_endings::normalized(expected.chars()).collect();
-
-    let actual: String = normalize_line_endings::normalized(actual.chars()).collect();
-
-    if actual != expected {
-        #[cfg(feature = "diff")]
-        {
-            let diff = crate::diff::diff(
-                &expected,
-                &actual,
-                case.expected.display(),
-                case.expected.display(),
-                palette,
-            );
-            Err(diff)
+impl Default for Verifier {
+    fn default() -> Self {
+        Self {
+            palette: crate::color::Palette::current(),
+            action: crate::Action::Verify,
         }
-        #[cfg(not(feature = "diff"))]
-        {
-            use std::fmt::Write;
-
-            let mut buf = String::new();
-            writeln!(
-                buf,
-                "{} {}:",
-                case.expected.display(),
-                palette.info.paint("(expected)")
-            )
-            .map_err(|e| e.to_string())?;
-            writeln!(buf, "{}", palette.info.paint(&expected)).map_err(|e| e.to_string())?;
-            writeln!(
-                buf,
-                "{} {}:",
-                case.expected.display(),
-                palette.error.paint("(actual)")
-            )
-            .map_err(|e| e.to_string())?;
-            writeln!(buf, "{}", palette.error.paint(&actual)).map_err(|e| e.to_string())?;
-
-            Err(buf)
-        }
-    } else {
-        Ok(())
     }
 }
 
