@@ -11,6 +11,31 @@ pub enum Action {
     Overwrite,
 }
 
+impl Action {
+    pub fn with_env_var(var: impl AsRef<std::ffi::OsStr>) -> Option<Self> {
+        let var = var.as_ref();
+        let value = std::env::var_os(var)?;
+        Self::with_env_value(value)
+    }
+
+    pub fn with_env_value(value: impl AsRef<std::ffi::OsStr>) -> Option<Self> {
+        let value = value.as_ref();
+        match value.to_str()? {
+            "skip" => Some(Action::Skip),
+            "ignore" => Some(Action::Ignore),
+            "verify" => Some(Action::Verify),
+            "overwrite" => Some(Action::Overwrite),
+            _ => None,
+        }
+    }
+}
+
+impl Default for Action {
+    fn default() -> Self {
+        Self::Verify
+    }
+}
+
 pub struct Harness<S, T> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
@@ -44,14 +69,8 @@ where
     }
 
     pub fn action_env(mut self, var_name: &str) -> Self {
-        let var_value = std::env::var_os(var_name);
-        self.action = match var_value.as_ref().and_then(|s| s.to_str()) {
-            Some("skip") => Action::Skip,
-            Some("ignore") => Action::Ignore,
-            Some("verify") => Action::Verify,
-            Some("overwrite") => Action::Overwrite,
-            Some(_) | None => self.action,
-        };
+        let action = Action::with_env_var(var_name);
+        self.action = action.unwrap_or(self.action);
         self
     }
 
