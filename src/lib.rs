@@ -180,14 +180,13 @@ pub(crate) mod lines;
 
 mod cases;
 mod command;
-mod error;
 mod filesystem;
 mod registry;
 mod runner;
 mod spec;
 
 pub use cases::TestCases;
-pub use error::Error;
+pub use fs_snapshot::Error;
 
 pub(crate) use command::wait_with_input_output;
 pub(crate) use filesystem::{shallow_copy, Data, FilesystemContext, Iterate as FsIterate};

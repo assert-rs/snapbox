@@ -43,7 +43,7 @@ filesystem = ["tempfile", "walkdir", "dunce", "content_inspector"]
 
 schema = ["schemars", "serde_json"]
 examples = ["escargot"]
-debug = ["backtrace"]
+debug = ["fs_snapshot/debug"]
 
 [[bin]]
 name = "bin-fixture"
@@ -70,7 +70,6 @@ os_pipe = "1.0"
 wait-timeout = "0.2.0"
 tempfile = { version = "3.0", optional = true }
 walkdir = { version = "2.3.2", optional = true }
-backtrace = { version = "0.3", optional = true }
 dunce = { version = "1.0", optional = true }
 content_inspector = { version = "0.2.4", optional = true }
 

@@ -1,4 +1,5 @@
 mod action;
+mod error;
 
 pub mod report;
 pub mod utils;
@@ -7,3 +8,4 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
+pub use error::Error;
