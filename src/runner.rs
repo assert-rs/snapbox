@@ -415,7 +415,7 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            if let crate::Data::Text(e) = &expected_content {
+            if let Some(e) = expected_content.as_str() {
                 stream.content = stream
                     .content
                     .map_text(|t| crate::elide::normalize(t, e, substitutions));
@@ -618,7 +618,7 @@ impl Case {
                     .map_err(FileStatus::Failure)?
                     .try_text();
 
-                if let crate::Data::Text(e) = &expected_content {
+                if let Some(e) = expected_content.as_str() {
                     actual_content =
                         actual_content.map_text(|t| crate::elide::normalize(t, e, substitutions));
                 }
@@ -683,12 +683,12 @@ impl Output {
         self.spawn.status = SpawnStatus::Ok;
         self.stdout = Some(Stream {
             stream: Stdio::Stdout,
-            content: crate::Data::Binary(output.stdout),
+            content: output.stdout.into(),
             status: StreamStatus::Ok,
         });
         self.stderr = Some(Stream {
             stream: Stdio::Stderr,
-            content: crate::Data::Binary(output.stderr),
+            content: output.stderr.into(),
             status: StreamStatus::Ok,
         });
         self
@@ -872,9 +872,7 @@ impl std::fmt::Display for Stream {
                 #[allow(unused_mut)]
                 let mut rendered = false;
                 #[cfg(feature = "diff")]
-                if let (crate::Data::Text(expected), crate::Data::Text(actual)) =
-                    (&expected, &self.content)
-                {
+                if let (Some(expected), Some(actual)) = (expected.as_str(), self.content.as_str()) {
                     let diff = fs_snapshot::report::render_diff(
                         expected,
                         actual,
@@ -1056,8 +1054,8 @@ impl std::fmt::Display for FileStatus {
                 #[allow(unused_mut)]
                 let mut rendered = false;
                 #[cfg(feature = "diff")]
-                if let (crate::Data::Text(expected), crate::Data::Text(actual)) =
-                    (&expected_content, &actual_content)
+                if let (Some(expected), Some(actual)) =
+                    (expected_content.as_str(), actual_content.as_str())
                 {
                     let diff = fs_snapshot::report::render_diff(
                         expected,

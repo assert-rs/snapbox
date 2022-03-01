@@ -5,6 +5,10 @@ pub(crate) enum Data {
 }
 
 impl Data {
+    pub(crate) fn new() -> Self {
+        Self::Text("".into())
+    }
+
     pub(crate) fn read_from(
         path: &std::path::Path,
         binary: Option<bool>,
@@ -144,6 +148,18 @@ impl std::fmt::Display for Data {
             Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             Self::Text(data) => data.fmt(f),
         }
+    }
+}
+
+impl Default for Data {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl From<Vec<u8>> for Data {
+    fn from(other: Vec<u8>) -> Self {
+        Self::Binary(other)
     }
 }
 

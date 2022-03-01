@@ -121,7 +121,7 @@ impl TryCmd {
                 overwrite_toml_output(path, id, stdout, "stdout", "stdout")?;
                 overwrite_toml_output(path, id, stderr, "stderr", "stderr")?;
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                if stderr.is_some() && stderr != Some(&crate::Data::Text("".into())) {
+                if stderr.is_some() && stderr != Some(&crate::Data::new()) {
                     panic!("stderr should have been merged: {:?}", stderr);
                 }
                 if let (Some(id), Some(stdout)) = (id, stdout) {
@@ -761,7 +761,7 @@ mod test {
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..4),
-                expected_stdout: Some(crate::Data::Text("".into())),
+                expected_stdout: Some(crate::Data::new()),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -788,7 +788,7 @@ $ cmd
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..4),
-                expected_stdout: Some(crate::Data::Text("".into())),
+                expected_stdout: Some(crate::Data::new()),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -815,7 +815,7 @@ $ cmd arg1 'arg with space'
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
-                expected_stdout: Some(crate::Data::Text("".into())),
+                expected_stdout: Some(crate::Data::new()),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -850,7 +850,7 @@ $ cmd arg1
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..4),
-                expected_stdout: Some(crate::Data::Text("".into())),
+                expected_stdout: Some(crate::Data::new()),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -876,7 +876,7 @@ $ KEY1=VALUE1 KEY2='VALUE2 with space' cmd
                 expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
-                expected_stdout: Some(crate::Data::Text("".into())),
+                expected_stdout: Some(crate::Data::new()),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -903,7 +903,7 @@ $ cmd
                 expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
-                expected_stdout: Some(crate::Data::Text("".into())),
+                expected_stdout: Some(crate::Data::new()),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -958,7 +958,7 @@ Hello World
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
-                    expected_stdout: Some(crate::Data::Text("".into())),
+                    expected_stdout: Some(crate::Data::new()),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -968,7 +968,7 @@ Hello World
                     expected_status: Some(CommandStatus::Success),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(6..6),
-                    expected_stdout: Some(crate::Data::Text("".into())),
+                    expected_stdout: Some(crate::Data::new()),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -998,7 +998,7 @@ $ cmd2
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
-                    expected_stdout: Some(crate::Data::Text("".into())),
+                    expected_stdout: Some(crate::Data::new()),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -1008,7 +1008,7 @@ $ cmd2
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(10..10),
-                    expected_stdout: Some(crate::Data::Text("".into())),
+                    expected_stdout: Some(crate::Data::new()),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -1018,7 +1018,7 @@ $ cmd2
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(20..20),
-                    expected_stdout: Some(crate::Data::Text("".into())),
+                    expected_stdout: Some(crate::Data::new()),
                     expected_stderr: None,
                     ..Default::default()
                 },
