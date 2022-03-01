@@ -176,7 +176,6 @@ pub mod cargo;
 pub mod schema;
 
 pub(crate) mod elide;
-pub(crate) mod lines;
 
 mod cases;
 mod command;

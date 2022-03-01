@@ -166,7 +166,7 @@ impl TryCmd {
     fn parse_trycmd(s: &str) -> Result<Self, crate::Error> {
         let mut steps = Vec::new();
 
-        let mut lines: VecDeque<_> = crate::lines::LinesWithTerminator::new(s)
+        let mut lines: VecDeque<_> = fs_snapshot::utils::LinesWithTerminator::new(s)
             .enumerate()
             .map(|(i, l)| (i + 1, l))
             .collect();

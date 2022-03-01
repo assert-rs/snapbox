@@ -98,8 +98,8 @@ pub(crate) fn normalize(input: &str, pattern: &str, substitutions: &dyn Substitu
     }
 
     let mut normalized: Vec<Cow<str>> = Vec::new();
-    let input_lines: Vec<_> = crate::lines::LinesWithTerminator::new(input).collect();
-    let pattern_lines: Vec<_> = crate::lines::LinesWithTerminator::new(pattern).collect();
+    let input_lines: Vec<_> = fs_snapshot::utils::LinesWithTerminator::new(input).collect();
+    let pattern_lines: Vec<_> = fs_snapshot::utils::LinesWithTerminator::new(pattern).collect();
 
     let mut input_index = 0;
     let mut pattern_index = 0;
