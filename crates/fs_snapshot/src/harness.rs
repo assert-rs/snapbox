@@ -137,11 +137,8 @@ impl Verifier {
     }
 
     fn try_overwrite(&self, actual: &str, expected_path: &std::path::Path) -> Result<(), String> {
-        std::fs::write(
-            expected_path,
-            normalize_line_endings::normalized(actual.chars()).collect::<String>(),
-        )
-        .map_err(|e| format!("Failed to write to {}: {}", expected_path.display(), e))
+        std::fs::write(expected_path, crate::utils::normalize_lines(actual))
+            .map_err(|e| format!("Failed to write to {}: {}", expected_path.display(), e))
     }
 
     fn do_verify(&self, actual: &str, expected_path: &std::path::Path) -> libtest_mimic::Outcome {
@@ -154,9 +151,9 @@ impl Verifier {
     fn try_verify(&self, actual: &str, expected_path: &std::path::Path) -> Result<(), String> {
         let expected = std::fs::read_to_string(expected_path)
             .map_err(|e| format!("Failed to read {}: {}", expected_path.display(), e))?;
-        let expected: String = normalize_line_endings::normalized(expected.chars()).collect();
+        let expected = crate::utils::normalize_lines(&expected);
 
-        let actual: String = normalize_line_endings::normalized(actual.chars()).collect();
+        let actual = crate::utils::normalize_lines(actual);
 
         if actual != expected {
             #[cfg(feature = "diff")]
