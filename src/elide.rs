@@ -37,7 +37,7 @@ impl Substitutions {
         } else {
             self.vars.insert(
                 key,
-                crate::filesystem::normalize_text(value.as_ref()).into(),
+                fs_snapshot::utils::normalize_text(value.as_ref()).into(),
             );
         }
         Ok(())
