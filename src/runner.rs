@@ -875,8 +875,13 @@ impl std::fmt::Display for Stream {
                 if let (crate::File::Text(expected), crate::File::Text(actual)) =
                     (&expected, &self.content)
                 {
-                    let diff =
-                        crate::diff::diff(expected, actual, self.stream, self.stream, palette);
+                    let diff = fs_snapshot::report::render_diff(
+                        expected,
+                        actual,
+                        self.stream,
+                        self.stream,
+                        palette,
+                    );
                     writeln!(f, "{}", diff)?;
                     rendered = true;
                 }
@@ -1054,7 +1059,7 @@ impl std::fmt::Display for FileStatus {
                 if let (crate::File::Text(expected), crate::File::Text(actual)) =
                     (&expected_content, &actual_content)
                 {
-                    let diff = crate::diff::diff(
+                    let diff = fs_snapshot::report::render_diff(
                         expected,
                         actual,
                         expected_path.display(),

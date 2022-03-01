@@ -175,8 +175,6 @@ mod macros;
 pub mod cargo;
 pub mod schema;
 
-#[cfg(feature = "diff")]
-pub(crate) mod diff;
 pub(crate) mod elide;
 pub(crate) mod lines;
 
