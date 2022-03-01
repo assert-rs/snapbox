@@ -76,15 +76,8 @@ impl Data {
     }
 
     pub(crate) fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
-        match self {
-            Self::Binary(data) => {
-                let data = String::from_utf8(data.clone()).map_err(|e| e.utf8_error())?;
-                let data = normalize_text(&data);
-                *self = Self::Text(data);
-                Ok(())
-            }
-            Self::Text(_) => Ok(()),
-        }
+        *self = Self::Text(std::mem::take(self).into_string()?);
+        Ok(())
     }
 
     pub(crate) fn try_text(self) -> Self {
