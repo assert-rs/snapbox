@@ -408,7 +408,7 @@ impl Case {
         let mut stream = stream?;
 
         if !binary {
-            stream = stream.utf8();
+            stream = stream.make_text();
             if !stream.is_ok() {
                 return Some(stream);
             }
@@ -613,10 +613,10 @@ impl Case {
             FileType::File => {
                 let expected_content = crate::Data::read_from(&expected_path, None)
                     .map_err(FileStatus::Failure)?
-                    .try_text();
+                    .map_text(fs_snapshot::utils::normalize_text);
                 let mut actual_content = crate::Data::read_from(&actual_path, None)
                     .map_err(FileStatus::Failure)?
-                    .try_text();
+                    .map_text(fs_snapshot::utils::normalize_text);
 
                 if let Some(e) = expected_content.as_str() {
                     actual_content =
@@ -838,10 +838,11 @@ struct Stream {
 }
 
 impl Stream {
-    fn utf8(mut self) -> Self {
+    fn make_text(mut self) -> Self {
         if self.content.make_text().is_err() {
             self.status = StreamStatus::Failure("invalid UTF-8".into());
         }
+        self.content = self.content.map_text(fs_snapshot::utils::normalize_text);
         self
     }
 

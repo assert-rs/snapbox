@@ -19,7 +19,6 @@ impl Data {
             Some(false) => {
                 let data = std::fs::read_to_string(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let data = crate::utils::normalize_text(&data);
                 Self::Text(data)
             }
             None => {
@@ -84,10 +83,7 @@ impl Data {
                     Self::Binary(data)
                 } else {
                     match String::from_utf8(data) {
-                        Ok(data) => {
-                            let data = crate::utils::normalize_text(&data);
-                            Self::Text(data)
-                        }
+                        Ok(data) => Self::Text(data),
                         Err(err) => {
                             let data = err.into_bytes();
                             Self::Binary(data)
@@ -103,7 +99,6 @@ impl Data {
         match self {
             Self::Binary(data) => {
                 let data = String::from_utf8(data).map_err(|e| e.utf8_error())?;
-                let data = crate::utils::normalize_text(&data);
                 Ok(data)
             }
             Self::Text(data) => Ok(data),

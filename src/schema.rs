@@ -25,6 +25,7 @@ impl TryCmd {
                 if sequence.steps[0].stdin.is_none() {
                     let stdin_path = path.with_extension("stdin");
                     let stdin = if stdin_path.exists() {
+                        // No `map_text` as we will trust what the user inputted
                         Some(crate::Data::read_from(&stdin_path, Some(is_binary))?)
                     } else {
                         None
@@ -35,7 +36,10 @@ impl TryCmd {
                 if sequence.steps[0].expected_stdout.is_none() {
                     let stdout_path = path.with_extension("stdout");
                     let stdout = if stdout_path.exists() {
-                        Some(crate::Data::read_from(&stdout_path, Some(is_binary))?)
+                        Some(
+                            crate::Data::read_from(&stdout_path, Some(is_binary))?
+                                .map_text(fs_snapshot::utils::normalize_text),
+                        )
                     } else {
                         None
                     };
@@ -45,7 +49,10 @@ impl TryCmd {
                 if sequence.steps[0].expected_stderr.is_none() {
                     let stderr_path = path.with_extension("stderr");
                     let stderr = if stderr_path.exists() {
-                        Some(crate::Data::read_from(&stderr_path, Some(is_binary))?)
+                        Some(
+                            crate::Data::read_from(&stderr_path, Some(is_binary))?
+                                .map_text(fs_snapshot::utils::normalize_text),
+                        )
                     } else {
                         None
                     };
@@ -55,6 +62,7 @@ impl TryCmd {
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 let raw = crate::Data::read_from(path, Some(false))?
+                    .map_text(fs_snapshot::utils::normalize_lines)
                     .into_string()
                     .unwrap();
                 Self::parse_trycmd(&raw)?
@@ -140,7 +148,8 @@ impl TryCmd {
                         .to_owned();
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
-                    let mut raw = crate::Data::read_from(path, Some(false))?;
+                    let mut raw = crate::Data::read_from(path, Some(false))?
+                        .map_text(fs_snapshot::utils::normalize_lines);
                     raw.replace_lines(line_nums, &stdout)?;
                     raw.write_to(path)?;
                 }
