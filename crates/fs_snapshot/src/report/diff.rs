@@ -1,5 +1,31 @@
+pub fn write_diff(
+    writer: &mut dyn std::fmt::Write,
+    expected: &crate::Data,
+    actual: &crate::Data,
+    expected_name: &dyn std::fmt::Display,
+    actual_name: &dyn std::fmt::Display,
+    palette: crate::report::Palette,
+) -> Result<(), std::fmt::Error> {
+    #[allow(unused_mut)]
+    let mut rendered = false;
+    #[cfg(feature = "diff")]
+    if let (Some(expected), Some(actual)) = (expected.as_str(), actual.as_str()) {
+        let diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        writeln!(writer, "{}", diff)?;
+        rendered = true;
+    }
+
+    if !rendered {
+        writeln!(writer, "{} {}:", expected_name, palette.info("(expected)"))?;
+        writeln!(writer, "{}", palette.info(&expected))?;
+        writeln!(writer, "{} {}:", actual_name, palette.error("(actual)"))?;
+        writeln!(writer, "{}", palette.error(&actual))?;
+    }
+    Ok(())
+}
+
 #[cfg(feature = "diff")]
-pub fn render_diff(
+fn render_diff(
     expected: &str,
     actual: &str,
     expected_name: impl std::fmt::Display,

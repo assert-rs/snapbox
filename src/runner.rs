@@ -870,27 +870,14 @@ impl std::fmt::Display for Stream {
                 writeln!(f, "{}", palette.info(&self.content))?;
             }
             StreamStatus::Expected(expected) => {
-                #[allow(unused_mut)]
-                let mut rendered = false;
-                #[cfg(feature = "diff")]
-                if let (Some(expected), Some(actual)) = (expected.as_str(), self.content.as_str()) {
-                    let diff = fs_snapshot::report::render_diff(
-                        expected,
-                        actual,
-                        self.stream,
-                        self.stream,
-                        palette,
-                    );
-                    writeln!(f, "{}", diff)?;
-                    rendered = true;
-                }
-
-                if !rendered {
-                    writeln!(f, "{} {}:", self.stream, palette.info("(expected)"))?;
-                    writeln!(f, "{}", palette.info(&expected))?;
-                    writeln!(f, "{} {}:", self.stream, palette.error("(actual)"))?;
-                    writeln!(f, "{}", palette.error(&self.content))?;
-                }
+                fs_snapshot::report::write_diff(
+                    f,
+                    expected,
+                    &self.content,
+                    &self.stream,
+                    &self.stream,
+                    palette,
+                )?;
             }
         }
 
@@ -1052,39 +1039,14 @@ impl std::fmt::Display for FileStatus {
                 expected_content,
                 actual_content,
             } => {
-                #[allow(unused_mut)]
-                let mut rendered = false;
-                #[cfg(feature = "diff")]
-                if let (Some(expected), Some(actual)) =
-                    (expected_content.as_str(), actual_content.as_str())
-                {
-                    let diff = fs_snapshot::report::render_diff(
-                        expected,
-                        actual,
-                        expected_path.display(),
-                        actual_path.display(),
-                        palette,
-                    );
-                    writeln!(f, "{}", diff)?;
-                    rendered = true;
-                }
-
-                if !rendered {
-                    writeln!(
-                        f,
-                        "{} {}:",
-                        expected_path.display(),
-                        palette.info("(expected)")
-                    )?;
-                    writeln!(f, "{}", palette.info(&expected_content))?;
-                    writeln!(
-                        f,
-                        "{} {}:",
-                        actual_path.display(),
-                        palette.error("(actual)")
-                    )?;
-                    writeln!(f, "{}", palette.error(&actual_content))?;
-                }
+                fs_snapshot::report::write_diff(
+                    f,
+                    expected_content,
+                    actual_content,
+                    &expected_path.display(),
+                    &actual_path.display(),
+                    palette,
+                )?;
             }
         }
 

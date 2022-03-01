@@ -81,10 +81,11 @@ where
         libtest_mimic::run_tests(&args, tests, move |test| {
             match (self.test)(&test.data.fixture) {
                 Ok(actual) => {
+                    let actual = crate::Data::Text(actual).map_text(crate::utils::normalize_lines);
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
-                    verify.verify(&actual, &test.data.expected)
+                    verify.verify(actual, &test.data.expected)
                 }
                 Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
             }
@@ -113,21 +114,25 @@ impl Verifier {
         self
     }
 
-    fn verify(&self, actual: &str, expected_path: &std::path::Path) -> libtest_mimic::Outcome {
+    fn verify(
+        &self,
+        actual: crate::Data,
+        expected_path: &std::path::Path,
+    ) -> libtest_mimic::Outcome {
         match self.action {
             crate::Action::Skip => libtest_mimic::Outcome::Ignored,
             crate::Action::Ignore => {
-                let _ = self.do_verify(&actual, expected_path);
+                let _ = self.do_verify(actual, expected_path);
                 libtest_mimic::Outcome::Ignored
             }
-            crate::Action::Verify => self.do_verify(&actual, expected_path),
-            crate::Action::Overwrite => self.do_overwrite(&actual, expected_path),
+            crate::Action::Verify => self.do_verify(actual, expected_path),
+            crate::Action::Overwrite => self.do_overwrite(actual, expected_path),
         }
     }
 
     fn do_overwrite(
         &self,
-        actual: &str,
+        actual: crate::Data,
         expected_path: &std::path::Path,
     ) -> libtest_mimic::Outcome {
         match self.try_overwrite(actual, expected_path) {
@@ -138,13 +143,20 @@ impl Verifier {
         }
     }
 
-    fn try_overwrite(&self, actual: &str, expected_path: &std::path::Path) -> crate::Result<()> {
-        std::fs::write(expected_path, crate::utils::normalize_lines(actual))
-            .map_err(|e| format!("Failed to write to {}: {}", expected_path.display(), e))?;
+    fn try_overwrite(
+        &self,
+        actual: crate::Data,
+        expected_path: &std::path::Path,
+    ) -> crate::Result<()> {
+        actual.write_to(expected_path)?;
         Ok(())
     }
 
-    fn do_verify(&self, actual: &str, expected_path: &std::path::Path) -> libtest_mimic::Outcome {
+    fn do_verify(
+        &self,
+        actual: crate::Data,
+        expected_path: &std::path::Path,
+    ) -> libtest_mimic::Outcome {
         match self.try_verify(actual, expected_path) {
             Ok(()) => libtest_mimic::Outcome::Passed,
             Err(err) => libtest_mimic::Outcome::Failed {
@@ -153,49 +165,26 @@ impl Verifier {
         }
     }
 
-    fn try_verify(&self, actual: &str, expected_path: &std::path::Path) -> crate::Result<()> {
-        let expected = std::fs::read_to_string(expected_path)
-            .map_err(|e| format!("Failed to read {}: {}", expected_path.display(), e))?;
-        let expected = crate::utils::normalize_lines(&expected);
-
-        let actual = crate::utils::normalize_lines(actual);
+    fn try_verify(
+        &self,
+        actual: crate::Data,
+        expected_path: &std::path::Path,
+    ) -> crate::Result<()> {
+        let expected = crate::Data::read_from(expected_path, Some(false))?
+            .map_text(crate::utils::normalize_lines);
 
         if actual != expected {
-            #[cfg(feature = "diff")]
-            {
-                let diff = crate::report::render_diff(
-                    &expected,
-                    &actual,
-                    expected_path.display(),
-                    expected_path.display(),
-                    self.palette,
-                );
-                Err(diff.into())
-            }
-            #[cfg(not(feature = "diff"))]
-            {
-                use std::fmt::Write;
-
-                let mut buf = String::new();
-                writeln!(
-                    buf,
-                    "{} {}:",
-                    expected_path.display(),
-                    self.palette.info("(expected)")
-                )
-                .map_err(|e| e.to_string())?;
-                writeln!(buf, "{}", self.palette.info(&expected)).map_err(|e| e.to_string())?;
-                writeln!(
-                    buf,
-                    "{} {}:",
-                    expected_path.display(),
-                    self.palette.error("(actual)")
-                )
-                .map_err(|e| e.to_string())?;
-                writeln!(buf, "{}", self.palette.error(&actual)).map_err(|e| e.to_string())?;
-
-                Err(buf.into())
-            }
+            let mut buf = String::new();
+            crate::report::write_diff(
+                &mut buf,
+                &expected,
+                &actual,
+                &expected_path.display(),
+                &expected_path.display(),
+                self.palette,
+            )
+            .map_err(|e| e.to_string())?;
+            Err(buf.into())
         } else {
             Ok(())
         }
