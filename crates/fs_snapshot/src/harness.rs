@@ -132,23 +132,28 @@ impl Verifier {
     ) -> libtest_mimic::Outcome {
         match self.try_overwrite(actual, expected_path) {
             Ok(()) => libtest_mimic::Outcome::Passed,
-            Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
+            Err(err) => libtest_mimic::Outcome::Failed {
+                msg: Some(err.to_string()),
+            },
         }
     }
 
-    fn try_overwrite(&self, actual: &str, expected_path: &std::path::Path) -> Result<(), String> {
+    fn try_overwrite(&self, actual: &str, expected_path: &std::path::Path) -> crate::Result<()> {
         std::fs::write(expected_path, crate::utils::normalize_lines(actual))
-            .map_err(|e| format!("Failed to write to {}: {}", expected_path.display(), e))
+            .map_err(|e| format!("Failed to write to {}: {}", expected_path.display(), e))?;
+        Ok(())
     }
 
     fn do_verify(&self, actual: &str, expected_path: &std::path::Path) -> libtest_mimic::Outcome {
         match self.try_verify(actual, expected_path) {
             Ok(()) => libtest_mimic::Outcome::Passed,
-            Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
+            Err(err) => libtest_mimic::Outcome::Failed {
+                msg: Some(err.to_string()),
+            },
         }
     }
 
-    fn try_verify(&self, actual: &str, expected_path: &std::path::Path) -> Result<(), String> {
+    fn try_verify(&self, actual: &str, expected_path: &std::path::Path) -> crate::Result<()> {
         let expected = std::fs::read_to_string(expected_path)
             .map_err(|e| format!("Failed to read {}: {}", expected_path.display(), e))?;
         let expected = crate::utils::normalize_lines(&expected);
@@ -165,7 +170,7 @@ impl Verifier {
                     expected_path.display(),
                     self.palette,
                 );
-                Err(diff)
+                Err(diff.into())
             }
             #[cfg(not(feature = "diff"))]
             {
@@ -189,7 +194,7 @@ impl Verifier {
                 .map_err(|e| e.to_string())?;
                 writeln!(buf, "{}", self.palette.error(&actual)).map_err(|e| e.to_string())?;
 
-                Err(buf)
+                Err(buf.into())
             }
         } else {
             Ok(())
