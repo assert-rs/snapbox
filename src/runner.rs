@@ -24,13 +24,10 @@ impl Runner {
         bins: &crate::BinRegistry,
         substitutions: &crate::elide::Substitutions,
     ) {
-        let palette = crate::Palette::current();
+        let palette = fs_snapshot::report::Palette::auto();
 
         if self.cases.is_empty() {
-            eprintln!(
-                "{}",
-                palette.warn.paint("There are no trycmd tests enabled yet")
-            );
+            eprintln!("{}", palette.warn("There are no trycmd tests enabled yet"));
         } else {
             let failures: Vec<_> = self
                 .cases
@@ -50,7 +47,7 @@ impl Runner {
                                     let _ = writeln!(
                                         stderr,
                                         "{} {} ... {}",
-                                        palette.hint.paint("Testing"),
+                                        palette.hint("Testing"),
                                         status.name(),
                                         status.spawn.status.summary()
                                     );
@@ -64,9 +61,9 @@ impl Runner {
                                     let _ = writeln!(
                                         stderr,
                                         "{} {} ... {}",
-                                        palette.hint.paint("Testing"),
+                                        palette.hint("Testing"),
                                         status.name(),
-                                        palette.error.paint("failed"),
+                                        palette.error("failed"),
                                     );
                                     // Assuming `status` will print the newline
                                     let _ = write!(stderr, "{}", &status);
@@ -84,14 +81,12 @@ impl Runner {
                 let _ = writeln!(
                     stderr,
                     "{}",
-                    palette
-                        .hint
-                        .paint("Update snapshots with `TRYCMD=overwrite`"),
+                    palette.hint("Update snapshots with `TRYCMD=overwrite`"),
                 );
                 let _ = writeln!(
                     stderr,
                     "{}",
-                    palette.hint.paint("Debug output with `TRYCMD=dump`"),
+                    palette.hint("Debug output with `TRYCMD=dump`"),
                 );
                 panic!("{} of {} tests failed", failures.len(), self.cases.len());
             }
@@ -757,25 +752,25 @@ impl Default for Spawn {
 
 impl std::fmt::Display for Spawn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = crate::Palette::current();
+        let palette = fs_snapshot::report::Palette::auto();
 
         match &self.status {
             SpawnStatus::Ok => {
                 if let Some(exit) = self.exit {
                     if exit.success() {
-                        writeln!(f, "Exit: {}", palette.info.paint("success"))?;
+                        writeln!(f, "Exit: {}", palette.info("success"))?;
                     } else if let Some(code) = exit.code() {
-                        writeln!(f, "Exit: {}", palette.error.paint(code))?;
+                        writeln!(f, "Exit: {}", palette.error(code))?;
                     } else {
-                        writeln!(f, "Exit: {}", palette.error.paint("interrupted"))?;
+                        writeln!(f, "Exit: {}", palette.error("interrupted"))?;
                     }
                 }
             }
             SpawnStatus::Skipped => {
-                writeln!(f, "{}", palette.warn.paint("Skipped"))?;
+                writeln!(f, "{}", palette.warn("Skipped"))?;
             }
             SpawnStatus::Failure(msg) => {
-                writeln!(f, "Failed: {}", palette.error.paint(msg))?;
+                writeln!(f, "Failed: {}", palette.error(msg))?;
             }
             SpawnStatus::Expected(expected) => {
                 if let Some(exit) = self.exit {
@@ -783,22 +778,22 @@ impl std::fmt::Display for Spawn {
                         writeln!(
                             f,
                             "Expected {}, was {}",
-                            palette.info.paint(expected),
-                            palette.error.paint("success")
+                            palette.info(expected),
+                            palette.error("success")
                         )?;
                     } else if let Some(code) = exit.code() {
                         writeln!(
                             f,
                             "Expected {}, was {}",
-                            palette.info.paint(expected),
-                            palette.error.paint(code)
+                            palette.info(expected),
+                            palette.error(code)
                         )?;
                     } else {
                         writeln!(
                             f,
                             "Expected {}, was {}",
-                            palette.info.paint(expected),
-                            palette.error.paint("interrupted")
+                            palette.info(expected),
+                            palette.error("interrupted")
                         )?;
                     }
                 }
@@ -826,11 +821,11 @@ impl SpawnStatus {
     }
 
     fn summary(&self) -> impl std::fmt::Display {
-        let palette = crate::Palette::current();
+        let palette = fs_snapshot::report::Palette::auto();
         match self {
-            Self::Ok => palette.info.paint("ok"),
-            Self::Skipped => palette.warn.paint("ignored"),
-            Self::Failure(_) | Self::Expected(_) => palette.error.paint("failed"),
+            Self::Ok => palette.info("ok"),
+            Self::Skipped => palette.warn("ignored"),
+            Self::Failure(_) | Self::Expected(_) => palette.error("failed"),
         }
     }
 }
@@ -857,21 +852,21 @@ impl Stream {
 
 impl std::fmt::Display for Stream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = crate::Palette::current();
+        let palette = fs_snapshot::report::Palette::auto();
 
         match &self.status {
             StreamStatus::Ok => {
                 writeln!(f, "{}:", self.stream)?;
-                writeln!(f, "{}", palette.info.paint(&self.content))?;
+                writeln!(f, "{}", palette.info(&self.content))?;
             }
             StreamStatus::Failure(msg) => {
                 writeln!(
                     f,
                     "{} {}:",
                     self.stream,
-                    palette.error.paint(format_args!("({})", msg))
+                    palette.error(format_args!("({})", msg))
                 )?;
-                writeln!(f, "{}", palette.info.paint(&self.content))?;
+                writeln!(f, "{}", palette.info(&self.content))?;
             }
             StreamStatus::Expected(expected) => {
                 #[allow(unused_mut)]
@@ -887,10 +882,10 @@ impl std::fmt::Display for Stream {
                 }
 
                 if !rendered {
-                    writeln!(f, "{} {}:", self.stream, palette.info.paint("(expected)"))?;
-                    writeln!(f, "{}", palette.info.paint(&expected))?;
-                    writeln!(f, "{} {}:", self.stream, palette.error.paint("(actual)"))?;
-                    writeln!(f, "{}", palette.error.paint(&self.content))?;
+                    writeln!(f, "{} {}:", self.stream, palette.info("(expected)"))?;
+                    writeln!(f, "{}", palette.info(&expected))?;
+                    writeln!(f, "{} {}:", self.stream, palette.error("(actual)"))?;
+                    writeln!(f, "{}", palette.error(&self.content))?;
                 }
             }
         }
@@ -1002,7 +997,7 @@ impl FileStatus {
 
 impl std::fmt::Display for FileStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = crate::Palette::current();
+        let palette = fs_snapshot::report::Palette::auto();
 
         match &self {
             FileStatus::Ok {
@@ -1013,11 +1008,11 @@ impl std::fmt::Display for FileStatus {
                     f,
                     "{}: is {}",
                     expected_path.display(),
-                    palette.info.paint("good"),
+                    palette.info("good"),
                 )?;
             }
             FileStatus::Failure(msg) => {
-                writeln!(f, "{}", palette.error.paint(msg))?;
+                writeln!(f, "{}", palette.error(msg))?;
             }
             FileStatus::TypeMismatch {
                 expected_path,
@@ -1029,8 +1024,8 @@ impl std::fmt::Display for FileStatus {
                     f,
                     "{}: Expected {}, was {}",
                     expected_path.display(),
-                    palette.info.paint(expected_type),
-                    palette.error.paint(actual_type)
+                    palette.info(expected_type),
+                    palette.error(actual_type)
                 )?;
             }
             FileStatus::LinkMismatch {
@@ -1043,8 +1038,8 @@ impl std::fmt::Display for FileStatus {
                     f,
                     "{}: Expected {}, was {}",
                     expected_path.display(),
-                    palette.info.paint(expected_target.display()),
-                    palette.error.paint(actual_target.display())
+                    palette.info(expected_target.display()),
+                    palette.error(actual_target.display())
                 )?;
             }
             FileStatus::ContentMismatch {
@@ -1075,16 +1070,16 @@ impl std::fmt::Display for FileStatus {
                         f,
                         "{} {}:",
                         expected_path.display(),
-                        palette.info.paint("(expected)")
+                        palette.info("(expected)")
                     )?;
-                    writeln!(f, "{}", palette.info.paint(&expected_content))?;
+                    writeln!(f, "{}", palette.info(&expected_content))?;
                     writeln!(
                         f,
                         "{} {}:",
                         actual_path.display(),
-                        palette.error.paint("(actual)")
+                        palette.error("(actual)")
                     )?;
-                    writeln!(f, "{}", palette.error.paint(&actual_content))?;
+                    writeln!(f, "{}", palette.error(&actual_content))?;
                 }
             }
         }

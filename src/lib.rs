@@ -181,7 +181,6 @@ pub(crate) mod elide;
 pub(crate) mod lines;
 
 mod cases;
-mod color;
 mod command;
 mod error;
 mod filesystem;
@@ -192,7 +191,6 @@ mod spec;
 pub use cases::TestCases;
 pub use error::Error;
 
-pub(crate) use color::Palette;
 pub(crate) use command::wait_with_input_output;
 pub(crate) use filesystem::{shallow_copy, File, FilesystemContext, Iterate as FsIterate};
 pub(crate) use registry::BinRegistry;

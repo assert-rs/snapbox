@@ -36,8 +36,8 @@ pre-release-replacements = [
 
 [features]
 default = ["color-auto", "filesystem", "diff"]
-color = ["yansi", "concolor/std"]
-color-auto = ["color", "concolor/auto"]
+color = ["fs_snapshot/color"]
+color-auto = ["fs_snapshot/color-auto"]
 diff = ["difflib"]
 filesystem = ["tempfile", "walkdir", "dunce", "content_inspector"]
 
@@ -53,8 +53,7 @@ name = "trycmd-schema"
 required-features = ["schema"]
 
 [dependencies]
-yansi = { version = "0.5.0", optional = true }
-concolor = { version = "0.0.8", optional = true }
+fs_snapshot = { path = "crates/fs_snapshot", version = "0.1.2", default-features = false }
 
 glob = "0.3.0"
 rayon = "1.5.1"

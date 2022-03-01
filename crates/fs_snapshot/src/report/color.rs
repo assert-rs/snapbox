@@ -40,19 +40,19 @@ impl Palette {
         }
     }
 
-    pub fn info(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+    pub fn info<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
         self.info.paint(item)
     }
 
-    pub fn warn(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+    pub fn warn<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
         self.warn.paint(item)
     }
 
-    pub fn error(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+    pub fn error<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
         self.error.paint(item)
     }
 
-    pub fn hint(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+    pub fn hint<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
         self.hint.paint(item)
     }
 }
@@ -69,14 +69,24 @@ fn is_colored() -> bool {
     }
 }
 
+pub use styled::Styled;
+
 #[cfg(feature = "color")]
 mod styled {
     #[derive(Copy, Clone, Debug, Default)]
     pub(crate) struct Style(pub(crate) yansi::Style);
 
     impl Style {
-        pub(crate) fn paint<T: std::fmt::Display>(self, item: T) -> impl std::fmt::Display {
-            self.0.paint(item)
+        pub(crate) fn paint<T: std::fmt::Display>(self, item: T) -> Styled<T> {
+            Styled(self.0.paint(item))
+        }
+    }
+
+    pub struct Styled<D: std::fmt::Display>(yansi::Paint<D>);
+
+    impl<D: std::fmt::Display> std::fmt::Display for Styled<D> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.0.fmt(f)
         }
     }
 }
@@ -87,8 +97,16 @@ mod styled {
     pub(crate) struct Style;
 
     impl Style {
-        pub(crate) fn paint<T: std::fmt::Display>(self, item: T) -> impl std::fmt::Display {
-            item
+        pub(crate) fn paint<T: std::fmt::Display>(self, item: T) -> Styled<T> {
+            Styled(item)
+        }
+    }
+
+    pub struct Styled<D: std::fmt::Display>(D);
+
+    impl<D: std::fmt::Display> std::fmt::Display for Styled<D> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            self.0.fmt(f)
         }
     }
 }
