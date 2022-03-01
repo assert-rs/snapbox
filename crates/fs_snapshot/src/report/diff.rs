@@ -9,8 +9,8 @@ pub fn render_diff(
     diff_inner(
         expected,
         actual,
-        &palette.info.paint(expected_name).to_string(),
-        &palette.error.paint(actual_name).to_string(),
+        &palette.info(expected_name).to_string(),
+        &palette.error(actual_name).to_string(),
         palette,
     )
 }
@@ -30,8 +30,8 @@ pub(crate) fn diff_inner(
         &actual,
         expected_name,
         actual_name,
-        &palette.info.paint("expected").to_string(),
-        &palette.error.paint("actual").to_string(),
+        &palette.info("expected").to_string(),
+        &palette.error("actual").to_string(),
         0,
     );
     let mut diff = colorize_diff(diff, palette);
@@ -46,24 +46,24 @@ fn colorize_diff(mut lines: Vec<String>, palette: crate::report::Palette) -> Vec
         match (i, line.as_bytes().get(0)) {
             (0, _) => {
                 if let Some((prefix, body)) = line.split_once(' ') {
-                    *line = format!("{} {}", palette.info.paint(prefix), body);
+                    *line = format!("{} {}", palette.info(prefix), body);
                 }
             }
             (1, _) => {
                 if let Some((prefix, body)) = line.split_once(' ') {
-                    *line = format!("{} {}", palette.error.paint(prefix), body);
+                    *line = format!("{} {}", palette.error(prefix), body);
                 }
             }
             (_, Some(b'-')) => {
                 let (prefix, body) = line.split_at(1);
-                *line = format!("{}{}", palette.info.paint(prefix), body);
+                *line = format!("{}{}", palette.info(prefix), body);
             }
             (_, Some(b'+')) => {
                 let (prefix, body) = line.split_at(1);
-                *line = format!("{}{}", palette.error.paint(prefix), body);
+                *line = format!("{}{}", palette.error(prefix), body);
             }
             (_, Some(b'@')) => {
-                *line = format!("{}", palette.hint.paint(&line));
+                *line = format!("{}", palette.hint(&line));
             }
             _ => (),
         }

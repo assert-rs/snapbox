@@ -1,9 +1,10 @@
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
 pub struct Palette {
-    pub(crate) info: styled::Style,
-    pub(crate) error: styled::Style,
-    pub(crate) hint: styled::Style,
+    info: styled::Style,
+    warn: styled::Style,
+    error: styled::Style,
+    hint: styled::Style,
 }
 
 impl Palette {
@@ -11,6 +12,7 @@ impl Palette {
     pub fn always() -> Self {
         Self {
             info: styled::Style(yansi::Style::new(yansi::Color::Green)),
+            warn: styled::Style(yansi::Style::new(yansi::Color::Yellow)),
             error: styled::Style(yansi::Style::new(yansi::Color::Red)),
             hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
         }
@@ -24,6 +26,7 @@ impl Palette {
     pub fn never() -> Self {
         Self {
             info: Default::default(),
+            warn: Default::default(),
             error: Default::default(),
             hint: Default::default(),
         }
@@ -35,6 +38,22 @@ impl Palette {
         } else {
             Self::never()
         }
+    }
+
+    pub fn info(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+        self.info.paint(item)
+    }
+
+    pub fn warn(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+        self.warn.paint(item)
+    }
+
+    pub fn error(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+        self.error.paint(item)
+    }
+
+    pub fn hint(&self, item: impl std::fmt::Display) -> impl std::fmt::Display {
+        self.hint.paint(item)
     }
 }
 

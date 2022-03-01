@@ -179,20 +179,18 @@ impl Verifier {
                     buf,
                     "{} {}:",
                     expected_path.display(),
-                    self.palette.info.paint("(expected)")
+                    self.palette.info("(expected)")
                 )
                 .map_err(|e| e.to_string())?;
-                writeln!(buf, "{}", self.palette.info.paint(&expected))
-                    .map_err(|e| e.to_string())?;
+                writeln!(buf, "{}", self.palette.info(&expected)).map_err(|e| e.to_string())?;
                 writeln!(
                     buf,
                     "{} {}:",
                     expected_path.display(),
-                    self.palette.error.paint("(actual)")
+                    self.palette.error("(actual)")
                 )
                 .map_err(|e| e.to_string())?;
-                writeln!(buf, "{}", self.palette.error.paint(&actual))
-                    .map_err(|e| e.to_string())?;
+                writeln!(buf, "{}", self.palette.error(&actual)).map_err(|e| e.to_string())?;
 
                 Err(buf)
             }
