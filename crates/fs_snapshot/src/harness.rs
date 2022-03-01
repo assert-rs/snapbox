@@ -1,9 +1,22 @@
+/// Test action
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Action {
+    /// Do not run the test
+    Skip,
+    /// Ignore test failures
+    Ignore,
+    /// Fail on mismatch
+    Verify,
+    /// Overwrite on mismatch
+    Overwrite,
+}
+
 pub struct Harness<S, T> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
-    action: crate::Action,
+    action: Action,
 }
 
 impl<S, T> Harness<S, T>
@@ -17,7 +30,7 @@ where
             overrides: None,
             setup,
             test,
-            action: crate::Action::Verify,
+            action: Action::Verify,
         }
     }
 
@@ -33,16 +46,16 @@ where
     pub fn action_env(mut self, var_name: &str) -> Self {
         let var_value = std::env::var_os(var_name);
         self.action = match var_value.as_ref().and_then(|s| s.to_str()) {
-            Some("skip") => crate::Action::Skip,
-            Some("ignore") => crate::Action::Ignore,
-            Some("verify") => crate::Action::Verify,
-            Some("overwrite") => crate::Action::Overwrite,
+            Some("skip") => Action::Skip,
+            Some("ignore") => Action::Ignore,
+            Some("verify") => Action::Verify,
+            Some("overwrite") => Action::Overwrite,
             Some(_) | None => self.action,
         };
         self
     }
 
-    pub fn action(mut self, action: crate::Action) -> Self {
+    pub fn action(mut self, action: Action) -> Self {
         self.action = action;
         self
     }
@@ -51,9 +64,9 @@ where
     #[deprecated = "Replaced with `Harness::action`"]
     pub fn overwrite(mut self, yes: bool) -> Self {
         if yes {
-            self.action = crate::Action::Overwrite;
+            self.action = Action::Overwrite;
         } else {
-            self.action = crate::Action::Verify;
+            self.action = Action::Verify;
         }
         self
     }
@@ -96,7 +109,7 @@ where
 
 struct Verifier {
     palette: crate::report::Palette,
-    action: crate::Action,
+    action: Action,
 }
 
 impl Verifier {
@@ -109,7 +122,7 @@ impl Verifier {
         self
     }
 
-    fn action(mut self, action: crate::Action) -> Self {
+    fn action(mut self, action: Action) -> Self {
         self.action = action;
         self
     }
@@ -120,13 +133,13 @@ impl Verifier {
         expected_path: &std::path::Path,
     ) -> libtest_mimic::Outcome {
         match self.action {
-            crate::Action::Skip => libtest_mimic::Outcome::Ignored,
-            crate::Action::Ignore => {
+            Action::Skip => libtest_mimic::Outcome::Ignored,
+            Action::Ignore => {
                 let _ = self.do_verify(actual, expected_path);
                 libtest_mimic::Outcome::Ignored
             }
-            crate::Action::Verify => self.do_verify(actual, expected_path),
-            crate::Action::Overwrite => self.do_overwrite(actual, expected_path),
+            Action::Verify => self.do_verify(actual, expected_path),
+            Action::Overwrite => self.do_overwrite(actual, expected_path),
         }
     }
 
@@ -195,7 +208,7 @@ impl Default for Verifier {
     fn default() -> Self {
         Self {
             palette: crate::report::Palette::auto(),
-            action: crate::Action::Verify,
+            action: Action::Verify,
         }
     }
 }
