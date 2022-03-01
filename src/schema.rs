@@ -25,7 +25,7 @@ impl TryCmd {
                 if sequence.steps[0].stdin.is_none() {
                     let stdin_path = path.with_extension("stdin");
                     let stdin = if stdin_path.exists() {
-                        Some(crate::File::read_from(&stdin_path, Some(is_binary))?)
+                        Some(crate::Data::read_from(&stdin_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -35,7 +35,7 @@ impl TryCmd {
                 if sequence.steps[0].expected_stdout.is_none() {
                     let stdout_path = path.with_extension("stdout");
                     let stdout = if stdout_path.exists() {
-                        Some(crate::File::read_from(&stdout_path, Some(is_binary))?)
+                        Some(crate::Data::read_from(&stdout_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -45,7 +45,7 @@ impl TryCmd {
                 if sequence.steps[0].expected_stderr.is_none() {
                     let stderr_path = path.with_extension("stderr");
                     let stderr = if stderr_path.exists() {
-                        Some(crate::File::read_from(&stderr_path, Some(is_binary))?)
+                        Some(crate::Data::read_from(&stderr_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -54,7 +54,7 @@ impl TryCmd {
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                let raw = crate::File::read_from(path, Some(false))?
+                let raw = crate::Data::read_from(path, Some(false))?
                     .into_string()
                     .unwrap();
                 Self::parse_trycmd(&raw)?
@@ -111,8 +111,8 @@ impl TryCmd {
         &self,
         path: &std::path::Path,
         id: Option<&str>,
-        stdout: Option<&crate::File>,
-        stderr: Option<&crate::File>,
+        stdout: Option<&crate::Data>,
+        stderr: Option<&crate::Data>,
     ) -> Result<(), crate::Error> {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
@@ -121,7 +121,7 @@ impl TryCmd {
                 overwrite_toml_output(path, id, stdout, "stdout", "stdout")?;
                 overwrite_toml_output(path, id, stderr, "stderr", "stderr")?;
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                if stderr.is_some() && stderr != Some(&crate::File::Text("".into())) {
+                if stderr.is_some() && stderr != Some(&crate::Data::Text("".into())) {
                     panic!("stderr should have been merged: {:?}", stderr);
                 }
                 if let (Some(id), Some(stdout)) = (id, stdout) {
@@ -140,7 +140,7 @@ impl TryCmd {
                         .to_owned();
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
-                    let mut raw = crate::File::read_from(path, Some(false))?;
+                    let mut raw = crate::Data::read_from(path, Some(false))?;
                     raw.replace_lines(line_nums, &stdout)?;
                     raw.write_to(path)?;
                 }
@@ -274,7 +274,7 @@ impl TryCmd {
                     stderr_to_stdout: true,
                     expected_status,
                     expected_stdout_source: Some(stdout_start..post_stdout_start),
-                    expected_stdout: Some(crate::File::Text(stdout)),
+                    expected_stdout: Some(crate::Data::Text(stdout)),
                     expected_stderr_source: None,
                     expected_stderr: None,
                     binary: false,
@@ -297,7 +297,7 @@ impl TryCmd {
 fn overwrite_toml_output(
     path: &std::path::Path,
     _id: Option<&str>,
-    output: Option<&crate::File>,
+    output: Option<&crate::Data>,
     output_ext: &str,
     output_field: &str,
 ) -> Result<(), crate::Error> {
@@ -307,7 +307,7 @@ fn overwrite_toml_output(
             output.write_to(&output_path)?;
         } else {
             match output {
-                crate::File::Binary(_) => {
+                crate::Data::Binary(_) => {
                     output.write_to(&output_path)?;
 
                     let raw = std::fs::read_to_string(path)
@@ -319,7 +319,7 @@ fn overwrite_toml_output(
                     std::fs::write(path, doc.to_string())
                         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
                 }
-                crate::File::Text(output) => {
+                crate::Data::Text(output) => {
                     let raw = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     let mut doc = raw
@@ -367,13 +367,13 @@ impl From<OneShot> for TryCmd {
                 bin,
                 args: args.into_vec(),
                 env,
-                stdin: stdin.map(crate::File::Text),
+                stdin: stdin.map(crate::Data::Text),
                 stderr_to_stdout,
                 expected_status: status,
                 expected_stdout_source: None,
-                expected_stdout: stdout.map(crate::File::Text),
+                expected_stdout: stdout.map(crate::Data::Text),
                 expected_stderr_source: None,
-                expected_stderr: stderr.map(crate::File::Text),
+                expected_stderr: stderr.map(crate::Data::Text),
                 binary,
                 timeout,
             }],
@@ -388,13 +388,13 @@ pub(crate) struct Step {
     pub(crate) bin: Option<Bin>,
     pub(crate) args: Vec<String>,
     pub(crate) env: Env,
-    pub(crate) stdin: Option<crate::File>,
+    pub(crate) stdin: Option<crate::Data>,
     pub(crate) stderr_to_stdout: bool,
     pub(crate) expected_status: Option<CommandStatus>,
     pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
-    pub(crate) expected_stdout: Option<crate::File>,
+    pub(crate) expected_stdout: Option<crate::Data>,
     pub(crate) expected_stderr_source: Option<std::ops::Range<usize>>,
-    pub(crate) expected_stderr: Option<crate::File>,
+    pub(crate) expected_stderr: Option<crate::Data>,
     pub(crate) binary: bool,
     pub(crate) timeout: Option<std::time::Duration>,
 }
@@ -761,7 +761,7 @@ mod test {
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..4),
-                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stdout: Some(crate::Data::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -788,7 +788,7 @@ $ cmd
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..4),
-                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stdout: Some(crate::Data::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -815,7 +815,7 @@ $ cmd arg1 'arg with space'
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
-                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stdout: Some(crate::Data::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -850,7 +850,7 @@ $ cmd arg1
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..4),
-                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stdout: Some(crate::Data::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -876,7 +876,7 @@ $ KEY1=VALUE1 KEY2='VALUE2 with space' cmd
                 expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
-                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stdout: Some(crate::Data::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -903,7 +903,7 @@ $ cmd
                 expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
-                expected_stdout: Some(crate::File::Text("".into())),
+                expected_stdout: Some(crate::Data::Text("".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -930,7 +930,7 @@ $ cmd
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..6),
-                expected_stdout: Some(crate::File::Text("Hello World\n".into())),
+                expected_stdout: Some(crate::Data::Text("Hello World\n".into())),
                 expected_stderr: None,
                 ..Default::default()
             }],
@@ -958,7 +958,7 @@ Hello World
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
-                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stdout: Some(crate::Data::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -968,7 +968,7 @@ Hello World
                     expected_status: Some(CommandStatus::Success),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(6..6),
-                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stdout: Some(crate::Data::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -998,7 +998,7 @@ $ cmd2
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
-                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stdout: Some(crate::Data::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -1008,7 +1008,7 @@ $ cmd2
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(10..10),
-                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stdout: Some(crate::Data::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
                 },
@@ -1018,7 +1018,7 @@ $ cmd2
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(20..20),
-                    expected_stdout: Some(crate::File::Text("".into())),
+                    expected_stdout: Some(crate::Data::Text("".into())),
                     expected_stderr: None,
                     ..Default::default()
                 },

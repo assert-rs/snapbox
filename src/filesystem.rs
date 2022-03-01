@@ -1,10 +1,10 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum File {
+pub(crate) enum Data {
     Binary(Vec<u8>),
     Text(String),
 }
 
-impl File {
+impl Data {
     pub(crate) fn read_from(
         path: &std::path::Path,
         binary: Option<bool>,
@@ -138,7 +138,7 @@ pub(crate) fn normalize_text(data: &str) -> String {
         .collect()
 }
 
-impl std::fmt::Display for File {
+impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
@@ -392,9 +392,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World\n";
-        let expected = File::Text("One\nWorld\nThree".into());
+        let expected = Data::Text("One\nWorld\nThree".into());
 
-        let mut actual = File::Text(input.into());
+        let mut actual = Data::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -404,9 +404,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World\nTrees\n";
-        let expected = File::Text("One\nWorld\nTrees\nThree".into());
+        let expected = Data::Text("One\nWorld\nTrees\nThree".into());
 
-        let mut actual = File::Text(input.into());
+        let mut actual = Data::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -416,9 +416,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "";
-        let expected = File::Text("One\nThree".into());
+        let expected = Data::Text("One\nThree".into());
 
-        let mut actual = File::Text(input.into());
+        let mut actual = Data::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -428,9 +428,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World";
-        let expected = File::Text("One\nWorld\nThree".into());
+        let expected = Data::Text("One\nWorld\nThree".into());
 
-        let mut actual = File::Text(input.into());
+        let mut actual = Data::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -440,9 +440,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..2;
         let replacement = "World\n";
-        let expected = File::Text("One\nWorld\nTwo\nThree".into());
+        let expected = Data::Text("One\nWorld\nTwo\nThree".into());
 
-        let mut actual = File::Text(input.into());
+        let mut actual = Data::Text(input.into());
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }

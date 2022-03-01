@@ -401,7 +401,7 @@ impl Case {
     fn validate_stream(
         &self,
         stream: Option<Stream>,
-        expected_content: Option<&crate::File>,
+        expected_content: Option<&crate::Data>,
         binary: bool,
         substitutions: &crate::elide::Substitutions,
     ) -> Option<Stream> {
@@ -415,7 +415,7 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            if let crate::File::Text(e) = &expected_content {
+            if let crate::Data::Text(e) = &expected_content {
                 stream.content = stream
                     .content
                     .map_text(|t| crate::elide::normalize(t, e, substitutions));
@@ -611,14 +611,14 @@ impl Case {
                 }
             }
             FileType::File => {
-                let expected_content = crate::File::read_from(&expected_path, None)
+                let expected_content = crate::Data::read_from(&expected_path, None)
                     .map_err(FileStatus::Failure)?
                     .try_text();
-                let mut actual_content = crate::File::read_from(&actual_path, None)
+                let mut actual_content = crate::Data::read_from(&actual_path, None)
                     .map_err(FileStatus::Failure)?
                     .try_text();
 
-                if let crate::File::Text(e) = &expected_content {
+                if let crate::Data::Text(e) = &expected_content {
                     actual_content =
                         actual_content.map_text(|t| crate::elide::normalize(t, e, substitutions));
                 }
@@ -683,12 +683,12 @@ impl Output {
         self.spawn.status = SpawnStatus::Ok;
         self.stdout = Some(Stream {
             stream: Stdio::Stdout,
-            content: crate::File::Binary(output.stdout),
+            content: crate::Data::Binary(output.stdout),
             status: StreamStatus::Ok,
         });
         self.stderr = Some(Stream {
             stream: Stdio::Stderr,
-            content: crate::File::Binary(output.stderr),
+            content: crate::Data::Binary(output.stderr),
             status: StreamStatus::Ok,
         });
         self
@@ -833,7 +833,7 @@ impl SpawnStatus {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Stream {
     stream: Stdio,
-    content: crate::File,
+    content: crate::Data,
     status: StreamStatus,
 }
 
@@ -872,7 +872,7 @@ impl std::fmt::Display for Stream {
                 #[allow(unused_mut)]
                 let mut rendered = false;
                 #[cfg(feature = "diff")]
-                if let (crate::File::Text(expected), crate::File::Text(actual)) =
+                if let (crate::Data::Text(expected), crate::Data::Text(actual)) =
                     (&expected, &self.content)
                 {
                     let diff = fs_snapshot::report::render_diff(
@@ -903,7 +903,7 @@ impl std::fmt::Display for Stream {
 enum StreamStatus {
     Ok,
     Failure(crate::Error),
-    Expected(crate::File),
+    Expected(crate::Data),
 }
 
 impl StreamStatus {
@@ -983,8 +983,8 @@ enum FileStatus {
     ContentMismatch {
         expected_path: std::path::PathBuf,
         actual_path: std::path::PathBuf,
-        expected_content: crate::File,
-        actual_content: crate::File,
+        expected_content: crate::Data,
+        actual_content: crate::Data,
     },
 }
 
@@ -1056,7 +1056,7 @@ impl std::fmt::Display for FileStatus {
                 #[allow(unused_mut)]
                 let mut rendered = false;
                 #[cfg(feature = "diff")]
-                if let (crate::File::Text(expected), crate::File::Text(actual)) =
+                if let (crate::Data::Text(expected), crate::Data::Text(actual)) =
                     (&expected_content, &actual_content)
                 {
                     let diff = fs_snapshot::report::render_diff(
