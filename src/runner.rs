@@ -22,7 +22,7 @@ impl Runner {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) {
         let palette = fs_snapshot::report::Palette::auto();
 
@@ -126,7 +126,7 @@ impl Case {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -289,7 +289,7 @@ impl Case {
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -380,7 +380,7 @@ impl Case {
         &self,
         mut output: Output,
         step: &crate::schema::Step,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) -> Output {
         output.stdout = self.validate_stream(
             output.stdout,
@@ -403,7 +403,7 @@ impl Case {
         stream: Option<Stream>,
         expected_content: Option<&crate::Data>,
         binary: bool,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) -> Option<Stream> {
         let mut stream = stream?;
 
@@ -470,7 +470,7 @@ impl Case {
         actual_root: &std::path::Path,
         mut fs: Filesystem,
         mode: &Mode,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 
@@ -553,7 +553,7 @@ impl Case {
         expected_path: Result<std::path::PathBuf, std::io::Error>,
         fixture_root: &std::path::Path,
         actual_root: &std::path::Path,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &fs_snapshot::Substitutions,
     ) -> Result<FileStatus, FileStatus> {
         let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
         let expected_meta = expected_path

@@ -1,6 +1,7 @@
 mod action;
 mod data;
 mod error;
+mod substitutions;
 
 pub mod report;
 pub mod utils;
@@ -11,5 +12,6 @@ pub mod harness;
 pub use action::Action;
 pub use data::Data;
 pub use error::Error;
+pub use substitutions::Substitutions;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

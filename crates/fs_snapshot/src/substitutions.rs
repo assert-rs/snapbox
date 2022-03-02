@@ -1,18 +1,17 @@
 use std::borrow::Cow;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub(crate) struct Substitutions {
+pub struct Substitutions {
     vars: std::collections::BTreeMap<&'static str, Cow<'static, str>>,
     unused: std::collections::BTreeSet<&'static str>,
 }
 
 impl Substitutions {
-    #[cfg(test)]
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Default::default()
     }
 
-    pub(crate) fn insert(
+    pub fn insert(
         &mut self,
         key: &'static str,
         value: impl Into<Cow<'static, str>>,
@@ -22,15 +21,13 @@ impl Substitutions {
         if value.is_empty() {
             self.unused.insert(key);
         } else {
-            self.vars.insert(
-                key,
-                fs_snapshot::utils::normalize_text(value.as_ref()).into(),
-            );
+            self.vars
+                .insert(key, crate::utils::normalize_text(value.as_ref()).into());
         }
         Ok(())
     }
 
-    pub(crate) fn extend(
+    pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
     ) -> Result<(), crate::Error> {
@@ -40,7 +37,7 @@ impl Substitutions {
         Ok(())
     }
 
-    pub(crate) fn normalize(&self, input: &str, pattern: &str) -> String {
+    pub fn normalize(&self, input: &str, pattern: &str) -> String {
         normalize(input, pattern, self)
     }
 
@@ -87,8 +84,8 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
     }
 
     let mut normalized: Vec<Cow<str>> = Vec::new();
-    let input_lines: Vec<_> = fs_snapshot::utils::LinesWithTerminator::new(input).collect();
-    let pattern_lines: Vec<_> = fs_snapshot::utils::LinesWithTerminator::new(pattern).collect();
+    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(input).collect();
+    let pattern_lines: Vec<_> = crate::utils::LinesWithTerminator::new(pattern).collect();
 
     let mut input_index = 0;
     let mut pattern_index = 0;

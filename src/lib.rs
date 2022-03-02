@@ -175,8 +175,6 @@ mod macros;
 pub mod cargo;
 pub mod schema;
 
-pub(crate) mod elide;
-
 mod cases;
 mod command;
 mod filesystem;
