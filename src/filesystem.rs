@@ -2,6 +2,7 @@
 pub(crate) enum FilesystemContext {
     Default,
     Path(std::path::PathBuf),
+    #[cfg(feature = "filesystem")]
     SandboxPath(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
     SandboxTemp {
@@ -23,24 +24,18 @@ impl FilesystemContext {
             match mode {
                 crate::Mode::Dump(root) => {
                     let target = root.join(path.with_extension("out").file_name().unwrap());
-                    let _ = std::fs::remove_dir_all(&target);
-                    std::fs::create_dir_all(&target)?;
+                    let mut context = Self::sandbox_at(&target)?;
                     if let Some(cwd) = cwd {
-                        debug!("Initializing {} from {}", target.display(), cwd.display());
-                        copy_dir(cwd, &target)?;
+                        context = context.with_fixture(cwd)?;
                     }
-                    Ok(Self::SandboxPath(target))
+                    Ok(context)
                 }
                 crate::Mode::Fail | crate::Mode::Overwrite => {
-                    let temp = tempfile::tempdir()?;
-                    // We need to get the `/private` prefix on Mac so variable substitutions work
-                    // correctly
-                    let path = canonicalize(temp.path())?;
+                    let mut context = Self::sandbox_temp()?;
                     if let Some(cwd) = cwd {
-                        debug!("Initializing {} from {}", path.display(), cwd.display());
-                        copy_dir(cwd, &path)?;
+                        context = context.with_fixture(cwd)?;
                     }
-                    Ok(Self::SandboxTemp { temp, path })
+                    Ok(context)
                 }
             }
             #[cfg(not(feature = "filesystem"))]
@@ -49,13 +44,63 @@ impl FilesystemContext {
                 "Sandboxing is disabled",
             ))
         } else {
-            Ok(cwd.map(|p| Self::Path(p.to_owned())).unwrap_or_default())
+            Ok(cwd.map(|p| Self::live(p)).unwrap_or_else(Self::none))
         }
+    }
+
+    pub(crate) fn none() -> Self {
+        Self::Default
+    }
+
+    pub(crate) fn live(target: &std::path::Path) -> Self {
+        Self::Path(target.to_owned())
+    }
+
+    #[cfg(feature = "filesystem")]
+    pub(crate) fn sandbox_temp() -> Result<Self, std::io::Error> {
+        let temp = tempfile::tempdir()?;
+        // We need to get the `/private` prefix on Mac so variable substitutions work
+        // correctly
+        let path = canonicalize(temp.path())?;
+        Ok(Self::SandboxTemp { temp, path })
+    }
+
+    #[cfg(feature = "filesystem")]
+    pub(crate) fn sandbox_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
+        let _ = std::fs::remove_dir_all(&target);
+        std::fs::create_dir_all(&target)?;
+        Ok(Self::SandboxPath(target.to_owned()))
+    }
+
+    #[cfg(feature = "filesystem")]
+    pub(crate) fn with_fixture(
+        self,
+        template_root: &std::path::Path,
+    ) -> Result<Self, std::io::Error> {
+        match &self {
+            Self::Default | Self::Path(_) => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "Sandboxing is disabled",
+                ));
+            }
+            Self::SandboxPath(path) | Self::SandboxTemp { path, .. } => {
+                debug!(
+                    "Initializing {} from {}",
+                    path.display(),
+                    template_root.display()
+                );
+                copy_dir(template_root, &path)?;
+            }
+        }
+
+        Ok(self)
     }
 
     pub(crate) fn is_sandbox(&self) -> bool {
         match self {
             Self::Default | Self::Path(_) => false,
+            #[cfg(feature = "filesystem")]
             Self::SandboxPath(_) => true,
             #[cfg(feature = "filesystem")]
             Self::SandboxTemp { .. } => true,
@@ -66,6 +111,7 @@ impl FilesystemContext {
         match self {
             Self::Default => None,
             Self::Path(path) => Some(path.as_path()),
+            #[cfg(feature = "filesystem")]
             Self::SandboxPath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
             Self::SandboxTemp { path, .. } => Some(path.as_path()),
@@ -74,7 +120,9 @@ impl FilesystemContext {
 
     pub(crate) fn close(self) -> Result<(), std::io::Error> {
         match self {
-            Self::Default | Self::Path(_) | Self::SandboxPath(_) => Ok(()),
+            Self::Default | Self::Path(_) => Ok(()),
+            #[cfg(feature = "filesystem")]
+            Self::SandboxPath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
             Self::SandboxTemp { temp, .. } => temp.close(),
         }
