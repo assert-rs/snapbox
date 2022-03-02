@@ -154,7 +154,7 @@ impl Case {
             return vec![Ok(output)];
         }
 
-        let fs_context = match crate::FilesystemContext::new(
+        let fs_context = match fs_context(
             &self.path,
             sequence.fs.base.as_deref(),
             sequence.fs.sandbox(),
@@ -1098,5 +1098,43 @@ impl Mode {
         }
 
         Ok(())
+    }
+}
+
+#[cfg_attr(not(feature = "filesystem"), allow(unused_variables))]
+fn fs_context(
+    path: &std::path::Path,
+    cwd: Option<&std::path::Path>,
+    sandbox: bool,
+    mode: &crate::Mode,
+) -> Result<crate::FilesystemContext, std::io::Error> {
+    if sandbox {
+        #[cfg(feature = "filesystem")]
+        match mode {
+            crate::Mode::Dump(root) => {
+                let target = root.join(path.with_extension("out").file_name().unwrap());
+                let mut context = crate::FilesystemContext::sandbox_at(&target)?;
+                if let Some(cwd) = cwd {
+                    context = context.with_fixture(cwd)?;
+                }
+                Ok(context)
+            }
+            crate::Mode::Fail | crate::Mode::Overwrite => {
+                let mut context = crate::FilesystemContext::sandbox_temp()?;
+                if let Some(cwd) = cwd {
+                    context = context.with_fixture(cwd)?;
+                }
+                Ok(context)
+            }
+        }
+        #[cfg(not(feature = "filesystem"))]
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Sandboxing is disabled",
+        ))
+    } else {
+        Ok(cwd
+            .map(|p| crate::FilesystemContext::live(p))
+            .unwrap_or_else(crate::FilesystemContext::none))
     }
 }

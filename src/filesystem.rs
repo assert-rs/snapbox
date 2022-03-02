@@ -15,42 +15,6 @@ pub(crate) enum FilesystemContextInner {
 }
 
 impl FilesystemContext {
-    #[cfg_attr(not(feature = "filesystem"), allow(unused_variables))]
-    pub(crate) fn new(
-        path: &std::path::Path,
-        cwd: Option<&std::path::Path>,
-        sandbox: bool,
-        mode: &crate::Mode,
-    ) -> Result<Self, std::io::Error> {
-        if sandbox {
-            #[cfg(feature = "filesystem")]
-            match mode {
-                crate::Mode::Dump(root) => {
-                    let target = root.join(path.with_extension("out").file_name().unwrap());
-                    let mut context = Self::sandbox_at(&target)?;
-                    if let Some(cwd) = cwd {
-                        context = context.with_fixture(cwd)?;
-                    }
-                    Ok(context)
-                }
-                crate::Mode::Fail | crate::Mode::Overwrite => {
-                    let mut context = Self::sandbox_temp()?;
-                    if let Some(cwd) = cwd {
-                        context = context.with_fixture(cwd)?;
-                    }
-                    Ok(context)
-                }
-            }
-            #[cfg(not(feature = "filesystem"))]
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                "Sandboxing is disabled",
-            ))
-        } else {
-            Ok(cwd.map(|p| Self::live(p)).unwrap_or_else(Self::none))
-        }
-    }
-
     pub(crate) fn none() -> Self {
         Self(FilesystemContextInner::None)
     }
