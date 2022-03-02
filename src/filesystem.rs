@@ -103,12 +103,12 @@ impl Default for FilesystemContext {
 }
 
 #[cfg(feature = "filesystem")]
-pub(crate) struct Iterate {
+pub(crate) struct Walk {
     inner: walkdir::IntoIter,
 }
 
 #[cfg(feature = "filesystem")]
-impl Iterate {
+impl Walk {
     pub(crate) fn new(path: &std::path::Path) -> Self {
         Self {
             inner: walkdir::WalkDir::new(path).into_iter(),
@@ -117,7 +117,7 @@ impl Iterate {
 }
 
 #[cfg(feature = "filesystem")]
-impl Iterator for Iterate {
+impl Iterator for Walk {
     type Item = Result<std::path::PathBuf, std::io::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -136,17 +136,17 @@ impl Iterator for Iterate {
 }
 
 #[cfg(not(feature = "filesystem"))]
-pub(crate) struct Iterate {}
+pub(crate) struct Walk {}
 
 #[cfg(not(feature = "filesystem"))]
-impl Iterate {
+impl Walk {
     pub(crate) fn new(_path: &std::path::Path) -> Self {
         Self {}
     }
 }
 
 #[cfg(not(feature = "filesystem"))]
-impl Iterator for Iterate {
+impl Iterator for Walk {
     type Item = Result<std::path::PathBuf, std::io::Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -159,7 +159,7 @@ fn copy_dir(source: &std::path::Path, dest: &std::path::Path) -> Result<(), std:
     let source = canonicalize(source)?;
     let dest = canonicalize(dest)?;
 
-    for current in Iterate::new(&source) {
+    for current in Walk::new(&source) {
         let current = current?;
         let rel = current.strip_prefix(&source).unwrap();
         let target = dest.join(rel);

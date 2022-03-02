@@ -479,7 +479,7 @@ impl Case {
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for expected_path in crate::FsIterate::new(&fixture_root) {
+                for expected_path in crate::Walk::new(&fixture_root) {
                     if expected_path
                         .as_deref()
                         .map(|p| p.is_dir())
