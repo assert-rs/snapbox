@@ -1,5 +1,8 @@
 #[derive(Debug)]
-pub(crate) enum FilesystemContext {
+pub(crate) struct FilesystemContext(FilesystemContextInner);
+
+#[derive(Debug)]
+pub(crate) enum FilesystemContextInner {
     Default,
     Path(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
@@ -49,11 +52,11 @@ impl FilesystemContext {
     }
 
     pub(crate) fn none() -> Self {
-        Self::Default
+        Self(FilesystemContextInner::Default)
     }
 
     pub(crate) fn live(target: &std::path::Path) -> Self {
-        Self::Path(target.to_owned())
+        Self(FilesystemContextInner::Path(target.to_owned()))
     }
 
     #[cfg(feature = "filesystem")]
@@ -62,14 +65,14 @@ impl FilesystemContext {
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
         let path = canonicalize(temp.path())?;
-        Ok(Self::SandboxTemp { temp, path })
+        Ok(Self(FilesystemContextInner::SandboxTemp { temp, path }))
     }
 
     #[cfg(feature = "filesystem")]
     pub(crate) fn sandbox_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
         let _ = std::fs::remove_dir_all(&target);
         std::fs::create_dir_all(&target)?;
-        Ok(Self::SandboxPath(target.to_owned()))
+        Ok(Self(FilesystemContextInner::SandboxPath(target.to_owned())))
     }
 
     #[cfg(feature = "filesystem")]
@@ -77,14 +80,15 @@ impl FilesystemContext {
         self,
         template_root: &std::path::Path,
     ) -> Result<Self, std::io::Error> {
-        match &self {
-            Self::Default | Self::Path(_) => {
+        match &self.0 {
+            FilesystemContextInner::Default | FilesystemContextInner::Path(_) => {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Unsupported,
                     "Sandboxing is disabled",
                 ));
             }
-            Self::SandboxPath(path) | Self::SandboxTemp { path, .. } => {
+            FilesystemContextInner::SandboxPath(path)
+            | FilesystemContextInner::SandboxTemp { path, .. } => {
                 debug!(
                     "Initializing {} from {}",
                     path.display(),
@@ -98,40 +102,39 @@ impl FilesystemContext {
     }
 
     pub(crate) fn is_sandbox(&self) -> bool {
-        match self {
-            Self::Default | Self::Path(_) => false,
+        match &self.0 {
+            FilesystemContextInner::Default | FilesystemContextInner::Path(_) => false,
             #[cfg(feature = "filesystem")]
-            Self::SandboxPath(_) => true,
+            FilesystemContextInner::SandboxPath(_) => true,
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp { .. } => true,
+            FilesystemContextInner::SandboxTemp { .. } => true,
         }
     }
 
     pub(crate) fn path(&self) -> Option<&std::path::Path> {
-        match self {
-            Self::Default => None,
-            Self::Path(path) => Some(path.as_path()),
+        match &self.0 {
+            FilesystemContextInner::Default => None,
+            FilesystemContextInner::Path(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxPath(path) => Some(path.as_path()),
+            FilesystemContextInner::SandboxPath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxTemp { path, .. } => Some(path.as_path()),
+            FilesystemContextInner::SandboxTemp { path, .. } => Some(path.as_path()),
         }
     }
 
     pub(crate) fn close(self) -> Result<(), std::io::Error> {
-        match self {
-            Self::Default | Self::Path(_) => Ok(()),
+        match self.0 {
+            FilesystemContextInner::Default | FilesystemContextInner::Path(_) => Ok(()),
+            FilesystemContextInner::SandboxPath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
-            Self::SandboxPath(_) => Ok(()),
-            #[cfg(feature = "filesystem")]
-            Self::SandboxTemp { temp, .. } => temp.close(),
+            FilesystemContextInner::SandboxTemp { temp, .. } => temp.close(),
         }
     }
 }
 
 impl Default for FilesystemContext {
     fn default() -> Self {
-        Self::Default
+        Self::none()
     }
 }
 
