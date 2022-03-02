@@ -42,7 +42,7 @@ fn render_diff(
 }
 
 #[cfg(feature = "diff")]
-pub(crate) fn diff_inner(
+fn diff_inner(
     expected: &str,
     actual: &str,
     expected_name: &str,
@@ -101,4 +101,65 @@ fn colorize_diff(mut lines: Vec<String>, palette: crate::report::Palette) -> Vec
 #[cfg(not(feature = "color"))]
 fn colorize_diff(lines: Vec<String>, _palette: crate::report::Palette) -> Vec<String> {
     lines
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[cfg(feature = "diff")]
+    #[test]
+    fn diff_eq() {
+        let expected = "Hello\nWorld\n";
+        let expected_name = "A";
+        let actual = "Hello\nWorld\n";
+        let actual_name = "B";
+        let palette = crate::report::Palette::never();
+
+        let actual_diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        let expected_diff = "
+";
+
+        assert_eq!(actual_diff, expected_diff);
+    }
+
+    #[cfg(feature = "diff")]
+    #[test]
+    fn diff_ne_line_missing() {
+        let expected = "Hello\nWorld\n";
+        let expected_name = "A";
+        let actual = "Hello\n";
+        let actual_name = "B";
+        let palette = crate::report::Palette::never();
+
+        let actual_diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        let expected_diff = "
+--- A\texpected
++++ B\tactual
+@@ -2 +1,0 @@
+-World
+";
+
+        assert_eq!(actual_diff, expected_diff);
+    }
+
+    #[cfg(feature = "diff")]
+    #[test]
+    fn diff_eq_trailing_newline_missing() {
+        let expected = "Hello\nWorld\n";
+        let expected_name = "A";
+        let actual = "Hello\nWorld";
+        let actual_name = "B";
+        let palette = crate::report::Palette::never();
+
+        let actual_diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        let expected_diff = "
+--- A\texpected
++++ B\tactual
+@@ -2 +2 @@
+-World
++World";
+
+        assert_eq!(actual_diff, expected_diff);
+    }
 }
