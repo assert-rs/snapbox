@@ -10,8 +10,14 @@ pub fn write_diff(
     let mut rendered = false;
     #[cfg(feature = "diff")]
     if let (Some(expected), Some(actual)) = (expected.as_str(), actual.as_str()) {
-        let diff = render_diff(expected, actual, expected_name, actual_name, palette);
-        writeln!(writer, "{}", diff)?;
+        write_diff_inner(
+            writer,
+            expected,
+            actual,
+            expected_name,
+            actual_name,
+            palette,
+        )?;
         rendered = true;
     }
 
@@ -25,82 +31,74 @@ pub fn write_diff(
 }
 
 #[cfg(feature = "diff")]
-fn render_diff(
+fn write_diff_inner(
+    writer: &mut dyn std::fmt::Write,
     expected: &str,
     actual: &str,
-    expected_name: impl std::fmt::Display,
-    actual_name: impl std::fmt::Display,
+    expected_name: &dyn std::fmt::Display,
+    actual_name: &dyn std::fmt::Display,
     palette: crate::report::Palette,
-) -> String {
-    diff_inner(
-        expected,
-        actual,
-        &palette.info(expected_name).to_string(),
-        &palette.error(actual_name).to_string(),
-        palette,
-    )
-}
-
-#[cfg(feature = "diff")]
-fn diff_inner(
-    expected: &str,
-    actual: &str,
-    expected_name: &str,
-    actual_name: &str,
-    palette: crate::report::Palette,
-) -> String {
-    let expected: Vec<_> = crate::utils::LinesWithTerminator::new(expected).collect();
-    let actual: Vec<_> = crate::utils::LinesWithTerminator::new(actual).collect();
-    let diff = difflib::unified_diff(
-        &expected,
-        &actual,
-        expected_name,
-        actual_name,
-        &palette.info("expected").to_string(),
-        &palette.error("actual").to_string(),
-        0,
-    );
-    let mut diff = colorize_diff(diff, palette);
-    diff.insert(0, "\n".to_owned());
-
-    diff.join("")
-}
-
-#[cfg(feature = "color")]
-fn colorize_diff(mut lines: Vec<String>, palette: crate::report::Palette) -> Vec<String> {
-    for (i, line) in lines.iter_mut().enumerate() {
-        match (i, line.as_bytes().get(0)) {
-            (0, _) => {
-                if let Some((prefix, body)) = line.split_once(' ') {
-                    *line = format!("{} {}", palette.info(prefix), body);
+) -> Result<(), std::fmt::Error> {
+    let changes = dissimilar::diff(expected, actual);
+    writeln!(writer)?;
+    writeln!(
+        writer,
+        "{}",
+        palette.info(format_args!("--- {} (expected)", expected_name))
+    )?;
+    writeln!(
+        writer,
+        "{}",
+        palette.error(format_args!("+++ {} (actual)", actual_name))
+    )?;
+    let mut expected_line_num = 1;
+    let mut actual_line_num = 1;
+    for change in changes {
+        match change {
+            dissimilar::Chunk::Equal(body) => {
+                for line in body.lines() {
+                    writeln!(
+                        writer,
+                        "{:>4} {:>4} {} {}",
+                        palette.hint(expected_line_num),
+                        palette.hint(actual_line_num),
+                        palette.hint(' '),
+                        palette.hint(line),
+                    )?;
+                    expected_line_num += 1;
+                    actual_line_num += 1;
                 }
             }
-            (1, _) => {
-                if let Some((prefix, body)) = line.split_once(' ') {
-                    *line = format!("{} {}", palette.error(prefix), body);
+            dissimilar::Chunk::Delete(body) => {
+                for line in body.lines() {
+                    writeln!(
+                        writer,
+                        "{:>4} {:>4} {} {}",
+                        palette.hint(expected_line_num),
+                        "",
+                        palette.info('-'),
+                        palette.info(line),
+                    )?;
+                    expected_line_num += 1;
                 }
             }
-            (_, Some(b'-')) => {
-                let (prefix, body) = line.split_at(1);
-                *line = format!("{}{}", palette.info(prefix), body);
+            dissimilar::Chunk::Insert(body) => {
+                for line in body.lines() {
+                    writeln!(
+                        writer,
+                        "{:>4} {:>4} {} {}",
+                        "",
+                        palette.hint(actual_line_num),
+                        palette.error('+'),
+                        palette.error(line),
+                    )?;
+                    actual_line_num += 1;
+                }
             }
-            (_, Some(b'+')) => {
-                let (prefix, body) = line.split_at(1);
-                *line = format!("{}{}", palette.error(prefix), body);
-            }
-            (_, Some(b'@')) => {
-                *line = format!("{}", palette.hint(&line));
-            }
-            _ => (),
         }
     }
-    lines
-}
 
-#[cfg(feature = "diff")]
-#[cfg(not(feature = "color"))]
-fn colorize_diff(lines: Vec<String>, _palette: crate::report::Palette) -> Vec<String> {
-    lines
+    Ok(())
 }
 
 #[cfg(test)]
@@ -116,8 +114,21 @@ mod test {
         let actual_name = "B";
         let palette = crate::report::Palette::never();
 
-        let actual_diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        let mut actual_diff = String::new();
+        write_diff_inner(
+            &mut actual_diff,
+            expected,
+            actual,
+            &expected_name,
+            &actual_name,
+            palette,
+        )
+        .unwrap();
         let expected_diff = "
+--- A (expected)
++++ B (actual)
+   1    1   Hello
+   2    2   World
 ";
 
         assert_eq!(actual_diff, expected_diff);
@@ -132,12 +143,21 @@ mod test {
         let actual_name = "B";
         let palette = crate::report::Palette::never();
 
-        let actual_diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        let mut actual_diff = String::new();
+        write_diff_inner(
+            &mut actual_diff,
+            expected,
+            actual,
+            &expected_name,
+            &actual_name,
+            palette,
+        )
+        .unwrap();
         let expected_diff = "
---- A\texpected
-+++ B\tactual
-@@ -2 +1,0 @@
--World
+--- A (expected)
++++ B (actual)
+   1    1   Hello
+   2      - World
 ";
 
         assert_eq!(actual_diff, expected_diff);
@@ -152,13 +172,23 @@ mod test {
         let actual_name = "B";
         let palette = crate::report::Palette::never();
 
-        let actual_diff = render_diff(expected, actual, expected_name, actual_name, palette);
+        let mut actual_diff = String::new();
+        write_diff_inner(
+            &mut actual_diff,
+            expected,
+            actual,
+            &expected_name,
+            &actual_name,
+            palette,
+        )
+        .unwrap();
         let expected_diff = "
---- A\texpected
-+++ B\tactual
-@@ -2 +2 @@
--World
-+World";
+--- A (expected)
++++ B (actual)
+   1    1   Hello
+   2    2   World
+   3      - 
+";
 
         assert_eq!(actual_diff, expected_diff);
     }

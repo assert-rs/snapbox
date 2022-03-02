@@ -37,7 +37,7 @@ default = ["color-auto", "diff"]
 harness = ["libtest-mimic", "ignore"]
 color = ["yansi", "concolor/std"]
 color-auto = ["color", "concolor/auto"]
-diff = ["difflib"]
+diff = ["dissimilar"]
 detect-encoding = ["content_inspector"]
 
 debug = ["backtrace"]
@@ -51,5 +51,5 @@ yansi = { version = "0.5.0", optional = true }
 concolor = { version = "0.0.8", optional = true }
 
 backtrace = { version = "0.3", optional = true }
-difflib = { version = "0.4", optional = true }
+dissimilar = { version = "1.0", optional = true }
 content_inspector = { version = "0.2.4", optional = true }
