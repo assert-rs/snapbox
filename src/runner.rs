@@ -416,9 +416,7 @@ impl Case {
 
         if let Some(expected_content) = expected_content {
             if let Some(e) = expected_content.as_str() {
-                stream.content = stream
-                    .content
-                    .map_text(|t| crate::elide::normalize(t, e, substitutions));
+                stream.content = stream.content.map_text(|t| substitutions.normalize(t, e));
             }
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -619,8 +617,7 @@ impl Case {
                     .map_text(fs_snapshot::utils::normalize_text);
 
                 if let Some(e) = expected_content.as_str() {
-                    actual_content =
-                        actual_content.map_text(|t| crate::elide::normalize(t, e, substitutions));
+                    actual_content = actual_content.map_text(|t| substitutions.normalize(t, e));
                 }
                 if expected_content != actual_content {
                     return Err(FileStatus::ContentMismatch {

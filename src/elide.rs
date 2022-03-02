@@ -40,6 +40,10 @@ impl Substitutions {
         Ok(())
     }
 
+    pub(crate) fn normalize(&self, input: &str, pattern: &str) -> String {
+        normalize(input, pattern, self)
+    }
+
     fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
         let mut value = Cow::Borrowed(value);
         for (var, replace) in self.vars.iter() {
@@ -77,7 +81,7 @@ fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
     Ok(key)
 }
 
-pub(crate) fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
+fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
     if input == pattern {
         return input.to_owned();
     }
