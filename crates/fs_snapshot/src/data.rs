@@ -31,6 +31,11 @@ impl Data {
     }
 
     pub fn write_to(&self, path: &std::path::Path) -> Result<(), crate::Error> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!("Failed to create parent dir for {}: {}", path.display(), e)
+            })?;
+        }
         std::fs::write(path, self.as_bytes())
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
