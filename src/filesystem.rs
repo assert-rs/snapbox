@@ -3,7 +3,7 @@ pub(crate) struct FilesystemContext(FilesystemContextInner);
 
 #[derive(Debug)]
 pub(crate) enum FilesystemContextInner {
-    Default,
+    None,
     Path(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
     SandboxPath(std::path::PathBuf),
@@ -52,7 +52,7 @@ impl FilesystemContext {
     }
 
     pub(crate) fn none() -> Self {
-        Self(FilesystemContextInner::Default)
+        Self(FilesystemContextInner::None)
     }
 
     pub(crate) fn live(target: &std::path::Path) -> Self {
@@ -81,7 +81,7 @@ impl FilesystemContext {
         template_root: &std::path::Path,
     ) -> Result<Self, std::io::Error> {
         match &self.0 {
-            FilesystemContextInner::Default | FilesystemContextInner::Path(_) => {
+            FilesystemContextInner::None | FilesystemContextInner::Path(_) => {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Unsupported,
                     "Sandboxing is disabled",
@@ -103,7 +103,7 @@ impl FilesystemContext {
 
     pub(crate) fn is_sandbox(&self) -> bool {
         match &self.0 {
-            FilesystemContextInner::Default | FilesystemContextInner::Path(_) => false,
+            FilesystemContextInner::None | FilesystemContextInner::Path(_) => false,
             #[cfg(feature = "filesystem")]
             FilesystemContextInner::SandboxPath(_) => true,
             #[cfg(feature = "filesystem")]
@@ -113,7 +113,7 @@ impl FilesystemContext {
 
     pub(crate) fn path(&self) -> Option<&std::path::Path> {
         match &self.0 {
-            FilesystemContextInner::Default => None,
+            FilesystemContextInner::None => None,
             FilesystemContextInner::Path(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
             FilesystemContextInner::SandboxPath(path) => Some(path.as_path()),
@@ -124,7 +124,7 @@ impl FilesystemContext {
 
     pub(crate) fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
-            FilesystemContextInner::Default | FilesystemContextInner::Path(_) => Ok(()),
+            FilesystemContextInner::None | FilesystemContextInner::Path(_) => Ok(()),
             FilesystemContextInner::SandboxPath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
             FilesystemContextInner::SandboxTemp { temp, .. } => temp.close(),
