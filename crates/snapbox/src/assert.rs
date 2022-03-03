@@ -40,17 +40,30 @@ impl FileAssert {
         pattern_path: impl AsRef<std::path::Path>,
     ) {
         let actual = actual.into();
-        let actual = actual.map_text(crate::utils::normalize_lines);
         let pattern_path = pattern_path.as_ref();
-        self.verify(actual, pattern_path);
+        self.matches_inner(actual, pattern_path);
     }
 
-    fn verify(&self, actual: crate::Data, pattern_path: &std::path::Path) {
+    fn matches_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
-            Action::Skip => {}
-            Action::Ignore => match self.try_verify(&actual, pattern_path) {
-                Ok(()) => {}
-                Err(err) => {
+            Action::Skip => {
+                return;
+            }
+            Action::Ignore | Action::Verify | Action::Overwrite => {}
+        }
+
+        actual = actual.try_text().map_text(crate::utils::normalize_text);
+        let expected = crate::Data::read_from(pattern_path, Some(false))
+            .map(|d| d.map_text(crate::utils::normalize_lines));
+        if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
+            actual = actual.map_text(|t| self.substitutions.normalize(t, expected));
+        }
+
+        let result = expected.and_then(|e| self.try_verify(&actual, &e, pattern_path));
+        if let Err(err) = result {
+            match self.action {
+                Action::Skip => unreachable!("Bailed out earlier"),
+                Action::Ignore => {
                     use std::io::Write;
 
                     let _ = writeln!(
@@ -60,16 +73,10 @@ impl FileAssert {
                         err
                     );
                 }
-            },
-            Action::Verify => match self.try_verify(&actual, pattern_path) {
-                Ok(()) => {}
-                Err(err) => {
+                Action::Verify => {
                     panic!("{}: {}", self.palette.error("Match failed"), err);
                 }
-            },
-            Action::Overwrite => match self.try_verify(&actual, pattern_path) {
-                Ok(()) => {}
-                Err(err) => {
+                Action::Overwrite => {
                     use std::io::Write;
 
                     let _ = writeln!(
@@ -80,24 +87,22 @@ impl FileAssert {
                     );
                     actual.write_to(pattern_path).unwrap();
                 }
-            },
+            }
         }
     }
 
     fn try_verify(
         &self,
         actual: &crate::Data,
+        expected: &crate::Data,
         expected_path: &std::path::Path,
     ) -> crate::Result<()> {
-        let expected = crate::Data::read_from(expected_path, Some(false))?
-            .map_text(crate::utils::normalize_lines);
-
-        if *actual != expected {
+        if actual != expected {
             let mut buf = String::new();
             crate::report::write_diff(
                 &mut buf,
-                &expected,
-                &actual,
+                expected,
+                actual,
                 &expected_path.display(),
                 &expected_path.display(),
                 self.palette,
