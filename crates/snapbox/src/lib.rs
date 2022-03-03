@@ -76,6 +76,7 @@ pub use data::Data;
 pub use error::Error;
 pub use file::file_assert;
 pub use file::FileAssert;
+pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

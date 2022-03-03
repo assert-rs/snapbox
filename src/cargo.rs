@@ -56,7 +56,7 @@ pub(crate) mod examples {
         target_name: &str,
         args: impl IntoIterator<Item = &'a str>,
     ) -> Result<crate::schema::Bin, crate::Error> {
-        debug!("Compiling example {}", target_name);
+        snapbox::debug!("Compiling example {}", target_name);
         let messages = escargot::CargoBuild::new()
             .current_target()
             .current_release()
@@ -69,7 +69,7 @@ pub(crate) mod examples {
             let message = message
                 .decode()
                 .map_err(|e| crate::Error::new(e.to_string()))?;
-            debug!("Message: {:?}", message);
+            snapbox::debug!("Message: {:?}", message);
             if let Some(bin) = decode_example_message(&message) {
                 let (name, bin) = bin?;
                 assert_eq!(target_name, name);
@@ -102,7 +102,7 @@ pub(crate) mod examples {
     pub fn compile_examples<'a>(
         args: impl IntoIterator<Item = &'a str>,
     ) -> Result<impl Iterator<Item = (String, crate::schema::Bin)>, crate::Error> {
-        debug!("Compiling examples");
+        snapbox::debug!("Compiling examples");
         let mut examples = std::collections::BTreeMap::new();
 
         let messages = escargot::CargoBuild::new()
@@ -117,7 +117,7 @@ pub(crate) mod examples {
             let message = message
                 .decode()
                 .map_err(|e| crate::Error::new(e.to_string()))?;
-            debug!("Message: {:?}", message);
+            snapbox::debug!("Message: {:?}", message);
             if let Some(bin) = decode_example_message(&message) {
                 let (name, bin) = bin?;
                 examples.insert(name.to_owned(), bin);

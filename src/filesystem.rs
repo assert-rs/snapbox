@@ -52,7 +52,7 @@ impl PathFixture {
                 ));
             }
             PathFixtureInner::MutablePath(path) | PathFixtureInner::MutableTemp { path, .. } => {
-                debug!(
+                snapbox::debug!(
                     "Initializing {} from {}",
                     path.display(),
                     template_root.display()

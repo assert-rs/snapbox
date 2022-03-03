@@ -1,5 +1,5 @@
 [package]
-name = "snapbox"
+name = "snapbox-macros"
 version = "0.1.2"
 description = "Snapshot testing toolbox"
 license = "MIT OR Apache-2.0"
@@ -33,38 +33,9 @@ pre-release-replacements = [
 ]
 
 [features]
-default = ["color-auto", "diff"]
-
-#! Feature Flags
-
-## Simple input/output test harness
-harness = ["libtest-mimic", "ignore"]
-## Smarter binary file detection
-detect-encoding = ["content_inspector"]
+default = []
 
 ## Extra debugging information
-debug = ["snapbox-macros/debug", "backtrace"]
-
-#! Default Feature Flags
-
-## Fancy diffs on failure
-diff = ["similar"]
-## Colored output support
-color = ["yansi", "concolor/std"]
-## Auto-detect whether to use colors
-color-auto = ["color", "concolor/auto"]
+debug = []
 
 [dependencies]
-normalize-line-endings = "0.3.0"
-snapbox-macros = { path = "../snapbox-macros", version = "0.1.2" }
-
-libtest-mimic = { version = "0.3.0", optional = true }
-ignore = { version = "0.4", optional = true }
-yansi = { version = "0.5.0", optional = true }
-concolor = { version = "0.0.8", optional = true }
-
-backtrace = { version = "0.3", optional = true }
-similar = { version = "2.1.0", features = ["inline"], optional = true }
-content_inspector = { version = "0.2.4", optional = true }
-
-document-features = { version = "0.2", optional = true }

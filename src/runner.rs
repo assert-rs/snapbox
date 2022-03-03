@@ -41,7 +41,7 @@ impl Runner {
                     results
                         .into_iter()
                         .filter_map(|s| {
-                            debug!("Case: {:#?}", s);
+                            snapbox::debug!("Case: {:#?}", s);
                             match s {
                                 Ok(status) => {
                                     let _ = writeln!(
@@ -198,7 +198,7 @@ impl Case {
         substitutions
             .insert("[EXE]", std::env::consts::EXE_SUFFIX)
             .unwrap();
-        debug!("{:?}", substitutions);
+        snapbox::debug!("{:?}", substitutions);
 
         let mut outputs = Vec::with_capacity(sequence.steps.len());
         let mut prior_step_failed = false;
@@ -324,7 +324,7 @@ impl Case {
             Some(crate::schema::Bin::Path(_)) => {}
             Some(crate::schema::Bin::Name(name)) => {
                 // Unhandled by resolve
-                debug!("bin={:?} not found", name);
+                snapbox::debug!("bin={:?} not found", name);
                 assert_eq!(output.spawn.status, SpawnStatus::Skipped);
                 return Ok(output);
             }

@@ -182,13 +182,13 @@ impl TryCmd {
                         match lang {
                             "trycmd" | "console" => {
                                 if info.any(|i| i == "ignore") {
-                                    debug!("ignore from infostring: {:?}", info);
+                                    snapbox::debug!("ignore from infostring: {:?}", info);
                                 } else {
                                     break;
                                 }
                             }
                             _ => {
-                                debug!("ignore from lang: {:?}", lang);
+                                snapbox::debug!("ignore from lang: {:?}", lang);
                             }
                         }
                     }

@@ -1,5 +1,6 @@
+/// Feature-flag controlled additional test debug information
 #[cfg(feature = "debug")]
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! debug {
     ($($arg:tt)*) => ({
         eprint!("[{:>w$}] \t", module_path!(), w = 28);
@@ -7,8 +8,9 @@ macro_rules! debug {
     })
 }
 
+/// Feature-flag controlled additional test debug information
 #[cfg(not(feature = "debug"))]
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! debug {
     ($($arg:tt)*) => {};
 }
