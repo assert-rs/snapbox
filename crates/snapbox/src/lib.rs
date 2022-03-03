@@ -6,16 +6,24 @@
 //! - You need a lot of customization around an individual test
 //! - You need to build your own test harness instead of using something like [`trycmd`][trycmd]
 //!
+//! In-memory:
+//! - [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
+//! - [`file_assert`] for one-off assertions with the snapshot stored in a file
+//! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
+//!
+//! Filesystem:
+//! - [`path::PathFixture`]
+//!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
 //! # Examples
 //!
-//! [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing:
+//! [`assert_matches`]
 //! ```rust
 //! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
 //! ```
 //!
-//! [`file_assert`] for one-off assertions with the snapshot stored in a file:
+//! [`file_assert`]
 //! ```rust,no_run
 //! let actual = "...";
 //! snapbox::file_assert()
@@ -23,7 +31,7 @@
 //!     .matches(actual, "tests/fixtures/help_output_is_clean.txt");
 //! ```
 //!
-//! [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
+//! [`harness::Harness`]
 #![cfg_attr(not(feature = "harness"), doc = " ```rust,ignore")]
 #![cfg_attr(feature = "harness", doc = " ```rust,no_run")]
 //! snapbox::harness::Harness::new(
