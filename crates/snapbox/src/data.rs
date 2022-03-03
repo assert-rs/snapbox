@@ -76,11 +76,6 @@ impl Data {
         }
     }
 
-    pub fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
-        *self = Self::Text(std::mem::take(self).into_string()?);
-        Ok(())
-    }
-
     pub fn try_text(self) -> Self {
         match self {
             Self::Binary(data) => {
@@ -100,6 +95,17 @@ impl Data {
         }
     }
 
+    /// Coerce to a string
+    ///
+    /// Note: this will **not** do a binary-content check
+    pub fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
+        *self = Self::Text(std::mem::take(self).into_string()?);
+        Ok(())
+    }
+
+    /// Coerce to a string
+    ///
+    /// Note: this will **not** do a binary-content check
     pub fn into_string(self) -> Result<String, std::str::Utf8Error> {
         match self {
             Self::Binary(data) => {
