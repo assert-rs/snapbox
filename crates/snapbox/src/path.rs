@@ -26,29 +26,28 @@ impl PathFixture {
     }
 
     #[cfg(feature = "path")]
-    pub fn mutable_temp() -> Result<Self, std::io::Error> {
-        let temp = tempfile::tempdir()?;
+    pub fn mutable_temp() -> Result<Self, crate::Error> {
+        let temp = tempfile::tempdir().map_err(|e| e.to_string())?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
-        let path = canonicalize(temp.path())?;
+        let path = canonicalize(temp.path())
+            .map_err(|e| format!("Failed to canonicalize {}: {}", temp.path().display(), e))?;
         Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
     }
 
     #[cfg(feature = "path")]
-    pub fn mutable_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
+    pub fn mutable_at(target: &std::path::Path) -> Result<Self, crate::Error> {
         let _ = std::fs::remove_dir_all(&target);
-        std::fs::create_dir_all(&target)?;
+        std::fs::create_dir_all(&target)
+            .map_err(|e| format!("Failed to create {}: {}", target.display(), e))?;
         Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
     }
 
     #[cfg(feature = "path")]
-    pub fn with_template(self, template_root: &std::path::Path) -> Result<Self, std::io::Error> {
+    pub fn with_template(self, template_root: &std::path::Path) -> Result<Self, crate::Error> {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    "Sandboxing is disabled",
-                ));
+                return Err("Sandboxing is disabled".into());
             }
             PathFixtureInner::MutablePath(path) | PathFixtureInner::MutableTemp { path, .. } => {
                 crate::debug!(
@@ -437,15 +436,14 @@ impl Iterator for Walk {
 ///
 /// Note: Ignores `.keep` files
 #[cfg(feature = "path")]
-pub fn copy_template(
-    source: &std::path::Path,
-    dest: &std::path::Path,
-) -> Result<(), std::io::Error> {
-    let source = canonicalize(source)?;
-    let dest = canonicalize(dest)?;
+pub fn copy_template(source: &std::path::Path, dest: &std::path::Path) -> Result<(), crate::Error> {
+    let source = canonicalize(source)
+        .map_err(|e| format!("Failed to canonicalize {}: {}", source.display(), e))?;
+    let dest = canonicalize(dest)
+        .map_err(|e| format!("Failed to canonicalize {}: {}", dest.display(), e))?;
 
     for current in Walk::new(&source) {
-        let current = current?;
+        let current = current.map_err(|e| e.to_string())?;
         let rel = current.strip_prefix(&source).unwrap();
         let target = dest.join(rel);
 
@@ -456,17 +454,25 @@ pub fn copy_template(
 }
 
 /// Copy a file system entry, without recursing
-pub fn shallow_copy(
-    source: &std::path::Path,
-    dest: &std::path::Path,
-) -> Result<(), std::io::Error> {
-    let meta = source.symlink_metadata()?;
+pub fn shallow_copy(source: &std::path::Path, dest: &std::path::Path) -> Result<(), crate::Error> {
+    let meta = source
+        .symlink_metadata()
+        .map_err(|e| format!("Failed to read metadata from {}: {}", source.display(), e))?;
     if meta.is_dir() {
-        std::fs::create_dir_all(dest)?;
+        std::fs::create_dir_all(dest)
+            .map_err(|e| format!("Failed to create {}: {}", dest.display(), e))?;
     } else if meta.is_file() {
-        std::fs::copy(source, dest)?;
+        std::fs::copy(source, dest).map_err(|e| {
+            format!(
+                "Failed to copy {} to {}: {}",
+                source.display(),
+                dest.display(),
+                e
+            )
+        })?;
     } else if let Ok(target) = std::fs::read_link(source) {
-        symlink_to_file(dest, &target)?;
+        symlink_to_file(dest, &target)
+            .map_err(|e| format!("Failed to create symlink {}: {}", dest.display(), e))?;
     }
 
     Ok(())

@@ -1018,7 +1018,7 @@ fn fs_context(
     cwd: Option<&std::path::Path>,
     sandbox: bool,
     mode: &crate::Mode,
-) -> Result<snapbox::path::PathFixture, std::io::Error> {
+) -> Result<snapbox::path::PathFixture, crate::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
@@ -1039,10 +1039,7 @@ fn fs_context(
             }
         }
         #[cfg(not(feature = "filesystem"))]
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "Sandboxing is disabled",
-        ))
+        Err("Sandboxing is disabled".into())
     } else {
         Ok(cwd
             .map(snapbox::path::PathFixture::immutable)
