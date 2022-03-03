@@ -52,11 +52,13 @@ impl FileAssert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        actual = actual.try_text().map_text(crate::utils::normalize_text);
         let expected = crate::Data::read_from(pattern_path, Some(false))
             .map(|d| d.map_text(crate::utils::normalize_lines));
         if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
-            actual = actual.map_text(|t| self.substitutions.normalize(t, expected));
+            actual = actual
+                .try_text()
+                .map_text(crate::utils::normalize_text)
+                .map_text(|t| self.substitutions.normalize(t, expected));
         }
 
         let result = expected.and_then(|e| self.try_verify(&actual, &e, pattern_path));
