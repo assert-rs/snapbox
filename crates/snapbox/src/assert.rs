@@ -23,6 +23,7 @@ pub struct FileAssert {
     action: Action,
     substitutions: crate::Substitutions,
     palette: crate::report::Palette,
+    binary: Option<bool>,
 }
 
 /// # Assertions
@@ -52,7 +53,7 @@ impl FileAssert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let expected = crate::Data::read_from(pattern_path, Some(false))
+        let expected = crate::Data::read_from(pattern_path, self.binary)
             .map(|d| d.map_text(crate::utils::normalize_lines));
         if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
             actual = actual
@@ -143,6 +144,14 @@ impl FileAssert {
         self.substitutions = substitutions;
         self
     }
+
+    /// Specify whether the content should be treated as binary or not
+    ///
+    /// The default is to auto-detect
+    pub fn binary(mut self, yes: bool) -> Self {
+        self.binary = Some(yes);
+        self
+    }
 }
 
 impl Default for FileAssert {
@@ -155,6 +164,7 @@ impl Default for FileAssert {
             action: Action::Verify,
             substitutions,
             palette: crate::report::Palette::auto(),
+            binary: None,
         }
     }
 }
