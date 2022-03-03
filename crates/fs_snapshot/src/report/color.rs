@@ -1,10 +1,12 @@
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
 pub struct Palette {
-    info: styled::Style,
-    warn: styled::Style,
-    error: styled::Style,
-    hint: styled::Style,
+    pub(crate) info: styled::Style,
+    pub(crate) warn: styled::Style,
+    pub(crate) error: styled::Style,
+    pub(crate) hint: styled::Style,
+    pub(crate) expected: styled::Style,
+    pub(crate) actual: styled::Style,
 }
 
 impl Palette {
@@ -15,6 +17,8 @@ impl Palette {
             warn: styled::Style(yansi::Style::new(yansi::Color::Yellow)),
             error: styled::Style(yansi::Style::new(yansi::Color::Red)),
             hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
+            expected: styled::Style(yansi::Style::new(yansi::Color::Green).underline()),
+            actual: styled::Style(yansi::Style::new(yansi::Color::Red).underline()),
         }
     }
 
@@ -29,6 +33,8 @@ impl Palette {
             warn: Default::default(),
             error: Default::default(),
             hint: Default::default(),
+            expected: Default::default(),
+            actual: Default::default(),
         }
     }
 
@@ -40,20 +46,28 @@ impl Palette {
         }
     }
 
-    pub fn info<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
+    pub fn info<D: std::fmt::Display>(self, item: D) -> Styled<D> {
         self.info.paint(item)
     }
 
-    pub fn warn<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
+    pub fn warn<D: std::fmt::Display>(self, item: D) -> Styled<D> {
         self.warn.paint(item)
     }
 
-    pub fn error<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
+    pub fn error<D: std::fmt::Display>(self, item: D) -> Styled<D> {
         self.error.paint(item)
     }
 
-    pub fn hint<D: std::fmt::Display>(&self, item: D) -> Styled<D> {
+    pub fn hint<D: std::fmt::Display>(self, item: D) -> Styled<D> {
         self.hint.paint(item)
+    }
+
+    pub fn expected<D: std::fmt::Display>(self, item: D) -> Styled<D> {
+        self.expected.paint(item)
+    }
+
+    pub fn actual<D: std::fmt::Display>(self, item: D) -> Styled<D> {
+        self.actual.paint(item)
     }
 }
 
@@ -69,6 +83,7 @@ fn is_colored() -> bool {
     }
 }
 
+pub(crate) use styled::Style;
 pub use styled::Styled;
 
 #[cfg(feature = "color")]
