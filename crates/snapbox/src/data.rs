@@ -110,6 +110,9 @@ impl Data {
         }
     }
 
+    /// Return the underlying `str`
+    ///
+    /// Note: this will not inspect binary data for being a valid `str`.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::Binary(_) => None,
