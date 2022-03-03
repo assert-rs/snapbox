@@ -10,6 +10,11 @@
 //!
 //! # Examples
 //!
+//! [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing:
+//! ```rust
+//! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
+//! ```
+//!
 //! [`file_assert`] for one-off assertions with the snapshot stored in a file:
 //! ```rust,no_run
 //! let actual = "...";
@@ -65,6 +70,7 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
+pub use data::assert_matches;
 pub use data::Data;
 pub use error::Error;
 pub use file::file_assert;

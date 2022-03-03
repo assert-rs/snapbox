@@ -91,6 +91,10 @@ impl FileAssert {
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
     /// - `[EXE]` matches `.exe` on Windows (override with [`FileAssert::substitutions`])
+    ///
+    /// Normalization:
+    /// - Newlines
+    /// - `\` to `/`
     #[track_caller]
     pub fn matches(
         &self,

@@ -187,6 +187,46 @@ fn is_binary(_data: &[u8]) -> bool {
     false
 }
 
+/// Check if a value matches a pattern
+///
+/// Pattern syntax:
+/// - `...` is a line-wildcard when on a line by itself
+/// - `[..]` is a character-wildcard when inside a line
+/// - `[EXE]` matches `.exe` on Windows
+///
+/// Normalization:
+/// - Newlines
+/// - `\` to `/`
+#[track_caller]
+pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
+    let actual = actual.into();
+    let pattern = pattern.into();
+    assert_matches_inner(actual, pattern);
+}
+
+#[track_caller]
+fn assert_matches_inner(mut actual: crate::Data, pattern: crate::Data) {
+    let pattern = pattern.try_text();
+    if let Some(pattern) = pattern.as_str() {
+        let mut substitutions = crate::Substitutions::new();
+        substitutions
+            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
+            .unwrap();
+        actual = actual
+            .try_text()
+            .map_text(crate::utils::normalize_text)
+            .map_text(|t| substitutions.normalize(t, pattern));
+    }
+
+    if actual != pattern {
+        let palette = crate::report::Palette::auto();
+        let mut buf = String::new();
+        crate::report::write_diff(&mut buf, &pattern, &actual, &"pattern", &"actual", palette)
+            .expect("diff should always succeed");
+        panic!("{}: {}", palette.error("Match failed"), buf);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
