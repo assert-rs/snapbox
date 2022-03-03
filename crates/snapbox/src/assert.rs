@@ -95,7 +95,7 @@ impl FileAssert {
             crate::report::write_diff(
                 &mut buf,
                 &expected,
-                &actual,
+                actual,
                 &expected_path.display(),
                 &expected_path.display(),
                 self.palette,

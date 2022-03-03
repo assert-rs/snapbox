@@ -58,7 +58,7 @@ impl FilesystemContext {
                     path.display(),
                     template_root.display()
                 );
-                copy_dir(template_root, &path)?;
+                copy_dir(template_root, path)?;
             }
         }
 

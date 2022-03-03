@@ -1134,7 +1134,7 @@ fn fs_context(
         ))
     } else {
         Ok(cwd
-            .map(|p| crate::FilesystemContext::live(p))
+            .map(crate::FilesystemContext::live)
             .unwrap_or_else(crate::FilesystemContext::none))
     }
 }

@@ -35,4 +35,3 @@ impl Default for Action {
         Self::Verify
     }
 }
-

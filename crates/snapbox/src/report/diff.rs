@@ -100,7 +100,7 @@ fn write_change(
         write!(writer, "{}", cur_style.paint(change))?;
     }
     if change.missing_newline() {
-        write!(writer, "{}\n", em_style.paint("∅"))?;
+        writeln!(writer, "{}", em_style.paint("∅"))?;
     }
 
     Ok(())

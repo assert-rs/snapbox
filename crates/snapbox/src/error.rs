@@ -11,7 +11,7 @@ impl Error {
 
     fn with_string(inner: String) -> Self {
         Self {
-            inner: inner.to_string(),
+            inner,
             backtrace: Backtrace::new(),
         }
     }
