@@ -89,6 +89,7 @@ impl FilesystemContext {
     pub(crate) fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
             FilesystemContextInner::None | FilesystemContextInner::Path(_) => Ok(()),
+            #[cfg(feature = "filesystem")]
             FilesystemContextInner::SandboxPath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
             FilesystemContextInner::SandboxTemp { temp, .. } => temp.close(),
