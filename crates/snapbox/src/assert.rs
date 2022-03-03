@@ -17,7 +17,17 @@ pub struct FileAssert {
 /// # Assertions
 impl FileAssert {
     #[track_caller]
-    pub fn matches(&self, actual: crate::Data, pattern_path: &std::path::Path) {
+    pub fn matches(
+        &self,
+        actual: impl Into<crate::Data>,
+        pattern_path: impl AsRef<std::path::Path>,
+    ) {
+        let actual = actual.into();
+        let pattern_path = pattern_path.as_ref();
+        self.matches_inner(actual, pattern_path);
+    }
+
+    fn matches_inner(&self, actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {}
             Action::Ignore => match self.try_verify(&actual, pattern_path) {

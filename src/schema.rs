@@ -38,7 +38,7 @@ impl TryCmd {
                     let stdout = if stdout_path.exists() {
                         Some(
                             crate::Data::read_from(&stdout_path, Some(is_binary))?
-                                .map_text(fs_snapshot::utils::normalize_text),
+                                .map_text(snapbox::utils::normalize_text),
                         )
                     } else {
                         None
@@ -51,7 +51,7 @@ impl TryCmd {
                     let stderr = if stderr_path.exists() {
                         Some(
                             crate::Data::read_from(&stderr_path, Some(is_binary))?
-                                .map_text(fs_snapshot::utils::normalize_text),
+                                .map_text(snapbox::utils::normalize_text),
                         )
                     } else {
                         None
@@ -62,7 +62,7 @@ impl TryCmd {
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 let raw = crate::Data::read_from(path, Some(false))?
-                    .map_text(fs_snapshot::utils::normalize_lines)
+                    .map_text(snapbox::utils::normalize_lines)
                     .into_string()
                     .unwrap();
                 Self::parse_trycmd(&raw)?
@@ -149,7 +149,7 @@ impl TryCmd {
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
                     let mut raw = crate::Data::read_from(path, Some(false))?
-                        .map_text(fs_snapshot::utils::normalize_lines);
+                        .map_text(snapbox::utils::normalize_lines);
                     raw.replace_lines(line_nums, &stdout)?;
                     raw.write_to(path)?;
                 }
@@ -166,7 +166,7 @@ impl TryCmd {
     fn parse_trycmd(s: &str) -> Result<Self, crate::Error> {
         let mut steps = Vec::new();
 
-        let mut lines: VecDeque<_> = fs_snapshot::utils::LinesWithTerminator::new(s)
+        let mut lines: VecDeque<_> = snapbox::utils::LinesWithTerminator::new(s)
             .enumerate()
             .map(|(i, l)| (i + 1, l))
             .collect();

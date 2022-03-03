@@ -5,7 +5,7 @@ use std::borrow::Cow;
 pub struct TestCases {
     runner: std::cell::RefCell<crate::RunnerSpec>,
     bins: std::cell::RefCell<crate::BinRegistry>,
-    substitutions: std::cell::RefCell<fs_snapshot::Substitutions>,
+    substitutions: std::cell::RefCell<snapbox::Substitutions>,
     has_run: std::cell::Cell<bool>,
 }
 

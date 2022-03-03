@@ -8,10 +8,12 @@ pub struct Harness<S, T> {
     action: Action,
 }
 
-impl<S, T> Harness<S, T>
+impl<S, T, I, E> Harness<S, T>
 where
-    S: Fn(std::path::PathBuf) -> Test + Send + Sync + 'static,
-    T: Fn(&std::path::Path) -> Result<String, String> + Send + Sync + 'static,
+    I: std::fmt::Display,
+    E: std::fmt::Display,
+    S: Fn(std::path::PathBuf) -> Case + Send + Sync + 'static,
+    T: Fn(&std::path::Path) -> Result<I, E> + Send + Sync + 'static,
 {
     pub fn new(root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
         Self {
@@ -71,19 +73,34 @@ where
             }
         });
 
-        let tests: Vec<_> = tests.into_iter().map(|path| (self.setup)(path)).collect();
+        let tests: Vec<_> = tests
+            .into_iter()
+            .map(|path| {
+                let case = (self.setup)(path);
+                Test {
+                    name: case.name.clone(),
+                    kind: "".into(),
+                    is_ignored: false,
+                    is_bench: false,
+                    data: case,
+                }
+            })
+            .collect();
 
         let args = libtest_mimic::Arguments::from_args();
         libtest_mimic::run_tests(&args, tests, move |test| {
             match (self.test)(&test.data.fixture) {
                 Ok(actual) => {
+                    let actual = actual.to_string();
                     let actual = crate::Data::Text(actual).map_text(crate::utils::normalize_lines);
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
                     verify.verify(actual, &test.data.expected)
                 }
-                Err(err) => libtest_mimic::Outcome::Failed { msg: Some(err) },
+                Err(err) => libtest_mimic::Outcome::Failed {
+                    msg: Some(err.to_string()),
+                },
             }
         })
         .exit()
@@ -196,9 +213,10 @@ impl Default for Verifier {
     }
 }
 
-pub type Test = libtest_mimic::Test<Case>;
-
 pub struct Case {
+    pub name: String,
     pub fixture: std::path::PathBuf,
     pub expected: std::path::PathBuf,
 }
+
+type Test = libtest_mimic::Test<Case>;

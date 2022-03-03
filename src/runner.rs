@@ -22,9 +22,9 @@ impl Runner {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) {
-        let palette = fs_snapshot::report::Palette::auto();
+        let palette = snapbox::report::Palette::auto();
 
         if self.cases.is_empty() {
             eprintln!("{}", palette.warn("There are no trycmd tests enabled yet"));
@@ -126,7 +126,7 @@ impl Case {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -289,7 +289,7 @@ impl Case {
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -380,7 +380,7 @@ impl Case {
         &self,
         mut output: Output,
         step: &crate::schema::Step,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Output {
         output.stdout = self.validate_stream(
             output.stdout,
@@ -403,7 +403,7 @@ impl Case {
         stream: Option<Stream>,
         expected_content: Option<&crate::Data>,
         binary: bool,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Option<Stream> {
         let mut stream = stream?;
 
@@ -470,7 +470,7 @@ impl Case {
         actual_root: &std::path::Path,
         mut fs: Filesystem,
         mode: &Mode,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 
@@ -553,7 +553,7 @@ impl Case {
         expected_path: Result<std::path::PathBuf, std::io::Error>,
         fixture_root: &std::path::Path,
         actual_root: &std::path::Path,
-        substitutions: &fs_snapshot::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Result<FileStatus, FileStatus> {
         let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
         let expected_meta = expected_path
@@ -611,10 +611,10 @@ impl Case {
             FileType::File => {
                 let expected_content = crate::Data::read_from(&expected_path, None)
                     .map_err(FileStatus::Failure)?
-                    .map_text(fs_snapshot::utils::normalize_text);
+                    .map_text(snapbox::utils::normalize_text);
                 let mut actual_content = crate::Data::read_from(&actual_path, None)
                     .map_err(FileStatus::Failure)?
-                    .map_text(fs_snapshot::utils::normalize_text);
+                    .map_text(snapbox::utils::normalize_text);
 
                 if let Some(e) = expected_content.as_str() {
                     actual_content = actual_content.map_text(|t| substitutions.normalize(t, e));
@@ -749,7 +749,7 @@ impl Default for Spawn {
 
 impl std::fmt::Display for Spawn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = fs_snapshot::report::Palette::auto();
+        let palette = snapbox::report::Palette::auto();
 
         match &self.status {
             SpawnStatus::Ok => {
@@ -818,7 +818,7 @@ impl SpawnStatus {
     }
 
     fn summary(&self) -> impl std::fmt::Display {
-        let palette = fs_snapshot::report::Palette::auto();
+        let palette = snapbox::report::Palette::auto();
         match self {
             Self::Ok => palette.info("ok"),
             Self::Skipped => palette.warn("ignored"),
@@ -839,7 +839,7 @@ impl Stream {
         if self.content.make_text().is_err() {
             self.status = StreamStatus::Failure("invalid UTF-8".into());
         }
-        self.content = self.content.map_text(fs_snapshot::utils::normalize_text);
+        self.content = self.content.map_text(snapbox::utils::normalize_text);
         self
     }
 
@@ -850,7 +850,7 @@ impl Stream {
 
 impl std::fmt::Display for Stream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = fs_snapshot::report::Palette::auto();
+        let palette = snapbox::report::Palette::auto();
 
         match &self.status {
             StreamStatus::Ok => {
@@ -867,7 +867,7 @@ impl std::fmt::Display for Stream {
                 writeln!(f, "{}", palette.info(&self.content))?;
             }
             StreamStatus::Expected(expected) => {
-                fs_snapshot::report::write_diff(
+                snapbox::report::write_diff(
                     f,
                     expected,
                     &self.content,
@@ -985,7 +985,7 @@ impl FileStatus {
 
 impl std::fmt::Display for FileStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = fs_snapshot::report::Palette::auto();
+        let palette = snapbox::report::Palette::auto();
 
         match &self {
             FileStatus::Ok {
@@ -1036,7 +1036,7 @@ impl std::fmt::Display for FileStatus {
                 expected_content,
                 actual_content,
             } => {
-                fs_snapshot::report::write_diff(
+                snapbox::report::write_diff(
                     f,
                     expected_content,
                     actual_content,

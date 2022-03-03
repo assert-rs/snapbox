@@ -1,11 +1,11 @@
 [package]
-name = "fs_snapshot"
+name = "snapbox"
 version = "0.1.2"
-description = "Simple input/output file snapshotting"
+description = "Snapshot testing toolbox"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/assert-rs/cargo-api.git"
-homepage = "https://github.com/assert-rs/cargo-api"
-documentation = "http://docs.rs/fs-snapshot/"
+repository = "https://github.com/assert-rs/trycmd/"
+homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
+documentation = "http://docs.rs/snapbox/"
 readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
@@ -29,7 +29,7 @@ pre-release-replacements = [
   {file="CHANGELOG.md", search="\\.\\.\\.HEAD", replace="...{{tag_name}}", exactly=1},
   {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}", min=1},
   {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n## [Unreleased] - ReleaseDate\n", exactly=1},
-  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/assert-rs/fs_snapshot/compare/{{tag_name}}...HEAD", exactly=1},
+  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/assert-rs/snapbox/compare/{{tag_name}}...HEAD", exactly=1},
 ]
 
 [features]

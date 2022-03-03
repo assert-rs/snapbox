@@ -146,6 +146,24 @@ impl From<Vec<u8>> for Data {
     }
 }
 
+impl<'b> From<&'b [u8]> for Data {
+    fn from(other: &'b [u8]) -> Self {
+        other.to_owned().into()
+    }
+}
+
+impl From<String> for Data {
+    fn from(other: String) -> Self {
+        Self::Text(other)
+    }
+}
+
+impl<'s> From<&'s str> for Data {
+    fn from(other: &'s str) -> Self {
+        other.to_owned().into()
+    }
+}
+
 #[cfg(feature = "detect-encoding")]
 fn is_binary(data: &[u8]) -> bool {
     match content_inspector::inspect(data) {

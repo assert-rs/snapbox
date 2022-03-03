@@ -36,14 +36,14 @@ pre-release-replacements = [
 
 [features]
 default = ["color-auto", "filesystem", "diff"]
-color = ["fs_snapshot/color"]
-color-auto = ["fs_snapshot/color-auto"]
-diff = ["fs_snapshot/diff"]
-filesystem = ["tempfile", "walkdir", "dunce", "fs_snapshot/detect-encoding"]
+color = ["snapbox/color"]
+color-auto = ["snapbox/color-auto"]
+diff = ["snapbox/diff"]
+filesystem = ["tempfile", "walkdir", "dunce", "snapbox/detect-encoding"]
 
 schema = ["schemars", "serde_json"]
 examples = ["escargot"]
-debug = ["fs_snapshot/debug"]
+debug = ["snapbox/debug"]
 
 [[bin]]
 name = "bin-fixture"
@@ -53,7 +53,7 @@ name = "trycmd-schema"
 required-features = ["schema"]
 
 [dependencies]
-fs_snapshot = { path = "crates/fs_snapshot", version = "0.1.2", default-features = false }
+snapbox = { path = "crates/snapbox", version = "0.1.2", default-features = false }
 
 glob = "0.3.0"
 rayon = "1.5.1"
