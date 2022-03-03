@@ -30,8 +30,9 @@ impl FileAssert {
     /// Check if a value matches the pattern contained in a file
     ///
     /// Pattern syntax:
-    /// - `[..]` is a character-wildcard when inside a line
     /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows (disable with [`FileAssert::substitutions`])
     #[track_caller]
     pub fn matches(
         &self,
