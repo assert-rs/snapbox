@@ -40,6 +40,7 @@ impl FileAssert {
         pattern_path: impl AsRef<std::path::Path>,
     ) {
         let actual = actual.into();
+        let actual = actual.map_text(crate::utils::normalize_lines);
         let pattern_path = pattern_path.as_ref();
         self.verify(actual, pattern_path);
     }
