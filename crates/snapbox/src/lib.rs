@@ -10,7 +10,7 @@
 //!
 //! # Examples
 //!
-//! [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing:
+//! [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing:
 //! ```rust
 //! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
 //! ```
@@ -70,6 +70,7 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
+pub use data::assert_eq;
 pub use data::assert_matches;
 pub use data::Data;
 pub use error::Error;

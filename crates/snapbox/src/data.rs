@@ -187,6 +187,39 @@ fn is_binary(_data: &[u8]) -> bool {
     false
 }
 
+/// Check if a value is the same as an expected value
+///
+/// When the content is text, newlines are normalized.
+#[track_caller]
+pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
+    let actual = actual.into();
+    let expected = expected.into();
+    assert_eq_inner(actual, expected);
+}
+
+#[track_caller]
+fn assert_eq_inner(mut actual: crate::Data, expected: crate::Data) {
+    let expected = expected.try_text();
+    if expected.as_str().is_some() {
+        actual = actual.try_text().map_text(crate::utils::normalize_lines);
+    }
+
+    if actual != expected {
+        let palette = crate::report::Palette::auto();
+        let mut buf = String::new();
+        crate::report::write_diff(
+            &mut buf,
+            &expected,
+            &actual,
+            &"expected",
+            &"actual",
+            palette,
+        )
+        .expect("diff should always succeed");
+        panic!("{}: {}", palette.error("Eq failed"), buf);
+    }
+}
+
 /// Check if a value matches a pattern
 ///
 /// Pattern syntax:
