@@ -1113,14 +1113,14 @@ fn fs_context(
         match mode {
             crate::Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
-                let mut context = crate::FilesystemContext::sandbox_at(&target)?;
+                let mut context = crate::FilesystemContext::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
                     context = context.with_fixture(cwd)?;
                 }
                 Ok(context)
             }
             crate::Mode::Fail | crate::Mode::Overwrite => {
-                let mut context = crate::FilesystemContext::sandbox_temp()?;
+                let mut context = crate::FilesystemContext::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_fixture(cwd)?;
                 }
@@ -1134,7 +1134,7 @@ fn fs_context(
         ))
     } else {
         Ok(cwd
-            .map(crate::FilesystemContext::live)
+            .map(crate::FilesystemContext::immutable)
             .unwrap_or_else(crate::FilesystemContext::none))
     }
 }
