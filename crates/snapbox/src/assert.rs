@@ -7,7 +7,7 @@ pub fn file_assert() -> FileAssert {
 
 /// Snapshot assertion against a file's contents
 ///
-/// See [`assert()`]
+/// See [`file_assert()`]
 pub struct FileAssert {
     action: Action,
     substitutions: crate::Substitutions,
