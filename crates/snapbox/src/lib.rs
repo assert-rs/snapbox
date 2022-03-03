@@ -53,9 +53,9 @@
 //! [trycmd]: https://docs.rs/trycmd
 
 mod action;
-mod assert;
 mod data;
 mod error;
+mod file;
 mod substitutions;
 
 pub mod report;
@@ -65,10 +65,10 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
-pub use assert::file_assert;
-pub use assert::FileAssert;
 pub use data::Data;
 pub use error::Error;
+pub use file::file_assert;
+pub use file::FileAssert;
 pub use substitutions::Substitutions;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
