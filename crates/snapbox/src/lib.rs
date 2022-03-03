@@ -6,6 +6,8 @@
 //! - You need a lot of customization around an individual test
 //! - You need to build your own test harness instead of using something like [`trycmd`][trycmd]
 //!
+#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
+//!
 //! # Examples
 //!
 //! [`file_assert`] for one-off assertions with the snapshot stored in a file:

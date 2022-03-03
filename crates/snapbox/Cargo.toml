@@ -34,13 +34,25 @@ pre-release-replacements = [
 
 [features]
 default = ["color-auto", "diff"]
+
+#! Feature Flags
+
+## Simple input/output test harness
 harness = ["libtest-mimic", "ignore"]
-color = ["yansi", "concolor/std"]
-color-auto = ["color", "concolor/auto"]
-diff = ["similar"]
+## Smarter binary file detection
 detect-encoding = ["content_inspector"]
 
+## Extra debugging information
 debug = ["backtrace"]
+
+#! Default Feature Flags
+
+## Fancy diffs on failure
+diff = ["similar"]
+## Colored output support
+color = ["yansi", "concolor/std"]
+## Auto-detect whether to use colors
+color-auto = ["color", "concolor/auto"]
 
 [dependencies]
 normalize-line-endings = "0.3.0"
@@ -53,3 +65,5 @@ concolor = { version = "0.0.8", optional = true }
 backtrace = { version = "0.3", optional = true }
 similar = { version = "2.1.0", features = ["inline"], optional = true }
 content_inspector = { version = "0.2.4", optional = true }
+
+document-features = { version = "0.2", optional = true }
