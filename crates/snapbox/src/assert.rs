@@ -28,12 +28,68 @@ pub struct FileAssert {
 
 /// # Assertions
 impl FileAssert {
-    /// Check if a value matches the pattern contained in a file
+    /// Check if a value matches the content of a file
+    ///
+    /// When the content is text, newlines are normalized.
+    #[track_caller]
+    pub fn eq(&self, actual: impl Into<crate::Data>, pattern_path: impl AsRef<std::path::Path>) {
+        let actual = actual.into();
+        let pattern_path = pattern_path.as_ref();
+        self.eq_inner(actual, pattern_path);
+    }
+
+    fn eq_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
+        match self.action {
+            Action::Skip => {
+                return;
+            }
+            Action::Ignore | Action::Verify | Action::Overwrite => {}
+        }
+
+        let expected = crate::Data::read_from(pattern_path, self.binary)
+            .map(|d| d.map_text(crate::utils::normalize_lines));
+        if expected.as_ref().ok().and_then(|d| d.as_str()).is_some() {
+            actual = actual.try_text().map_text(crate::utils::normalize_lines);
+        }
+
+        let result = expected.and_then(|e| self.try_verify(&actual, &e, pattern_path));
+        if let Err(err) = result {
+            match self.action {
+                Action::Skip => unreachable!("Bailed out earlier"),
+                Action::Ignore => {
+                    use std::io::Write;
+
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "{}: {}",
+                        self.palette.warn("Ignoring eq failure"),
+                        err
+                    );
+                }
+                Action::Verify => {
+                    panic!("{}: {}", self.palette.error("Not eq"), err);
+                }
+                Action::Overwrite => {
+                    use std::io::Write;
+
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "{}: {}",
+                        self.palette.warn("Overwriting failed eq check"),
+                        err
+                    );
+                    actual.write_to(pattern_path).unwrap();
+                }
+            }
+        }
+    }
+
+    /// Check if a value matches the pattern in a file
     ///
     /// Pattern syntax:
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
-    /// - `[EXE]` matches `.exe` on Windows (disable with [`FileAssert::substitutions`])
+    /// - `[EXE]` matches `.exe` on Windows (override with [`FileAssert::substitutions`])
     #[track_caller]
     pub fn matches(
         &self,
@@ -72,7 +128,7 @@ impl FileAssert {
                     let _ = writeln!(
                         std::io::stderr(),
                         "{}: {}",
-                        self.palette.warn("Ignoring failure"),
+                        self.palette.warn("Ignoring match failure"),
                         err
                     );
                 }
