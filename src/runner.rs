@@ -475,7 +475,7 @@ impl Case {
         let mut ok = true;
 
         if let Mode::Dump(_) = mode {
-            // Handled as part of FilesystemContext
+            // Handled as part of PathFixture
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
@@ -1107,20 +1107,20 @@ fn fs_context(
     cwd: Option<&std::path::Path>,
     sandbox: bool,
     mode: &crate::Mode,
-) -> Result<crate::FilesystemContext, std::io::Error> {
+) -> Result<crate::PathFixture, std::io::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
             crate::Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
-                let mut context = crate::FilesystemContext::mutable_at(&target)?;
+                let mut context = crate::PathFixture::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
                     context = context.with_fixture(cwd)?;
                 }
                 Ok(context)
             }
             crate::Mode::Fail | crate::Mode::Overwrite => {
-                let mut context = crate::FilesystemContext::mutable_temp()?;
+                let mut context = crate::PathFixture::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_fixture(cwd)?;
                 }
@@ -1134,7 +1134,7 @@ fn fs_context(
         ))
     } else {
         Ok(cwd
-            .map(crate::FilesystemContext::immutable)
-            .unwrap_or_else(crate::FilesystemContext::none))
+            .map(crate::PathFixture::immutable)
+            .unwrap_or_else(crate::PathFixture::none))
     }
 }
