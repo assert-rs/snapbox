@@ -199,7 +199,7 @@ pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data
 
 #[track_caller]
 fn assert_eq_inner(mut actual: crate::Data, expected: crate::Data) {
-    let expected = expected.try_text();
+    let expected = expected.try_text().map_text(crate::utils::normalize_lines);
     if expected.as_str().is_some() {
         actual = actual.try_text().map_text(crate::utils::normalize_lines);
     }
@@ -239,7 +239,7 @@ pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::
 
 #[track_caller]
 fn assert_matches_inner(mut actual: crate::Data, pattern: crate::Data) {
-    let pattern = pattern.try_text();
+    let pattern = pattern.try_text().map_text(crate::utils::normalize_lines);
     if let Some(pattern) = pattern.as_str() {
         let mut substitutions = crate::Substitutions::new();
         substitutions
