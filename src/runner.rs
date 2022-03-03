@@ -173,7 +173,7 @@ impl Case {
             .map(|p| {
                 sequence.fs.rel_cwd().map(|rel| {
                     let p = p.join(rel);
-                    crate::filesystem::strip_trailing_slash(&p).to_owned()
+                    snapbox::path::strip_trailing_slash(&p).to_owned()
                 })
             })
             .transpose()
@@ -479,7 +479,7 @@ impl Case {
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for expected_path in crate::Walk::new(&fixture_root) {
+                for expected_path in snapbox::path::Walk::new(&fixture_root) {
                     if expected_path
                         .as_deref()
                         .map(|p| p.is_dir())
@@ -506,7 +506,9 @@ impl Case {
                                         actual_path,
                                         ..
                                     } => {
-                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                        if snapbox::path::shallow_copy(expected_path, actual_path)
+                                            .is_ok()
+                                        {
                                             is_current_ok = true;
                                         }
                                     }
@@ -515,7 +517,9 @@ impl Case {
                                         actual_path,
                                         ..
                                     } => {
-                                        if crate::shallow_copy(expected_path, actual_path).is_ok() {
+                                        if snapbox::path::shallow_copy(expected_path, actual_path)
+                                            .is_ok()
+                                        {
                                             is_current_ok = true;
                                         }
                                     }
@@ -1107,20 +1111,20 @@ fn fs_context(
     cwd: Option<&std::path::Path>,
     sandbox: bool,
     mode: &crate::Mode,
-) -> Result<crate::PathFixture, std::io::Error> {
+) -> Result<snapbox::path::PathFixture, std::io::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
             crate::Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
-                let mut context = crate::PathFixture::mutable_at(&target)?;
+                let mut context = snapbox::path::PathFixture::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
                 Ok(context)
             }
             crate::Mode::Fail | crate::Mode::Overwrite => {
-                let mut context = crate::PathFixture::mutable_temp()?;
+                let mut context = snapbox::path::PathFixture::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
@@ -1134,7 +1138,7 @@ fn fs_context(
         ))
     } else {
         Ok(cwd
-            .map(crate::PathFixture::immutable)
-            .unwrap_or_else(crate::PathFixture::none))
+            .map(snapbox::path::PathFixture::immutable)
+            .unwrap_or_else(snapbox::path::PathFixture::none))
     }
 }

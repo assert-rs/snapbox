@@ -184,7 +184,6 @@ pub mod schema;
 
 mod cases;
 mod command;
-mod filesystem;
 mod registry;
 mod runner;
 mod spec;
@@ -193,7 +192,6 @@ pub use cases::TestCases;
 pub use snapbox::Error;
 
 pub(crate) use command::wait_with_input_output;
-pub(crate) use filesystem::{shallow_copy, PathFixture, Walk};
 pub(crate) use registry::BinRegistry;
 pub(crate) use runner::{Case, Mode, Runner};
 pub(crate) use spec::RunnerSpec;

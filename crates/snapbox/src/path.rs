@@ -1,13 +1,13 @@
 #[derive(Debug)]
-pub(crate) struct PathFixture(PathFixtureInner);
+pub struct PathFixture(PathFixtureInner);
 
 #[derive(Debug)]
-pub(crate) enum PathFixtureInner {
+enum PathFixtureInner {
     None,
     Immutable(std::path::PathBuf),
-    #[cfg(feature = "filesystem")]
+    #[cfg(feature = "path")]
     MutablePath(std::path::PathBuf),
-    #[cfg(feature = "filesystem")]
+    #[cfg(feature = "path")]
     MutableTemp {
         temp: tempfile::TempDir,
         path: std::path::PathBuf,
@@ -15,16 +15,16 @@ pub(crate) enum PathFixtureInner {
 }
 
 impl PathFixture {
-    pub(crate) fn none() -> Self {
+    pub fn none() -> Self {
         Self(PathFixtureInner::None)
     }
 
-    pub(crate) fn immutable(target: &std::path::Path) -> Self {
+    pub fn immutable(target: &std::path::Path) -> Self {
         Self(PathFixtureInner::Immutable(target.to_owned()))
     }
 
-    #[cfg(feature = "filesystem")]
-    pub(crate) fn mutable_temp() -> Result<Self, std::io::Error> {
+    #[cfg(feature = "path")]
+    pub fn mutable_temp() -> Result<Self, std::io::Error> {
         let temp = tempfile::tempdir()?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
@@ -32,18 +32,15 @@ impl PathFixture {
         Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
     }
 
-    #[cfg(feature = "filesystem")]
-    pub(crate) fn mutable_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
+    #[cfg(feature = "path")]
+    pub fn mutable_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
         let _ = std::fs::remove_dir_all(&target);
         std::fs::create_dir_all(&target)?;
         Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
     }
 
-    #[cfg(feature = "filesystem")]
-    pub(crate) fn with_template(
-        self,
-        template_root: &std::path::Path,
-    ) -> Result<Self, std::io::Error> {
+    #[cfg(feature = "path")]
+    pub fn with_template(self, template_root: &std::path::Path) -> Result<Self, std::io::Error> {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => {
                 return Err(std::io::Error::new(
@@ -52,45 +49,46 @@ impl PathFixture {
                 ));
             }
             PathFixtureInner::MutablePath(path) | PathFixtureInner::MutableTemp { path, .. } => {
-                snapbox::debug!(
+                crate::debug!(
                     "Initializing {} from {}",
                     path.display(),
                     template_root.display()
                 );
-                copy_dir(template_root, path)?;
+                copy_template(template_root, path)?;
             }
         }
 
         Ok(self)
     }
 
-    pub(crate) fn is_mutable(&self) -> bool {
+    pub fn is_mutable(&self) -> bool {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => false,
-            #[cfg(feature = "filesystem")]
+            #[cfg(feature = "path")]
             PathFixtureInner::MutablePath(_) => true,
-            #[cfg(feature = "filesystem")]
+            #[cfg(feature = "path")]
             PathFixtureInner::MutableTemp { .. } => true,
         }
     }
 
-    pub(crate) fn path(&self) -> Option<&std::path::Path> {
+    pub fn path(&self) -> Option<&std::path::Path> {
         match &self.0 {
             PathFixtureInner::None => None,
             PathFixtureInner::Immutable(path) => Some(path.as_path()),
-            #[cfg(feature = "filesystem")]
+            #[cfg(feature = "path")]
             PathFixtureInner::MutablePath(path) => Some(path.as_path()),
-            #[cfg(feature = "filesystem")]
+            #[cfg(feature = "path")]
             PathFixtureInner::MutableTemp { path, .. } => Some(path.as_path()),
         }
     }
 
-    pub(crate) fn close(self) -> Result<(), std::io::Error> {
+    /// Explicitly close to report errors
+    pub fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => Ok(()),
-            #[cfg(feature = "filesystem")]
+            #[cfg(feature = "path")]
             PathFixtureInner::MutablePath(_) => Ok(()),
-            #[cfg(feature = "filesystem")]
+            #[cfg(feature = "path")]
             PathFixtureInner::MutableTemp { temp, .. } => temp.close(),
         }
     }
@@ -102,21 +100,24 @@ impl Default for PathFixture {
     }
 }
 
-#[cfg(feature = "filesystem")]
-pub(crate) struct Walk {
+/// Recursively walk a path
+///
+/// Note: Ignores `.keep` files
+#[cfg(feature = "path")]
+pub struct Walk {
     inner: walkdir::IntoIter,
 }
 
-#[cfg(feature = "filesystem")]
+#[cfg(feature = "path")]
 impl Walk {
-    pub(crate) fn new(path: &std::path::Path) -> Self {
+    pub fn new(path: &std::path::Path) -> Self {
         Self {
             inner: walkdir::WalkDir::new(path).into_iter(),
         }
     }
 }
 
-#[cfg(feature = "filesystem")]
+#[cfg(feature = "path")]
 impl Iterator for Walk {
     type Item = Result<std::path::PathBuf, std::io::Error>;
 
@@ -135,17 +136,17 @@ impl Iterator for Walk {
     }
 }
 
-#[cfg(not(feature = "filesystem"))]
-pub(crate) struct Walk {}
+#[cfg(not(feature = "path"))]
+pub struct Walk {}
 
-#[cfg(not(feature = "filesystem"))]
+#[cfg(not(feature = "path"))]
 impl Walk {
-    pub(crate) fn new(_path: &std::path::Path) -> Self {
+    pub fn new(_path: &std::path::Path) -> Self {
         Self {}
     }
 }
 
-#[cfg(not(feature = "filesystem"))]
+#[cfg(not(feature = "path"))]
 impl Iterator for Walk {
     type Item = Result<std::path::PathBuf, std::io::Error>;
 
@@ -154,8 +155,16 @@ impl Iterator for Walk {
     }
 }
 
-#[cfg(feature = "filesystem")]
-fn copy_dir(source: &std::path::Path, dest: &std::path::Path) -> Result<(), std::io::Error> {
+/// Copy a template into a [`PathFixture`]
+///
+/// Note: Generally you'll use [`PathFixture::with_template`] instead.
+///
+/// Note: Ignores `.keep` files
+#[cfg(feature = "path")]
+pub fn copy_template(
+    source: &std::path::Path,
+    dest: &std::path::Path,
+) -> Result<(), std::io::Error> {
     let source = canonicalize(source)?;
     let dest = canonicalize(dest)?;
 
@@ -170,7 +179,8 @@ fn copy_dir(source: &std::path::Path, dest: &std::path::Path) -> Result<(), std:
     Ok(())
 }
 
-pub(crate) fn shallow_copy(
+/// Copy a file system entry, without recursing
+pub fn shallow_copy(
     source: &std::path::Path,
     dest: &std::path::Path,
 ) -> Result<(), std::io::Error> {
@@ -196,7 +206,7 @@ fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(
     std::os::unix::fs::symlink(target, link)
 }
 
-pub(crate) fn resolve_dir(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
+pub fn resolve_dir(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
     let meta = std::fs::symlink_metadata(&path)?;
     if meta.is_dir() {
         canonicalize(&path)
@@ -211,18 +221,18 @@ pub(crate) fn resolve_dir(path: std::path::PathBuf) -> Result<std::path::PathBuf
 }
 
 fn canonicalize(path: &std::path::Path) -> Result<std::path::PathBuf, std::io::Error> {
-    #[cfg(feature = "filesystem")]
+    #[cfg(feature = "path")]
     {
         dunce::canonicalize(path)
     }
-    #[cfg(not(feature = "filesystem"))]
+    #[cfg(not(feature = "path"))]
     {
         // Hope for the best
         Ok(strip_trailing_slash(path).to_owned())
     }
 }
 
-pub(crate) fn strip_trailing_slash(path: &std::path::Path) -> &std::path::Path {
+pub fn strip_trailing_slash(path: &std::path::Path) -> &std::path::Path {
     path.components().as_path()
 }
 

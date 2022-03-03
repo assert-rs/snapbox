@@ -63,6 +63,7 @@ mod error;
 mod file;
 mod substitutions;
 
+pub mod path;
 pub mod report;
 pub mod utils;
 
