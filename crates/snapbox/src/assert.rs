@@ -1,6 +1,17 @@
 use crate::Action;
 
 /// Snapshot assertion against a file's contents
+///
+/// Useful for one-off assertions with the snapshot stored in a file
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// let actual = "...";
+/// snapbox::file_assert()
+///     .action_env("SNAPSHOT_ACTION")
+///     .matches(actual, "tests/fixtures/help_output_is_clean.txt");
+/// ```
 pub fn file_assert() -> FileAssert {
     Default::default()
 }
@@ -16,6 +27,11 @@ pub struct FileAssert {
 
 /// # Assertions
 impl FileAssert {
+    /// Check if a value matches the pattern contained in a file
+    ///
+    /// Pattern syntax:
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `...` is a line-wildcard when on a line by itself
     #[track_caller]
     pub fn matches(
         &self,

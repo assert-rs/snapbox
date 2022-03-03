@@ -1,3 +1,37 @@
+//! [`Harness`] for discovering test inputs and asserting against snapshot files
+//!
+//! # Examples
+//!
+//! ```rust,no_run
+//! snapbox::harness::Harness::new(
+//!     "tests/fixtures/invalid",
+//!     setup,
+//!     test,
+//! )
+//! .select(["tests/cases/*.in"])
+//! .action_env("SNAPSHOT_ACTION")
+//! .test();
+//!
+//! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
+//!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
+//!     let expected = input_path.with_extension("out");
+//!     snapbox::harness::Case {
+//!         name,
+//!         fixture: input_path,
+//!         expected,
+//!     }
+//! }
+//!
+//! fn test(input_path: &std::path::Path) -> Result<usize, Box<std::error::Error>> {
+//!     let raw = std::fs::read_to_string(input_path)?;
+//!     let num = raw.parse::<usize>()?;
+//!
+//!     let expected = num + 10;
+//!
+//!     Ok(expected)
+//! }
+//! ```
+
 use crate::Action;
 
 pub struct Harness<S, T> {
@@ -25,6 +59,9 @@ where
         }
     }
 
+    /// Path patterns for selecting input files
+    ///
+    /// This used gitignore syntax
     pub fn select<'p>(mut self, patterns: impl IntoIterator<Item = &'p str>) -> Self {
         let mut overrides = ignore::overrides::OverrideBuilder::new(&self.root);
         for line in patterns {
@@ -34,28 +71,20 @@ where
         self
     }
 
+    /// Read the failure action from an environment variable
     pub fn action_env(mut self, var_name: &str) -> Self {
         let action = Action::with_env_var(var_name);
         self.action = action.unwrap_or(self.action);
         self
     }
 
+    /// Override the failure action
     pub fn action(mut self, action: Action) -> Self {
         self.action = action;
         self
     }
 
-    /// Deprecated, replaced with [`Harness::action`]
-    #[deprecated = "Replaced with `Harness::action`"]
-    pub fn overwrite(mut self, yes: bool) -> Self {
-        if yes {
-            self.action = Action::Overwrite;
-        } else {
-            self.action = Action::Verify;
-        }
-        self
-    }
-
+    /// Run tests
     pub fn test(self) -> ! {
         let mut walk = ignore::WalkBuilder::new(&self.root);
         walk.standard_filters(false);

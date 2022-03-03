@@ -50,7 +50,6 @@
 //! }
 //! ```
 //!
-//!
 //! [trycmd]: https://docs.rs/trycmd
 
 mod action;
