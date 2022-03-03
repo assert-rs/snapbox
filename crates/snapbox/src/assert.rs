@@ -40,13 +40,13 @@ impl FileAssert {
     ) {
         let actual = actual.into();
         let pattern_path = pattern_path.as_ref();
-        self.matches_inner(actual, pattern_path);
+        self.verify(actual, pattern_path);
     }
 
-    fn matches_inner(&self, actual: crate::Data, pattern_path: &std::path::Path) {
+    fn verify(&self, actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {}
-            Action::Ignore => match self.try_matches(&actual, pattern_path) {
+            Action::Ignore => match self.try_verify(&actual, pattern_path) {
                 Ok(()) => {}
                 Err(err) => {
                     use std::io::Write;
@@ -59,13 +59,13 @@ impl FileAssert {
                     );
                 }
             },
-            Action::Verify => match self.try_matches(&actual, pattern_path) {
+            Action::Verify => match self.try_verify(&actual, pattern_path) {
                 Ok(()) => {}
                 Err(err) => {
                     panic!("{}: {}", self.palette.error("Match failed"), err);
                 }
             },
-            Action::Overwrite => match self.try_matches(&actual, pattern_path) {
+            Action::Overwrite => match self.try_verify(&actual, pattern_path) {
                 Ok(()) => {}
                 Err(err) => {
                     use std::io::Write;
@@ -82,7 +82,7 @@ impl FileAssert {
         }
     }
 
-    fn try_matches(
+    fn try_verify(
         &self,
         actual: &crate::Data,
         expected_path: &std::path::Path,
@@ -95,7 +95,7 @@ impl FileAssert {
             crate::report::write_diff(
                 &mut buf,
                 &expected,
-                actual,
+                &actual,
                 &expected_path.display(),
                 &expected_path.display(),
                 self.palette,
