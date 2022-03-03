@@ -64,7 +64,7 @@ impl PathFixture {
         Ok(self)
     }
 
-    pub(crate) fn is_sandbox(&self) -> bool {
+    pub(crate) fn is_mutable(&self) -> bool {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => false,
             #[cfg(feature = "filesystem")]
