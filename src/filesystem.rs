@@ -1,42 +1,42 @@
 #[derive(Debug)]
-pub(crate) struct FilesystemContext(FilesystemContextInner);
+pub(crate) struct PathFixture(PathFixtureInner);
 
 #[derive(Debug)]
-pub(crate) enum FilesystemContextInner {
+pub(crate) enum PathFixtureInner {
     None,
-    Path(std::path::PathBuf),
+    Immutable(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
-    SandboxPath(std::path::PathBuf),
+    MutablePath(std::path::PathBuf),
     #[cfg(feature = "filesystem")]
-    SandboxTemp {
+    MutableTemp {
         temp: tempfile::TempDir,
         path: std::path::PathBuf,
     },
 }
 
-impl FilesystemContext {
+impl PathFixture {
     pub(crate) fn none() -> Self {
-        Self(FilesystemContextInner::None)
+        Self(PathFixtureInner::None)
     }
 
-    pub(crate) fn live(target: &std::path::Path) -> Self {
-        Self(FilesystemContextInner::Path(target.to_owned()))
+    pub(crate) fn immutable(target: &std::path::Path) -> Self {
+        Self(PathFixtureInner::Immutable(target.to_owned()))
     }
 
     #[cfg(feature = "filesystem")]
-    pub(crate) fn sandbox_temp() -> Result<Self, std::io::Error> {
+    pub(crate) fn mutable_temp() -> Result<Self, std::io::Error> {
         let temp = tempfile::tempdir()?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
         let path = canonicalize(temp.path())?;
-        Ok(Self(FilesystemContextInner::SandboxTemp { temp, path }))
+        Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
     }
 
     #[cfg(feature = "filesystem")]
-    pub(crate) fn sandbox_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
+    pub(crate) fn mutable_at(target: &std::path::Path) -> Result<Self, std::io::Error> {
         let _ = std::fs::remove_dir_all(&target);
         std::fs::create_dir_all(&target)?;
-        Ok(Self(FilesystemContextInner::SandboxPath(target.to_owned())))
+        Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
     }
 
     #[cfg(feature = "filesystem")]
@@ -45,14 +45,13 @@ impl FilesystemContext {
         template_root: &std::path::Path,
     ) -> Result<Self, std::io::Error> {
         match &self.0 {
-            FilesystemContextInner::None | FilesystemContextInner::Path(_) => {
+            PathFixtureInner::None | PathFixtureInner::Immutable(_) => {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::Unsupported,
                     "Sandboxing is disabled",
                 ));
             }
-            FilesystemContextInner::SandboxPath(path)
-            | FilesystemContextInner::SandboxTemp { path, .. } => {
+            PathFixtureInner::MutablePath(path) | PathFixtureInner::MutableTemp { path, .. } => {
                 debug!(
                     "Initializing {} from {}",
                     path.display(),
@@ -67,37 +66,37 @@ impl FilesystemContext {
 
     pub(crate) fn is_sandbox(&self) -> bool {
         match &self.0 {
-            FilesystemContextInner::None | FilesystemContextInner::Path(_) => false,
+            PathFixtureInner::None | PathFixtureInner::Immutable(_) => false,
             #[cfg(feature = "filesystem")]
-            FilesystemContextInner::SandboxPath(_) => true,
+            PathFixtureInner::MutablePath(_) => true,
             #[cfg(feature = "filesystem")]
-            FilesystemContextInner::SandboxTemp { .. } => true,
+            PathFixtureInner::MutableTemp { .. } => true,
         }
     }
 
     pub(crate) fn path(&self) -> Option<&std::path::Path> {
         match &self.0 {
-            FilesystemContextInner::None => None,
-            FilesystemContextInner::Path(path) => Some(path.as_path()),
+            PathFixtureInner::None => None,
+            PathFixtureInner::Immutable(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            FilesystemContextInner::SandboxPath(path) => Some(path.as_path()),
+            PathFixtureInner::MutablePath(path) => Some(path.as_path()),
             #[cfg(feature = "filesystem")]
-            FilesystemContextInner::SandboxTemp { path, .. } => Some(path.as_path()),
+            PathFixtureInner::MutableTemp { path, .. } => Some(path.as_path()),
         }
     }
 
     pub(crate) fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
-            FilesystemContextInner::None | FilesystemContextInner::Path(_) => Ok(()),
+            PathFixtureInner::None | PathFixtureInner::Immutable(_) => Ok(()),
             #[cfg(feature = "filesystem")]
-            FilesystemContextInner::SandboxPath(_) => Ok(()),
+            PathFixtureInner::MutablePath(_) => Ok(()),
             #[cfg(feature = "filesystem")]
-            FilesystemContextInner::SandboxTemp { temp, .. } => temp.close(),
+            PathFixtureInner::MutableTemp { temp, .. } => temp.close(),
         }
     }
 }
 
-impl Default for FilesystemContext {
+impl Default for PathFixture {
     fn default() -> Self {
         Self::none()
     }

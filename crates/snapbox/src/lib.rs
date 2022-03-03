@@ -10,6 +10,11 @@
 //!
 //! # Examples
 //!
+//! [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing:
+//! ```rust
+//! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
+//! ```
+//!
 //! [`file_assert`] for one-off assertions with the snapshot stored in a file:
 //! ```rust,no_run
 //! let actual = "...";
@@ -53,9 +58,9 @@
 //! [trycmd]: https://docs.rs/trycmd
 
 mod action;
-mod assert;
 mod data;
 mod error;
+mod file;
 mod substitutions;
 
 pub mod report;
@@ -65,10 +70,12 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
-pub use assert::file_assert;
-pub use assert::FileAssert;
+pub use data::assert_eq;
+pub use data::assert_matches;
 pub use data::Data;
 pub use error::Error;
+pub use file::file_assert;
+pub use file::FileAssert;
 pub use substitutions::Substitutions;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
