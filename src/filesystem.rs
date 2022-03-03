@@ -40,7 +40,7 @@ impl PathFixture {
     }
 
     #[cfg(feature = "filesystem")]
-    pub(crate) fn with_fixture(
+    pub(crate) fn with_template(
         self,
         template_root: &std::path::Path,
     ) -> Result<Self, std::io::Error> {
