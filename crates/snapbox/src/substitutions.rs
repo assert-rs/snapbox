@@ -11,6 +11,14 @@ impl Substitutions {
         Default::default()
     }
 
+    pub(crate) fn with_exe() -> Self {
+        let mut substitutions = Self::new();
+        substitutions
+            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
+            .unwrap();
+        substitutions
+    }
+
     pub fn insert(
         &mut self,
         key: &'static str,

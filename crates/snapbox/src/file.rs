@@ -218,13 +218,9 @@ impl FileAssert {
 
 impl Default for FileAssert {
     fn default() -> Self {
-        let mut substitutions = crate::Substitutions::new();
-        substitutions
-            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
-            .unwrap();
         Self {
             action: Action::Verify,
-            substitutions,
+            substitutions: crate::Substitutions::with_exe(),
             palette: crate::report::Palette::auto(),
             binary: None,
         }

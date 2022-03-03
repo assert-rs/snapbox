@@ -250,10 +250,7 @@ pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::
 fn assert_matches_inner(mut actual: crate::Data, pattern: crate::Data) {
     let pattern = pattern.try_text().map_text(crate::utils::normalize_lines);
     if let Some(pattern) = pattern.as_str() {
-        let mut substitutions = crate::Substitutions::new();
-        substitutions
-            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
-            .unwrap();
+        let substitutions = crate::Substitutions::with_exe();
         actual = actual
             .try_text()
             .map_text(crate::utils::normalize_text)
