@@ -38,6 +38,7 @@ impl FileAssert {
         self.eq_inner(actual, pattern_path);
     }
 
+    #[track_caller]
     fn eq_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {
@@ -101,6 +102,7 @@ impl FileAssert {
         self.matches_inner(actual, pattern_path);
     }
 
+    #[track_caller]
     fn matches_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {
