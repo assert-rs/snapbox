@@ -491,11 +491,11 @@ impl Case {
                                 expected_path,
                             });
                         }
-                        Err(snapbox::path::FileStatus::Failure(err)) => {
+                        Err(snapbox::path::PathDiff::Failure(err)) => {
                             fs.context.push(FileStatus::Failure(err));
                             ok = false;
                         }
-                        Err(snapbox::path::FileStatus::TypeMismatch {
+                        Err(snapbox::path::PathDiff::TypeMismatch {
                             expected_path,
                             actual_path,
                             expected_type,
@@ -518,7 +518,7 @@ impl Case {
                                 ok = false;
                             }
                         }
-                        Err(snapbox::path::FileStatus::LinkMismatch {
+                        Err(snapbox::path::PathDiff::LinkMismatch {
                             expected_path,
                             actual_path,
                             expected_target,
@@ -541,7 +541,7 @@ impl Case {
                                 ok = false;
                             }
                         }
-                        Err(snapbox::path::FileStatus::ContentMismatch {
+                        Err(snapbox::path::PathDiff::ContentMismatch {
                             expected_path,
                             actual_path,
                             expected_content,

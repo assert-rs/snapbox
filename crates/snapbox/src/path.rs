@@ -146,8 +146,7 @@ impl PathAssert {
         &'s self,
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
-    {
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
         let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
         self.subset_eq_iter_inner(actual_root, pattern_root)
@@ -157,18 +156,17 @@ impl PathAssert {
         &'s self,
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
-    {
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
         let walker = Walk::new(&expected_root);
         walker.map(move |r| {
-            let expected_path = r.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
+            let expected_path = r.map_err(|e| PathDiff::Failure(e.to_string().into()))?;
             let rel = expected_path.strip_prefix(&expected_root).unwrap();
             let actual_path = actual_root.join(rel);
 
             let expected_type = FileType::from_path(&expected_path);
             let actual_type = FileType::from_path(&actual_path);
             if expected_type != actual_type {
-                return Err(FileStatus::TypeMismatch {
+                return Err(PathDiff::TypeMismatch {
                     expected_path,
                     actual_path,
                     expected_type,
@@ -181,7 +179,7 @@ impl PathAssert {
                     let expected_target = std::fs::read_link(&expected_path).ok();
                     let actual_target = std::fs::read_link(&actual_path).ok();
                     if expected_target != actual_target {
-                        return Err(FileStatus::LinkMismatch {
+                        return Err(PathDiff::LinkMismatch {
                             expected_path,
                             actual_path,
                             expected_target: expected_target.unwrap(),
@@ -191,17 +189,17 @@ impl PathAssert {
                 }
                 FileType::File => {
                     let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(FileStatus::Failure)?;
+                        crate::Data::read_from(&actual_path, None).map_err(PathDiff::Failure)?;
 
                     let expected = crate::Data::read_from(&expected_path, None)
                         .map(|d| d.map_text(crate::utils::normalize_lines))
-                        .map_err(FileStatus::Failure)?;
+                        .map_err(PathDiff::Failure)?;
                     if expected.as_str().is_some() {
                         actual = actual.try_text().map_text(crate::utils::normalize_lines);
                     }
 
                     if expected != actual {
-                        return Err(FileStatus::ContentMismatch {
+                        return Err(PathDiff::ContentMismatch {
                             expected_path,
                             actual_path,
                             expected_content: expected,
@@ -220,8 +218,7 @@ impl PathAssert {
         &'s self,
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
-    {
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
         let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
         self.subset_matches_iter_inner(actual_root, pattern_root)
@@ -231,18 +228,17 @@ impl PathAssert {
         &'s self,
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
-    {
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
         let walker = Walk::new(&expected_root);
         walker.map(move |r| {
-            let expected_path = r.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
+            let expected_path = r.map_err(|e| PathDiff::Failure(e.to_string().into()))?;
             let rel = expected_path.strip_prefix(&expected_root).unwrap();
             let actual_path = actual_root.join(rel);
 
             let expected_type = FileType::from_path(&expected_path);
             let actual_type = FileType::from_path(&actual_path);
             if expected_type != actual_type {
-                return Err(FileStatus::TypeMismatch {
+                return Err(PathDiff::TypeMismatch {
                     expected_path,
                     actual_path,
                     expected_type,
@@ -255,7 +251,7 @@ impl PathAssert {
                     let expected_target = std::fs::read_link(&expected_path).ok();
                     let actual_target = std::fs::read_link(&actual_path).ok();
                     if expected_target != actual_target {
-                        return Err(FileStatus::LinkMismatch {
+                        return Err(PathDiff::LinkMismatch {
                             expected_path,
                             actual_path,
                             expected_target: expected_target.unwrap(),
@@ -265,11 +261,11 @@ impl PathAssert {
                 }
                 FileType::File => {
                     let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(FileStatus::Failure)?;
+                        crate::Data::read_from(&actual_path, None).map_err(PathDiff::Failure)?;
 
                     let expected = crate::Data::read_from(&expected_path, None)
                         .map(|d| d.map_text(crate::utils::normalize_lines))
-                        .map_err(FileStatus::Failure)?;
+                        .map_err(PathDiff::Failure)?;
                     if let Some(expected) = expected.as_str() {
                         actual = actual
                             .try_text()
@@ -278,7 +274,7 @@ impl PathAssert {
                     }
 
                     if expected != actual {
-                        return Err(FileStatus::ContentMismatch {
+                        return Err(PathDiff::ContentMismatch {
                             expected_path,
                             actual_path,
                             expected_content: expected,
@@ -305,7 +301,7 @@ impl Default for PathAssert {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FileStatus {
+pub enum PathDiff {
     Failure(crate::Error),
     TypeMismatch {
         expected_path: std::path::PathBuf,
