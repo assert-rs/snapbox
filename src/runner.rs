@@ -22,15 +22,12 @@ impl Runner {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) {
-        let palette = crate::Palette::current();
+        let palette = snapbox::report::Palette::auto();
 
         if self.cases.is_empty() {
-            eprintln!(
-                "{}",
-                palette.warn.paint("There are no trycmd tests enabled yet")
-            );
+            eprintln!("{}", palette.warn("There are no trycmd tests enabled yet"));
         } else {
             let failures: Vec<_> = self
                 .cases
@@ -50,7 +47,7 @@ impl Runner {
                                     let _ = writeln!(
                                         stderr,
                                         "{} {} ... {}",
-                                        palette.hint.paint("Testing"),
+                                        palette.hint("Testing"),
                                         status.name(),
                                         status.spawn.status.summary()
                                     );
@@ -64,9 +61,9 @@ impl Runner {
                                     let _ = writeln!(
                                         stderr,
                                         "{} {} ... {}",
-                                        palette.hint.paint("Testing"),
+                                        palette.hint("Testing"),
                                         status.name(),
-                                        palette.error.paint("failed"),
+                                        palette.error("failed"),
                                     );
                                     // Assuming `status` will print the newline
                                     let _ = write!(stderr, "{}", &status);
@@ -84,14 +81,12 @@ impl Runner {
                 let _ = writeln!(
                     stderr,
                     "{}",
-                    palette
-                        .hint
-                        .paint("Update snapshots with `TRYCMD=overwrite`"),
+                    palette.hint("Update snapshots with `TRYCMD=overwrite`"),
                 );
                 let _ = writeln!(
                     stderr,
                     "{}",
-                    palette.hint.paint("Debug output with `TRYCMD=dump`"),
+                    palette.hint("Debug output with `TRYCMD=dump`"),
                 );
                 panic!("{} of {} tests failed", failures.len(), self.cases.len());
             }
@@ -131,7 +126,7 @@ impl Case {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -159,7 +154,7 @@ impl Case {
             return vec![Ok(output)];
         }
 
-        let fs_context = match crate::FilesystemContext::new(
+        let fs_context = match fs_context(
             &self.path,
             sequence.fs.base.as_deref(),
             sequence.fs.sandbox(),
@@ -294,7 +289,7 @@ impl Case {
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -385,7 +380,7 @@ impl Case {
         &self,
         mut output: Output,
         step: &crate::schema::Step,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Output {
         output.stdout = self.validate_stream(
             output.stdout,
@@ -406,24 +401,22 @@ impl Case {
     fn validate_stream(
         &self,
         stream: Option<Stream>,
-        expected_content: Option<&crate::File>,
+        expected_content: Option<&crate::Data>,
         binary: bool,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Option<Stream> {
         let mut stream = stream?;
 
         if !binary {
-            stream = stream.utf8();
+            stream = stream.make_text();
             if !stream.is_ok() {
                 return Some(stream);
             }
         }
 
         if let Some(expected_content) = expected_content {
-            if let crate::File::Text(e) = &expected_content {
-                stream.content = stream
-                    .content
-                    .map_text(|t| crate::elide::normalize(t, e, substitutions));
+            if let Some(e) = expected_content.as_str() {
+                stream.content = stream.content.map_text(|t| substitutions.normalize(t, e));
             }
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -477,7 +470,7 @@ impl Case {
         actual_root: &std::path::Path,
         mut fs: Filesystem,
         mode: &Mode,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 
@@ -486,7 +479,7 @@ impl Case {
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for expected_path in crate::FsIterate::new(&fixture_root) {
+                for expected_path in crate::Walk::new(&fixture_root) {
                     if expected_path
                         .as_deref()
                         .map(|p| p.is_dir())
@@ -560,7 +553,7 @@ impl Case {
         expected_path: Result<std::path::PathBuf, std::io::Error>,
         fixture_root: &std::path::Path,
         actual_root: &std::path::Path,
-        substitutions: &crate::elide::Substitutions,
+        substitutions: &snapbox::Substitutions,
     ) -> Result<FileStatus, FileStatus> {
         let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
         let expected_meta = expected_path
@@ -616,16 +609,15 @@ impl Case {
                 }
             }
             FileType::File => {
-                let expected_content = crate::File::read_from(&expected_path, None)
+                let expected_content = crate::Data::read_from(&expected_path, None)
                     .map_err(FileStatus::Failure)?
-                    .try_utf8();
-                let mut actual_content = crate::File::read_from(&actual_path, None)
+                    .map_text(snapbox::utils::normalize_text);
+                let mut actual_content = crate::Data::read_from(&actual_path, None)
                     .map_err(FileStatus::Failure)?
-                    .try_utf8();
+                    .map_text(snapbox::utils::normalize_text);
 
-                if let crate::File::Text(e) = &expected_content {
-                    actual_content =
-                        actual_content.map_text(|t| crate::elide::normalize(t, e, substitutions));
+                if let Some(e) = expected_content.as_str() {
+                    actual_content = actual_content.map_text(|t| substitutions.normalize(t, e));
                 }
                 if expected_content != actual_content {
                     return Err(FileStatus::ContentMismatch {
@@ -688,12 +680,12 @@ impl Output {
         self.spawn.status = SpawnStatus::Ok;
         self.stdout = Some(Stream {
             stream: Stdio::Stdout,
-            content: crate::File::Binary(output.stdout),
+            content: output.stdout.into(),
             status: StreamStatus::Ok,
         });
         self.stderr = Some(Stream {
             stream: Stdio::Stderr,
-            content: crate::File::Binary(output.stderr),
+            content: output.stderr.into(),
             status: StreamStatus::Ok,
         });
         self
@@ -757,25 +749,25 @@ impl Default for Spawn {
 
 impl std::fmt::Display for Spawn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = crate::Palette::current();
+        let palette = snapbox::report::Palette::auto();
 
         match &self.status {
             SpawnStatus::Ok => {
                 if let Some(exit) = self.exit {
                     if exit.success() {
-                        writeln!(f, "Exit: {}", palette.info.paint("success"))?;
+                        writeln!(f, "Exit: {}", palette.info("success"))?;
                     } else if let Some(code) = exit.code() {
-                        writeln!(f, "Exit: {}", palette.error.paint(code))?;
+                        writeln!(f, "Exit: {}", palette.error(code))?;
                     } else {
-                        writeln!(f, "Exit: {}", palette.error.paint("interrupted"))?;
+                        writeln!(f, "Exit: {}", palette.error("interrupted"))?;
                     }
                 }
             }
             SpawnStatus::Skipped => {
-                writeln!(f, "{}", palette.warn.paint("Skipped"))?;
+                writeln!(f, "{}", palette.warn("Skipped"))?;
             }
             SpawnStatus::Failure(msg) => {
-                writeln!(f, "Failed: {}", palette.error.paint(msg))?;
+                writeln!(f, "Failed: {}", palette.error(msg))?;
             }
             SpawnStatus::Expected(expected) => {
                 if let Some(exit) = self.exit {
@@ -783,22 +775,22 @@ impl std::fmt::Display for Spawn {
                         writeln!(
                             f,
                             "Expected {}, was {}",
-                            palette.info.paint(expected),
-                            palette.error.paint("success")
+                            palette.info(expected),
+                            palette.error("success")
                         )?;
                     } else if let Some(code) = exit.code() {
                         writeln!(
                             f,
                             "Expected {}, was {}",
-                            palette.info.paint(expected),
-                            palette.error.paint(code)
+                            palette.info(expected),
+                            palette.error(code)
                         )?;
                     } else {
                         writeln!(
                             f,
                             "Expected {}, was {}",
-                            palette.info.paint(expected),
-                            palette.error.paint("interrupted")
+                            palette.info(expected),
+                            palette.error("interrupted")
                         )?;
                     }
                 }
@@ -826,11 +818,11 @@ impl SpawnStatus {
     }
 
     fn summary(&self) -> impl std::fmt::Display {
-        let palette = crate::Palette::current();
+        let palette = snapbox::report::Palette::auto();
         match self {
-            Self::Ok => palette.info.paint("ok"),
-            Self::Skipped => palette.warn.paint("ignored"),
-            Self::Failure(_) | Self::Expected(_) => palette.error.paint("failed"),
+            Self::Ok => palette.info("ok"),
+            Self::Skipped => palette.warn("ignored"),
+            Self::Failure(_) | Self::Expected(_) => palette.error("failed"),
         }
     }
 }
@@ -838,15 +830,16 @@ impl SpawnStatus {
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Stream {
     stream: Stdio,
-    content: crate::File,
+    content: crate::Data,
     status: StreamStatus,
 }
 
 impl Stream {
-    fn utf8(mut self) -> Self {
-        if self.content.utf8().is_err() {
+    fn make_text(mut self) -> Self {
+        if self.content.make_text().is_err() {
             self.status = StreamStatus::Failure("invalid UTF-8".into());
         }
+        self.content = self.content.map_text(snapbox::utils::normalize_text);
         self
     }
 
@@ -857,41 +850,31 @@ impl Stream {
 
 impl std::fmt::Display for Stream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = crate::Palette::current();
+        let palette = snapbox::report::Palette::auto();
 
         match &self.status {
             StreamStatus::Ok => {
                 writeln!(f, "{}:", self.stream)?;
-                writeln!(f, "{}", palette.info.paint(&self.content))?;
+                writeln!(f, "{}", palette.info(&self.content))?;
             }
             StreamStatus::Failure(msg) => {
                 writeln!(
                     f,
                     "{} {}:",
                     self.stream,
-                    palette.error.paint(format_args!("({})", msg))
+                    palette.error(format_args!("({})", msg))
                 )?;
-                writeln!(f, "{}", palette.info.paint(&self.content))?;
+                writeln!(f, "{}", palette.info(&self.content))?;
             }
             StreamStatus::Expected(expected) => {
-                #[allow(unused_mut)]
-                let mut rendered = false;
-                #[cfg(feature = "diff")]
-                if let (crate::File::Text(expected), crate::File::Text(actual)) =
-                    (&expected, &self.content)
-                {
-                    let diff =
-                        crate::diff::diff(expected, actual, self.stream, self.stream, palette);
-                    writeln!(f, "{}", diff)?;
-                    rendered = true;
-                }
-
-                if !rendered {
-                    writeln!(f, "{} {}:", self.stream, palette.info.paint("(expected)"))?;
-                    writeln!(f, "{}", palette.info.paint(&expected))?;
-                    writeln!(f, "{} {}:", self.stream, palette.error.paint("(actual)"))?;
-                    writeln!(f, "{}", palette.error.paint(&self.content))?;
-                }
+                snapbox::report::write_diff(
+                    f,
+                    expected,
+                    &self.content,
+                    &self.stream,
+                    &self.stream,
+                    palette,
+                )?;
             }
         }
 
@@ -903,7 +886,7 @@ impl std::fmt::Display for Stream {
 enum StreamStatus {
     Ok,
     Failure(crate::Error),
-    Expected(crate::File),
+    Expected(crate::Data),
 }
 
 impl StreamStatus {
@@ -983,8 +966,8 @@ enum FileStatus {
     ContentMismatch {
         expected_path: std::path::PathBuf,
         actual_path: std::path::PathBuf,
-        expected_content: crate::File,
-        actual_content: crate::File,
+        expected_content: crate::Data,
+        actual_content: crate::Data,
     },
 }
 
@@ -1002,7 +985,7 @@ impl FileStatus {
 
 impl std::fmt::Display for FileStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = crate::Palette::current();
+        let palette = snapbox::report::Palette::auto();
 
         match &self {
             FileStatus::Ok {
@@ -1013,11 +996,11 @@ impl std::fmt::Display for FileStatus {
                     f,
                     "{}: is {}",
                     expected_path.display(),
-                    palette.info.paint("good"),
+                    palette.info("good"),
                 )?;
             }
             FileStatus::Failure(msg) => {
-                writeln!(f, "{}", palette.error.paint(msg))?;
+                writeln!(f, "{}", palette.error(msg))?;
             }
             FileStatus::TypeMismatch {
                 expected_path,
@@ -1029,8 +1012,8 @@ impl std::fmt::Display for FileStatus {
                     f,
                     "{}: Expected {}, was {}",
                     expected_path.display(),
-                    palette.info.paint(expected_type),
-                    palette.error.paint(actual_type)
+                    palette.info(expected_type),
+                    palette.error(actual_type)
                 )?;
             }
             FileStatus::LinkMismatch {
@@ -1043,8 +1026,8 @@ impl std::fmt::Display for FileStatus {
                     f,
                     "{}: Expected {}, was {}",
                     expected_path.display(),
-                    palette.info.paint(expected_target.display()),
-                    palette.error.paint(actual_target.display())
+                    palette.info(expected_target.display()),
+                    palette.error(actual_target.display())
                 )?;
             }
             FileStatus::ContentMismatch {
@@ -1053,39 +1036,14 @@ impl std::fmt::Display for FileStatus {
                 expected_content,
                 actual_content,
             } => {
-                #[allow(unused_mut)]
-                let mut rendered = false;
-                #[cfg(feature = "diff")]
-                if let (crate::File::Text(expected), crate::File::Text(actual)) =
-                    (&expected_content, &actual_content)
-                {
-                    let diff = crate::diff::diff(
-                        expected,
-                        actual,
-                        expected_path.display(),
-                        actual_path.display(),
-                        palette,
-                    );
-                    writeln!(f, "{}", diff)?;
-                    rendered = true;
-                }
-
-                if !rendered {
-                    writeln!(
-                        f,
-                        "{} {}:",
-                        expected_path.display(),
-                        palette.info.paint("(expected)")
-                    )?;
-                    writeln!(f, "{}", palette.info.paint(&expected_content))?;
-                    writeln!(
-                        f,
-                        "{} {}:",
-                        actual_path.display(),
-                        palette.error.paint("(actual)")
-                    )?;
-                    writeln!(f, "{}", palette.error.paint(&actual_content))?;
-                }
+                snapbox::report::write_diff(
+                    f,
+                    expected_content,
+                    actual_content,
+                    &expected_path.display(),
+                    &actual_path.display(),
+                    palette,
+                )?;
             }
         }
 
@@ -1140,5 +1098,43 @@ impl Mode {
         }
 
         Ok(())
+    }
+}
+
+#[cfg_attr(not(feature = "filesystem"), allow(unused_variables))]
+fn fs_context(
+    path: &std::path::Path,
+    cwd: Option<&std::path::Path>,
+    sandbox: bool,
+    mode: &crate::Mode,
+) -> Result<crate::FilesystemContext, std::io::Error> {
+    if sandbox {
+        #[cfg(feature = "filesystem")]
+        match mode {
+            crate::Mode::Dump(root) => {
+                let target = root.join(path.with_extension("out").file_name().unwrap());
+                let mut context = crate::FilesystemContext::sandbox_at(&target)?;
+                if let Some(cwd) = cwd {
+                    context = context.with_fixture(cwd)?;
+                }
+                Ok(context)
+            }
+            crate::Mode::Fail | crate::Mode::Overwrite => {
+                let mut context = crate::FilesystemContext::sandbox_temp()?;
+                if let Some(cwd) = cwd {
+                    context = context.with_fixture(cwd)?;
+                }
+                Ok(context)
+            }
+        }
+        #[cfg(not(feature = "filesystem"))]
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Sandboxing is disabled",
+        ))
+    } else {
+        Ok(cwd
+            .map(crate::FilesystemContext::live)
+            .unwrap_or_else(crate::FilesystemContext::none))
     }
 }

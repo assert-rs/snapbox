@@ -1,10 +1,10 @@
 #[derive(Clone, Debug)]
-pub(crate) struct LinesWithTerminator<'a> {
+pub struct LinesWithTerminator<'a> {
     data: &'a str,
 }
 
 impl<'a> LinesWithTerminator<'a> {
-    pub(crate) fn new(data: &'a str) -> LinesWithTerminator<'a> {
+    pub fn new(data: &'a str) -> LinesWithTerminator<'a> {
         LinesWithTerminator { data }
     }
 }

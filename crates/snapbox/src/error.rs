@@ -5,8 +5,11 @@ pub struct Error {
 }
 
 impl Error {
-    #[allow(dead_code)]
-    pub(crate) fn new(inner: String) -> Self {
+    pub fn new(inner: impl std::fmt::Display) -> Self {
+        Self::with_string(inner.to_string())
+    }
+
+    fn with_string(inner: String) -> Self {
         Self {
             inner,
             backtrace: Backtrace::new(),
@@ -38,19 +41,19 @@ impl std::error::Error for Error {}
 
 impl<'s> From<&'s str> for Error {
     fn from(other: &'s str) -> Self {
-        Self::new(other.into())
+        Self::with_string(other.to_owned())
     }
 }
 
 impl<'s> From<&'s String> for Error {
     fn from(other: &'s String) -> Self {
-        Self::new(other.clone())
+        Self::with_string(other.clone())
     }
 }
 
 impl From<String> for Error {
     fn from(other: String) -> Self {
-        Self::new(other)
+        Self::with_string(other)
     }
 }
 

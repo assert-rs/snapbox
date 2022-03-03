@@ -1,5 +1,7 @@
 //! # Snapshot testing for a herd of CLI tests
 //!
+//! > Treat your tests like cattle, instead of [pets](https://docs.rs/snapbox)
+//!
 //! `trycmd` is a test harness that will enumerate test case files and run them to verify the
 //! results, taking inspiration from
 //! [trybuild](https://crates.io/crates/trybuild) and [cram](https://bitheap.org/cram/).
@@ -165,6 +167,14 @@
 //! See also "Eliding Content" for `.stdout`
 //!
 //! `.keep` files will be ignored.
+//!
+//! # Related Crates
+//!
+//! - [`snapbox`](https://crates.io/crates/snapbox): Lower level primitives used in `trycmd`
+//! - [`insta`](https://insta.rs/): Snapshot testing of Rust data types
+//! - [`term-transcript`](https://crates.io/crates/term-transcript): CLI snapshot testing, including
+//!   colors
+//! - [`runt`](https://crates.io/crates/runt): External CLI snapshot test command
 
 // Doesn't distinguish between incidental sharing vs essential sharing
 #![allow(clippy::branches_sharing_code)]
@@ -175,26 +185,20 @@ mod macros;
 pub mod cargo;
 pub mod schema;
 
-#[cfg(feature = "diff")]
-pub(crate) mod diff;
-pub(crate) mod elide;
-pub(crate) mod lines;
-
 mod cases;
-mod color;
 mod command;
-mod error;
 mod filesystem;
 mod registry;
 mod runner;
 mod spec;
 
 pub use cases::TestCases;
-pub use error::Error;
+pub use snapbox::Error;
 
-pub(crate) use color::Palette;
 pub(crate) use command::wait_with_input_output;
-pub(crate) use filesystem::{shallow_copy, File, FilesystemContext, Iterate as FsIterate};
+pub(crate) use filesystem::{shallow_copy, FilesystemContext, Walk};
 pub(crate) use registry::BinRegistry;
 pub(crate) use runner::{Case, Mode, Runner};
 pub(crate) use spec::RunnerSpec;
+
+pub(crate) use snapbox::Data;
