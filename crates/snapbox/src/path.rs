@@ -1,3 +1,5 @@
+use crate::Action;
+
 #[derive(Debug)]
 pub struct PathFixture(PathFixtureInner);
 
@@ -97,6 +99,284 @@ impl PathFixture {
 impl Default for PathFixture {
     fn default() -> Self {
         Self::none()
+    }
+}
+
+pub fn path_assert() -> PathAssert {
+    Default::default()
+}
+
+pub struct PathAssert {
+    action: Action,
+    substitutions: crate::Substitutions,
+    palette: crate::report::Palette,
+}
+
+/// # Customize Behavior
+impl PathAssert {
+    /// Override the color palette
+    pub fn palette(mut self, palette: crate::report::Palette) -> Self {
+        self.palette = palette;
+        self
+    }
+
+    /// Read the failure action from an environment variable
+    pub fn action_env(mut self, var_name: &str) -> Self {
+        let action = Action::with_env_var(var_name);
+        self.action = action.unwrap_or(self.action);
+        self
+    }
+
+    /// Override the failure action
+    pub fn action(mut self, action: Action) -> Self {
+        self.action = action;
+        self
+    }
+
+    /// Override the default [`Substitutions`][crate::Substitutions]
+    pub fn substitutions(mut self, substitutions: crate::Substitutions) -> Self {
+        self.substitutions = substitutions;
+        self
+    }
+}
+
+/// # Building Blocks
+impl PathAssert {
+    pub fn subset_eq_iter<'s>(
+        &'s self,
+        actual_root: impl Into<std::path::PathBuf>,
+        pattern_root: impl Into<std::path::PathBuf>,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
+    {
+        let actual_root = actual_root.into();
+        let pattern_root = pattern_root.into();
+        self.subset_eq_iter_inner(actual_root, pattern_root)
+    }
+
+    fn subset_eq_iter_inner<'s>(
+        &'s self,
+        actual_root: std::path::PathBuf,
+        expected_root: std::path::PathBuf,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
+    {
+        let walker = Walk::new(&expected_root);
+        walker.map(move |r| {
+            let expected_path = r.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
+            let rel = expected_path.strip_prefix(&expected_root).unwrap();
+            let actual_path = actual_root.join(rel);
+
+            let expected_type = FileType::from_path(&expected_path);
+            let actual_type = FileType::from_path(&actual_path);
+            if expected_type != actual_type {
+                return Err(FileStatus::TypeMismatch {
+                    expected_path,
+                    actual_path,
+                    expected_type,
+                    actual_type,
+                });
+            }
+
+            match expected_type {
+                FileType::Symlink => {
+                    let expected_target = std::fs::read_link(&expected_path).ok();
+                    let actual_target = std::fs::read_link(&actual_path).ok();
+                    if expected_target != actual_target {
+                        return Err(FileStatus::LinkMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_target: expected_target.unwrap(),
+                            actual_target: actual_target.unwrap(),
+                        });
+                    }
+                }
+                FileType::File => {
+                    let mut actual =
+                        crate::Data::read_from(&actual_path, None).map_err(FileStatus::Failure)?;
+
+                    let expected = crate::Data::read_from(&expected_path, None)
+                        .map(|d| d.map_text(crate::utils::normalize_lines))
+                        .map_err(FileStatus::Failure)?;
+                    if expected.as_str().is_some() {
+                        actual = actual.try_text().map_text(crate::utils::normalize_lines);
+                    }
+
+                    if expected != actual {
+                        return Err(FileStatus::ContentMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_content: expected,
+                            actual_content: actual,
+                        });
+                    }
+                }
+                FileType::Dir | FileType::Unknown | FileType::Missing => {}
+            }
+
+            Ok((actual_path, expected_path))
+        })
+    }
+
+    pub fn subset_matches_iter<'s>(
+        &'s self,
+        actual_root: impl Into<std::path::PathBuf>,
+        pattern_root: impl Into<std::path::PathBuf>,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
+    {
+        let actual_root = actual_root.into();
+        let pattern_root = pattern_root.into();
+        self.subset_matches_iter_inner(actual_root, pattern_root)
+    }
+
+    fn subset_matches_iter_inner<'s>(
+        &'s self,
+        actual_root: std::path::PathBuf,
+        expected_root: std::path::PathBuf,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), FileStatus>> + 's
+    {
+        let walker = Walk::new(&expected_root);
+        walker.map(move |r| {
+            let expected_path = r.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
+            let rel = expected_path.strip_prefix(&expected_root).unwrap();
+            let actual_path = actual_root.join(rel);
+
+            let expected_type = FileType::from_path(&expected_path);
+            let actual_type = FileType::from_path(&actual_path);
+            if expected_type != actual_type {
+                return Err(FileStatus::TypeMismatch {
+                    expected_path,
+                    actual_path,
+                    expected_type,
+                    actual_type,
+                });
+            }
+
+            match expected_type {
+                FileType::Symlink => {
+                    let expected_target = std::fs::read_link(&expected_path).ok();
+                    let actual_target = std::fs::read_link(&actual_path).ok();
+                    if expected_target != actual_target {
+                        return Err(FileStatus::LinkMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_target: expected_target.unwrap(),
+                            actual_target: actual_target.unwrap(),
+                        });
+                    }
+                }
+                FileType::File => {
+                    let mut actual =
+                        crate::Data::read_from(&actual_path, None).map_err(FileStatus::Failure)?;
+
+                    let expected = crate::Data::read_from(&expected_path, None)
+                        .map(|d| d.map_text(crate::utils::normalize_lines))
+                        .map_err(FileStatus::Failure)?;
+                    if let Some(expected) = expected.as_str() {
+                        actual = actual
+                            .try_text()
+                            .map_text(crate::utils::normalize_text)
+                            .map_text(|t| self.substitutions.normalize(t, expected));
+                    }
+
+                    if expected != actual {
+                        return Err(FileStatus::ContentMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_content: expected,
+                            actual_content: actual,
+                        });
+                    }
+                }
+                FileType::Dir | FileType::Unknown | FileType::Missing => {}
+            }
+
+            Ok((actual_path, expected_path))
+        })
+    }
+}
+
+impl Default for PathAssert {
+    fn default() -> Self {
+        Self {
+            action: Action::Verify,
+            substitutions: crate::Substitutions::with_exe(),
+            palette: crate::report::Palette::auto(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FileStatus {
+    Failure(crate::Error),
+    TypeMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_type: FileType,
+        actual_type: FileType,
+    },
+    LinkMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_target: std::path::PathBuf,
+        actual_target: std::path::PathBuf,
+    },
+    ContentMismatch {
+        expected_path: std::path::PathBuf,
+        actual_path: std::path::PathBuf,
+        expected_content: crate::Data,
+        actual_content: crate::Data,
+    },
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FileType {
+    Dir,
+    File,
+    Symlink,
+    Unknown,
+    Missing,
+}
+
+impl FileType {
+    pub fn from_path(path: &std::path::Path) -> Self {
+        let meta = path.symlink_metadata();
+        match meta {
+            Ok(meta) => {
+                if meta.is_dir() {
+                    Self::Dir
+                } else if meta.is_file() {
+                    Self::File
+                } else {
+                    let target = std::fs::read_link(path).ok();
+                    if target.is_some() {
+                        Self::Symlink
+                    } else {
+                        Self::Unknown
+                    }
+                }
+            }
+            Err(err) => match err.kind() {
+                std::io::ErrorKind::NotFound => Self::Missing,
+                _ => Self::Unknown,
+            },
+        }
+    }
+}
+
+impl FileType {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Dir => "dir",
+            Self::File => "file",
+            Self::Symlink => "symlink",
+            Self::Unknown => "unknown",
+            Self::Missing => "missing",
+        }
+    }
+}
+
+impl std::fmt::Display for FileType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.as_str().fmt(f)
     }
 }
 
@@ -249,5 +529,29 @@ mod test {
         let stripped = strip_trailing_slash(path);
         let rendered = stripped.display().to_string();
         assert_eq!(rendered.as_bytes()[rendered.len() - 1], b'r');
+    }
+
+    #[test]
+    fn file_type_detect_file() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        dbg!(&path);
+        let actual = FileType::from_path(&path);
+        assert_eq!(actual, FileType::File);
+    }
+
+    #[test]
+    fn file_type_detect_dir() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        dbg!(path);
+        let actual = FileType::from_path(path);
+        assert_eq!(actual, FileType::Dir);
+    }
+
+    #[test]
+    fn file_type_detect_missing() {
+        let path = std::path::Path::new("this-should-never-exist");
+        dbg!(path);
+        let actual = FileType::from_path(path);
+        assert_eq!(actual, FileType::Missing);
     }
 }

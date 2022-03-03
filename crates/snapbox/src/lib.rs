@@ -85,6 +85,8 @@ pub use data::Data;
 pub use error::Error;
 pub use file::file_assert;
 pub use file::FileAssert;
+pub use path::path_assert;
+pub use path::PathAssert;
 pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;
 

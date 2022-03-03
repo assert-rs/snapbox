@@ -1,6 +1,7 @@
 use std::io::prelude::*;
 
 use rayon::prelude::*;
+use snapbox::path::FileType;
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -479,63 +480,85 @@ impl Case {
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for expected_path in snapbox::path::Walk::new(&fixture_root) {
-                    if expected_path
-                        .as_deref()
-                        .map(|p| p.is_dir())
-                        .unwrap_or_default()
-                    {
-                        continue;
-                    }
-
-                    match self.validate_path(
-                        expected_path,
-                        &fixture_root,
-                        actual_root,
-                        substitutions,
-                    ) {
-                        Ok(status) => {
-                            fs.context.push(status);
+                for status in snapbox::path::path_assert()
+                    .substitutions(substitutions.clone())
+                    .subset_matches_iter(actual_root, fixture_root)
+                {
+                    match status {
+                        Ok((actual_path, expected_path)) => {
+                            fs.context.push(FileStatus::Ok {
+                                actual_path,
+                                expected_path,
+                            });
                         }
-                        Err(status) => {
+                        Err(snapbox::path::FileStatus::Failure(err)) => {
+                            fs.context.push(FileStatus::Failure(err));
+                            ok = false;
+                        }
+                        Err(snapbox::path::FileStatus::TypeMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_type,
+                            actual_type,
+                        }) => {
                             let mut is_current_ok = false;
                             if *mode == Mode::Overwrite {
-                                match &status {
-                                    FileStatus::TypeMismatch {
-                                        expected_path,
-                                        actual_path,
-                                        ..
-                                    } => {
-                                        if snapbox::path::shallow_copy(expected_path, actual_path)
-                                            .is_ok()
-                                        {
-                                            is_current_ok = true;
-                                        }
-                                    }
-                                    FileStatus::LinkMismatch {
-                                        expected_path,
-                                        actual_path,
-                                        ..
-                                    } => {
-                                        if snapbox::path::shallow_copy(expected_path, actual_path)
-                                            .is_ok()
-                                        {
-                                            is_current_ok = true;
-                                        }
-                                    }
-                                    FileStatus::ContentMismatch {
-                                        expected_path,
-                                        actual_content,
-                                        ..
-                                    } => {
-                                        if actual_content.write_to(expected_path).is_ok() {
-                                            is_current_ok = true;
-                                        }
-                                    }
-                                    _ => {}
+                                if snapbox::path::shallow_copy(&expected_path, &actual_path).is_ok()
+                                {
+                                    is_current_ok = true;
                                 }
                             }
-                            fs.context.push(status);
+                            fs.context.push(FileStatus::TypeMismatch {
+                                actual_path,
+                                expected_path,
+                                actual_type,
+                                expected_type,
+                            });
+                            if !is_current_ok {
+                                ok = false;
+                            }
+                        }
+                        Err(snapbox::path::FileStatus::LinkMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_target,
+                            actual_target,
+                        }) => {
+                            let mut is_current_ok = false;
+                            if *mode == Mode::Overwrite {
+                                if snapbox::path::shallow_copy(&expected_path, &actual_path).is_ok()
+                                {
+                                    is_current_ok = true;
+                                }
+                            }
+                            fs.context.push(FileStatus::LinkMismatch {
+                                actual_path,
+                                expected_path,
+                                actual_target,
+                                expected_target,
+                            });
+                            if !is_current_ok {
+                                ok = false;
+                            }
+                        }
+                        Err(snapbox::path::FileStatus::ContentMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_content,
+                            actual_content,
+                        }) => {
+                            let mut is_current_ok = false;
+                            if *mode == Mode::Overwrite {
+                                if actual_content.write_to(&expected_path).is_ok() {
+                                    is_current_ok = true;
+                                }
+                            }
+                            fs.context.push(FileStatus::ContentMismatch {
+                                actual_path,
+                                expected_path,
+                                actual_content,
+                                expected_content,
+                            });
                             if !is_current_ok {
                                 ok = false;
                             }
@@ -550,95 +573,6 @@ impl Case {
         } else {
             Err(fs)
         }
-    }
-
-    fn validate_path(
-        &self,
-        expected_path: Result<std::path::PathBuf, std::io::Error>,
-        fixture_root: &std::path::Path,
-        actual_root: &std::path::Path,
-        substitutions: &snapbox::Substitutions,
-    ) -> Result<FileStatus, FileStatus> {
-        let expected_path = expected_path.map_err(|e| FileStatus::Failure(e.to_string().into()))?;
-        let expected_meta = expected_path
-            .symlink_metadata()
-            .map_err(|e| FileStatus::Failure(e.to_string().into()))?;
-        let expected_target = std::fs::read_link(&expected_path).ok();
-
-        let rel = expected_path.strip_prefix(&fixture_root).unwrap();
-        let actual_path = actual_root.join(rel);
-        let actual_meta = actual_path.symlink_metadata().ok();
-        let actual_target = std::fs::read_link(&actual_path).ok();
-
-        let expected_type = if expected_meta.is_dir() {
-            FileType::Dir
-        } else if expected_meta.is_file() {
-            FileType::File
-        } else if expected_target.is_some() {
-            FileType::Symlink
-        } else {
-            FileType::Unknown
-        };
-        let actual_type = if let Some(actual_meta) = actual_meta {
-            if actual_meta.is_dir() {
-                FileType::Dir
-            } else if actual_meta.is_file() {
-                FileType::File
-            } else if actual_target.is_some() {
-                FileType::Symlink
-            } else {
-                FileType::Unknown
-            }
-        } else {
-            FileType::Missing
-        };
-        if expected_type != actual_type {
-            return Err(FileStatus::TypeMismatch {
-                expected_path,
-                actual_path,
-                expected_type,
-                actual_type,
-            });
-        }
-
-        match expected_type {
-            FileType::Symlink => {
-                if expected_target != actual_target {
-                    return Err(FileStatus::LinkMismatch {
-                        expected_path,
-                        actual_path,
-                        expected_target: expected_target.unwrap(),
-                        actual_target: actual_target.unwrap(),
-                    });
-                }
-            }
-            FileType::File => {
-                let expected_content = crate::Data::read_from(&expected_path, None)
-                    .map_err(FileStatus::Failure)?
-                    .map_text(snapbox::utils::normalize_text);
-                let mut actual_content = crate::Data::read_from(&actual_path, None)
-                    .map_err(FileStatus::Failure)?
-                    .map_text(snapbox::utils::normalize_text);
-
-                if let Some(e) = expected_content.as_str() {
-                    actual_content = actual_content.map_text(|t| substitutions.normalize(t, e));
-                }
-                if expected_content != actual_content {
-                    return Err(FileStatus::ContentMismatch {
-                        expected_path,
-                        actual_path,
-                        expected_content,
-                        actual_content,
-                    });
-                }
-            }
-            FileType::Dir | FileType::Unknown | FileType::Missing => {}
-        }
-
-        Ok(FileStatus::Ok {
-            expected_path,
-            actual_path,
-        })
     }
 }
 
@@ -1052,33 +986,6 @@ impl std::fmt::Display for FileStatus {
         }
 
         Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum FileType {
-    Dir,
-    File,
-    Symlink,
-    Unknown,
-    Missing,
-}
-
-impl FileType {
-    fn as_str(&self) -> &str {
-        match self {
-            Self::Dir => "dir",
-            Self::File => "file",
-            Self::Symlink => "symlink",
-            Self::Unknown => "unknown",
-            Self::Missing => "missing",
-        }
-    }
-}
-
-impl std::fmt::Display for FileType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_str().fmt(f)
     }
 }
 
