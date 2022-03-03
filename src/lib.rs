@@ -165,6 +165,13 @@
 //! See also "Eliding Content" for `.stdout`
 //!
 //! `.keep` files will be ignored.
+//!
+//! # Related Crates
+//!
+//! - [insta](https://insta.rs/): Snapshot testing of Rust data types
+//! - [term-transcript](https://crates.io/crates/term-transcript): CLI snapshot testing, including
+//!   colors
+//! - [runt](https://crates.io/crates/runt): External CLI snapshot test command
 
 // Doesn't distinguish between incidental sharing vs essential sharing
 #![allow(clippy::branches_sharing_code)]
