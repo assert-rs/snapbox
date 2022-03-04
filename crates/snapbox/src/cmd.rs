@@ -1,3 +1,5 @@
+pub use snapbox_macros::cargo_bin;
+
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
 pub struct Command {

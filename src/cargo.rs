@@ -1,28 +1,6 @@
 //! Interact with `cargo`
 
-/// The absolute path to a binary target's executable.
-///
-/// The `bin_target_name` is the name of the binary
-/// target, exactly as-is.
-///
-/// **NOTE:** This is only set when building an integration test or benchmark.
-///
-/// ## Example
-///
-/// ```rust,no_run
-/// #[test]
-/// fn cli_tests() {
-///     trycmd::TestCases::new()
-///         .default_bin_path(trycmd::cargo_bin!("bin-fixture"))
-///         .case("tests/cmd/*.trycmd");
-/// }
-/// ```
-#[macro_export]
-macro_rules! cargo_bin {
-    ($bin_target_name:expr) => {
-        ::std::path::Path::new(env!(concat!("CARGO_BIN_EXE_", $bin_target_name)))
-    };
-}
+pub use snapbox::cmd::cargo_bin;
 
 #[cfg(feature = "examples")]
 pub use examples::{compile_example, compile_examples};
@@ -175,7 +153,7 @@ pub(crate) mod examples {
 
 /// Look up the path to a cargo-built binary within an integration test.
 ///
-/// **NOTE:** Prefer `trycmd::cargo_bin!` as this makes assumptions about cargo
+/// **NOTE:** Prefer [`cargo_bin!`] as this makes assumptions about cargo
 pub(crate) fn cargo_bin(name: &str) -> std::path::PathBuf {
     let file_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
     let target_dir = target_dir();
