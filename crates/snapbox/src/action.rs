@@ -1,4 +1,4 @@
-/// Test action
+/// Test action, see [`Assert`][crate::Assert]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Action {
     /// Do not run the test

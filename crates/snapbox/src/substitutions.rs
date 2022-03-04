@@ -1,5 +1,10 @@
 use std::borrow::Cow;
 
+/// Match pattern expressions, see [`Assert`][crate::Assert]
+///
+/// Built-in expressions:
+/// - `...` on a line of its own: match multiple complete lines
+/// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Substitutions {
     vars: std::collections::BTreeMap<&'static str, Cow<'static, str>>,
@@ -19,6 +24,14 @@ impl Substitutions {
         substitutions
     }
 
+    /// Insert an additional match pattern
+    ///
+    /// `key` must be enclosed in `[` and `]`.
+    ///
+    /// ```rust
+    /// let mut subst = snapbox::Substitutions::new();
+    /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
+    /// ```
     pub fn insert(
         &mut self,
         key: &'static str,
@@ -35,6 +48,9 @@ impl Substitutions {
         Ok(())
     }
 
+    /// Insert additional match patterns
+    ///
+    /// keys must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
@@ -45,6 +61,17 @@ impl Substitutions {
         Ok(())
     }
 
+    /// Apply match pattern to `input`
+    ///
+    /// If `pattern` matches `input`, then `pattern` is returned.
+    ///
+    /// Otherwise, `input`, with as many patterns replaced as possible, will be returned.
+    ///
+    /// ```rust
+    /// let subst = snapbox::Substitutions::new();
+    /// let output = subst.normalize("Hello World!", "Hello [..]!");
+    /// assert_eq!(output, "Hello [..]!");
+    /// ```
     pub fn normalize(&self, input: &str, pattern: &str) -> String {
         normalize(input, pattern, self)
     }

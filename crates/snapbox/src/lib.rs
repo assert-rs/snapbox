@@ -97,6 +97,11 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// Check if a value is the same as an expected value
 ///
 /// When the content is text, newlines are normalized.
+///
+/// ```rust
+/// let output = "something";
+/// snapbox::assert_eq(output, "something");
+/// ```
 #[track_caller]
 pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
     Assert::new().eq(actual, expected);
@@ -112,6 +117,11 @@ pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data
 /// Normalization:
 /// - Newlines
 /// - `\` to `/`
+///
+/// ```rust
+/// let output = "something";
+/// snapbox::assert_matches(output, "so[..]g");
+/// ```
 #[track_caller]
 pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
     Assert::new().matches(actual, pattern);
@@ -120,6 +130,11 @@ pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::
 /// Check if a value matches the content of a file
 ///
 /// When the content is text, newlines are normalized.
+///
+/// ```rust,no_run
+/// let output = "something";
+/// snapbox::assert_eq_path(output, "tests/snapshots/output.txt");
+/// ```
 #[track_caller]
 pub fn assert_eq_path(actual: impl Into<crate::Data>, expected_path: impl AsRef<std::path::Path>) {
     Assert::new().eq_path(actual, expected_path);
@@ -135,6 +150,11 @@ pub fn assert_eq_path(actual: impl Into<crate::Data>, expected_path: impl AsRef<
 /// Normalization:
 /// - Newlines
 /// - `\` to `/`
+///
+/// ```rust,no_run
+/// let output = "something";
+/// snapbox::assert_matches_path(output, "tests/snapshots/output.txt");
+/// ```
 #[track_caller]
 pub fn assert_matches_path(
     actual: impl Into<crate::Data>,
