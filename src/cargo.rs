@@ -1,5 +1,6 @@
 //! Interact with `cargo`
 
+#[doc(inline)]
 pub use snapbox::cmd::cargo_bin;
 
 #[cfg(feature = "examples")]
@@ -9,7 +10,7 @@ pub use examples::{compile_example, compile_examples};
 pub(crate) mod examples {
     /// Prepare an example for testing
     ///
-    /// Unlike [`cargo_bin!`][crate::cargo_bin!], this does not inherit all of the current compiler settings.  It
+    /// Unlike `cargo_bin!`, this does not inherit all of the current compiler settings.  It
     /// will match the current target and profile but will not get feature flags.  Pass those arguments
     /// to the compiler via `args`.
     ///
@@ -63,7 +64,7 @@ pub(crate) mod examples {
 
     /// Prepare all examples for testing
     ///
-    /// Unlike [`cargo_bin!`][crate::cargo_bin!], this does not inherit all of the current compiler settings.  It
+    /// Unlike `cargo_bin!`, this does not inherit all of the current compiler settings.  It
     /// will match the current target and profile but will not get feature flags.  Pass those arguments
     /// to the compiler via `args`.
     ///
