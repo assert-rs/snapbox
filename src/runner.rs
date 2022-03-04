@@ -494,10 +494,8 @@ impl Case {
                         }
                         Err(diff) => {
                             let mut is_current_ok = false;
-                            if *mode == Mode::Overwrite {
-                                if diff.overwrite().is_ok() {
-                                    is_current_ok = true;
-                                }
+                            if *mode == Mode::Overwrite && diff.overwrite().is_ok() {
+                                is_current_ok = true;
                             }
                             fs.context.push(diff.into());
                             if !is_current_ok {

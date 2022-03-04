@@ -378,21 +378,21 @@ impl PathDiff {
         })
     }
 
-    pub fn subset_matches_iter<'s>(
+    pub fn subset_matches_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
-        substitutions: &'s crate::Substitutions,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + 's {
+        substitutions: &crate::Substitutions,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
         Self::subset_matches_iter_inner(actual_root, pattern_root, substitutions)
     }
 
-    fn subset_matches_iter_inner<'s>(
+    fn subset_matches_iter_inner(
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
-        substitutions: &'s crate::Substitutions,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + 's {
+        substitutions: &crate::Substitutions,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let walker = Walk::new(&expected_root);
         walker.map(move |r| {
             let expected_path = r.map_err(|e| Self::Failure(e.to_string().into()))?;
@@ -560,20 +560,20 @@ impl PathDiff {
                     }
                     FileType::Unknown | FileType::Missing => {}
                 }
-                shallow_copy(&expected_path, &actual_path)
+                shallow_copy(expected_path, actual_path)
             }
             Self::LinkMismatch {
                 expected_path,
                 actual_path,
                 expected_target: _,
                 actual_target: _,
-            } => shallow_copy(&expected_path, &actual_path),
+            } => shallow_copy(expected_path, actual_path),
             Self::ContentMismatch {
                 expected_path,
                 actual_path: _,
                 expected_content: _,
                 actual_content,
-            } => actual_content.write_to(&expected_path),
+            } => actual_content.write_to(expected_path),
         }
     }
 }
