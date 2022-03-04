@@ -25,6 +25,80 @@ impl Assert {
         Default::default()
     }
 
+    /// Check if a value is the same as an expected value
+    ///
+    /// When the content is text, newlines are normalized.
+    #[track_caller]
+    pub fn eq(&self, actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
+        let actual = actual.into();
+        let expected = expected.into();
+        self.eq_inner(actual, expected);
+    }
+
+    #[track_caller]
+    fn eq_inner(&self, mut actual: crate::Data, expected: crate::Data) {
+        let expected = expected.try_text().map_text(crate::utils::normalize_lines);
+        if expected.as_str().is_some() {
+            actual = actual.try_text().map_text(crate::utils::normalize_lines);
+        }
+
+        if actual != expected {
+            let mut buf = String::new();
+            crate::report::write_diff(
+                &mut buf,
+                &expected,
+                &actual,
+                &"expected",
+                &"actual",
+                self.palette,
+            )
+            .expect("diff should always succeed");
+            panic!("{}: {}", self.palette.error("Eq failed"), buf);
+        }
+    }
+
+    /// Check if a value matches a pattern
+    ///
+    /// Pattern syntax:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    ///
+    /// Normalization:
+    /// - Newlines
+    /// - `\` to `/`
+    #[track_caller]
+    pub fn matches(&self, actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
+        let actual = actual.into();
+        let pattern = pattern.into();
+        self.matches_inner(actual, pattern);
+    }
+
+    #[track_caller]
+    fn matches_inner(&self, mut actual: crate::Data, pattern: crate::Data) {
+        let pattern = pattern.try_text().map_text(crate::utils::normalize_lines);
+        if let Some(pattern) = pattern.as_str() {
+            actual = actual
+                .try_text()
+                .map_text(crate::utils::normalize_text)
+                .map_text(|t| self.substitutions.normalize(t, pattern));
+        }
+
+        if actual != pattern {
+            let mut buf = String::new();
+            crate::report::write_diff(
+                &mut buf,
+                &pattern,
+                &actual,
+                &"pattern",
+                &"actual",
+                self.palette,
+            )
+            .expect("diff should always succeed");
+            panic!("{}: {}", self.palette.error("Match failed"), buf);
+        }
+    }
+
     /// Check if a value matches the content of a file
     ///
     /// When the content is text, newlines are normalized.
