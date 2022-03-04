@@ -207,7 +207,7 @@ impl From<std::process::Command> for Command {
     }
 }
 
-/// Assert the state of a [`Command`][cmd::Command]'s [`Output`].
+/// Assert the state of a [`Command`]'s [`Output`].
 ///
 /// Create an `OutputAssert` through the [`Command::assert`].
 ///
