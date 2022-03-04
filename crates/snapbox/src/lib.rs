@@ -8,7 +8,7 @@
 //!
 //! In-memory:
 //! - [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
-//! - [`file_assert`] for one-off assertions with the snapshot stored in a file
+//! - [`Assert`] for one-off assertions with the snapshot stored in a file
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Filesystem:
@@ -24,12 +24,12 @@
 //! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
 //! ```
 //!
-//! [`file_assert`]
+//! [`Assert`]
 //! ```rust,no_run
 //! let actual = "...";
-//! snapbox::file_assert()
+//! snapbox::Assert::new()
 //!     .action_env("SNAPSHOT_ACTION")
-//!     .matches(actual, "tests/fixtures/help_output_is_clean.txt");
+//!     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
 //! ```
 //!
 //! [`harness::Harness`]
@@ -67,9 +67,9 @@
 //! [trycmd]: https://docs.rs/trycmd
 
 mod action;
+mod assert;
 mod data;
 mod error;
-mod file;
 mod substitutions;
 
 pub mod cmd;
@@ -81,12 +81,11 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
+pub use assert::Assert;
 pub use data::assert_eq;
 pub use data::assert_matches;
 pub use data::Data;
 pub use error::Error;
-pub use file::file_assert;
-pub use file::FileAssert;
 pub use path::path_assert;
 pub use path::PathAssert;
 pub use snapbox_macros::debug;

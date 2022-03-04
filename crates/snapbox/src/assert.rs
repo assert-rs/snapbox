@@ -8,18 +8,11 @@ use crate::Action;
 ///
 /// ```rust,no_run
 /// let actual = "...";
-/// snapbox::file_assert()
+/// snapbox::Assert::new()
 ///     .action_env("SNAPSHOT_ACTION")
-///     .matches(actual, "tests/fixtures/help_output_is_clean.txt");
+///     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
 /// ```
-pub fn file_assert() -> FileAssert {
-    Default::default()
-}
-
-/// Snapshot assertion against a file's contents
-///
-/// See [`file_assert()`]
-pub struct FileAssert {
+pub struct Assert {
     action: Action,
     substitutions: crate::Substitutions,
     palette: crate::report::Palette,
@@ -27,19 +20,27 @@ pub struct FileAssert {
 }
 
 /// # Assertions
-impl FileAssert {
+impl Assert {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     /// Check if a value matches the content of a file
     ///
     /// When the content is text, newlines are normalized.
     #[track_caller]
-    pub fn eq(&self, actual: impl Into<crate::Data>, pattern_path: impl AsRef<std::path::Path>) {
+    pub fn eq_path(
+        &self,
+        actual: impl Into<crate::Data>,
+        pattern_path: impl AsRef<std::path::Path>,
+    ) {
         let actual = actual.into();
         let pattern_path = pattern_path.as_ref();
-        self.eq_inner(actual, pattern_path);
+        self.eq_path_inner(actual, pattern_path);
     }
 
     #[track_caller]
-    fn eq_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
+    fn eq_path_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {
                 return;
@@ -90,24 +91,24 @@ impl FileAssert {
     /// Pattern syntax:
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
-    /// - `[EXE]` matches `.exe` on Windows (override with [`FileAssert::substitutions`])
+    /// - `[EXE]` matches `.exe` on Windows (override with [`Assert::substitutions`])
     ///
     /// Normalization:
     /// - Newlines
     /// - `\` to `/`
     #[track_caller]
-    pub fn matches(
+    pub fn matches_path(
         &self,
         actual: impl Into<crate::Data>,
         pattern_path: impl AsRef<std::path::Path>,
     ) {
         let actual = actual.into();
         let pattern_path = pattern_path.as_ref();
-        self.matches_inner(actual, pattern_path);
+        self.matches_path_inner(actual, pattern_path);
     }
 
     #[track_caller]
-    fn matches_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
+    fn matches_path_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {
                 return;
@@ -181,7 +182,7 @@ impl FileAssert {
 }
 
 /// # Customize Behavior
-impl FileAssert {
+impl Assert {
     /// Override the color palette
     pub fn palette(mut self, palette: crate::report::Palette) -> Self {
         self.palette = palette;
@@ -216,7 +217,7 @@ impl FileAssert {
     }
 }
 
-impl Default for FileAssert {
+impl Default for Assert {
     fn default() -> Self {
         Self {
             action: Action::Verify,
