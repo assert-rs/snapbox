@@ -14,6 +14,7 @@ use crate::Action;
 /// ```
 pub struct Assert {
     action: Action,
+    action_var: Option<String>,
     substitutions: crate::Substitutions,
     pub(crate) palette: crate::report::Palette,
     pub(crate) binary: Option<bool>,
@@ -219,7 +220,19 @@ impl Assert {
                     );
                 }
                 Action::Verify => {
-                    panic!("{}", err);
+                    use std::fmt::Write;
+                    let mut buffer = String::new();
+                    write!(&mut buffer, "{}", err).unwrap();
+                    if let Some(action_var) = self.action_var.as_deref() {
+                        writeln!(
+                            &mut buffer,
+                            "{}",
+                            self.palette
+                                .hint(format_args!("Update with {}=overwrite", action_var))
+                        )
+                        .unwrap();
+                    }
+                    panic!("{}", buffer);
                 }
                 Action::Overwrite => {
                     use std::io::Write;
@@ -403,6 +416,23 @@ impl Assert {
                     }
                 }
             } else {
+                match self.action {
+                    Action::Skip => unreachable!("Bailed out earlier"),
+                    Action::Ignore => unreachable!("Shouldn't be able to fail"),
+                    Action::Verify => {
+                        use std::fmt::Write;
+                        if let Some(action_var) = self.action_var.as_deref() {
+                            writeln!(
+                                &mut buffer,
+                                "{}",
+                                self.palette
+                                    .hint(format_args!("Update with {}=overwrite", action_var))
+                            )
+                            .unwrap();
+                        }
+                    }
+                    Action::Overwrite => {}
+                }
                 panic!("{}", buffer);
             }
         }
@@ -421,6 +451,7 @@ impl Assert {
     pub fn action_env(mut self, var_name: &str) -> Self {
         let action = Action::with_env_var(var_name);
         self.action = action.unwrap_or(self.action);
+        self.action_var = Some(var_name.to_owned());
         self
     }
 
@@ -449,6 +480,7 @@ impl Default for Assert {
     fn default() -> Self {
         Self {
             action: Action::Verify,
+            action_var: None,
             substitutions: crate::Substitutions::with_exe(),
             palette: crate::report::Palette::auto(),
             binary: None,
