@@ -1,5 +1,3 @@
-pub use snapbox_macros::cargo_bin;
-
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
 pub struct Command {
@@ -576,4 +574,30 @@ fn wait(
     _timeout: Option<std::time::Duration>,
 ) -> std::io::Result<std::process::ExitStatus> {
     child.wait()
+}
+
+pub use snapbox_macros::cargo_bin;
+
+/// Look up the path to a cargo-built binary within an integration test.
+///
+/// **NOTE:** Prefer [`cargo_bin!`] as this makes assumptions about cargo
+pub fn cargo_bin(name: &str) -> std::path::PathBuf {
+    let file_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
+    let target_dir = target_dir();
+    target_dir.join(&file_name)
+}
+
+// Adapted from
+// https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
+fn target_dir() -> std::path::PathBuf {
+    std::env::current_exe()
+        .ok()
+        .map(|mut path| {
+            path.pop();
+            if path.ends_with("deps") {
+                path.pop();
+            }
+            path
+        })
+        .unwrap()
 }
