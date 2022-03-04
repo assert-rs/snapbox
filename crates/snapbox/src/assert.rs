@@ -28,6 +28,11 @@ impl Assert {
     /// Check if a value is the same as an expected value
     ///
     /// When the content is text, newlines are normalized.
+    ///
+    /// ```rust
+    /// let output = "something";
+    /// snapbox::Assert::new().eq(output, "something");
+    /// ```
     #[track_caller]
     pub fn eq(&self, actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
         let actual = actual.into();
@@ -53,6 +58,11 @@ impl Assert {
     /// Normalization:
     /// - Newlines
     /// - `\` to `/`
+    ///
+    /// ```rust
+    /// let output = "something";
+    /// snapbox::Assert::new().matches(output, "so[..]g");
+    /// ```
     #[track_caller]
     pub fn matches(&self, actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
         let actual = actual.into();
@@ -71,6 +81,11 @@ impl Assert {
     /// Check if a value matches the content of a file
     ///
     /// When the content is text, newlines are normalized.
+    ///
+    /// ```rust,no_run
+    /// let output = "something";
+    /// snapbox::Assert::new().eq_path(output, "tests/snapshots/output.txt");
+    /// ```
     #[track_caller]
     pub fn eq_path(
         &self,
@@ -113,6 +128,11 @@ impl Assert {
     /// Normalization:
     /// - Newlines
     /// - `\` to `/`
+    ///
+    /// ```rust,no_run
+    /// let output = "something";
+    /// snapbox::Assert::new().matches_path(output, "tests/snapshots/output.txt");
+    /// ```
     #[track_caller]
     pub fn matches_path(
         &self,

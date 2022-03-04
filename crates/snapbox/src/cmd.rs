@@ -69,23 +69,60 @@ impl Command {
         self
     }
 
+    /// Write `buffer` to `stdin` when the `Command` is run.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use snapbox::cmd::Command;
+    ///
+    /// let mut cmd = Command::new("cat")
+    ///     .arg("-et")
+    ///     .stdin("42")
+    ///     .assert()
+    ///     .stdout_eq("42");
+    /// ```
     pub fn stdin(mut self, stream: impl Into<crate::Data>) -> Self {
         self.stdin = Some(stream.into());
         self
     }
 
+    /// Error out if a timeout is reached
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .timeout(std::time::Duration::from_secs(1))
+    ///     .env("sleep", "100")
+    ///     .assert();
+    /// assert.failure();
+    /// ```
     #[cfg(feature = "cmd")]
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
         self.timeout = Some(timeout);
         self
     }
 
+    /// Merge `stderr` into `stdout`
     #[cfg(feature = "cmd")]
     pub fn stderr_to_stdout(mut self) -> Self {
         self._stderr_to_stdout = true;
         self
     }
 
+    /// Run the command and assert on the results
+    ///
+    /// ```rust
+    /// use snapbox::cmd::Command;
+    ///
+    /// let mut cmd = Command::new("cat")
+    ///     .arg("-et")
+    ///     .stdin("42")
+    ///     .assert()
+    ///     .stdout_eq("42");
+    /// ```
     #[track_caller]
     pub fn assert(self) -> OutputAssert {
         match self.output() {
@@ -96,6 +133,7 @@ impl Command {
         }
     }
 
+    /// Run the command and capture the `Output`
     #[cfg(feature = "cmd")]
     pub fn output(self) -> Result<std::process::Output, std::io::Error> {
         if self._stderr_to_stdout {
@@ -240,6 +278,15 @@ impl OutputAssert {
     }
 
     /// Ensure the command succeeded.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .assert()
+    ///     .success();
+    /// ```
     #[track_caller]
     pub fn success(self) -> Self {
         if !self.output.status.success() {
@@ -260,6 +307,16 @@ impl OutputAssert {
     }
 
     /// Ensure the command failed.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("exit", "1")
+    ///     .assert()
+    ///     .failure();
+    /// ```
     #[track_caller]
     pub fn failure(self) -> Self {
         if self.output.status.success() {
@@ -300,6 +357,16 @@ impl OutputAssert {
     }
 
     /// Ensure the command returned the expected code.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("exit", "42")
+    ///     .assert()
+    ///     .code(42);
+    /// ```
     #[track_caller]
     pub fn code(self, expected: i32) -> Self {
         if self.output.status.code() != Some(expected) {
@@ -320,6 +387,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stdout`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_eq("hello");
+    /// ```
     #[track_caller]
     pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -346,6 +424,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stdout`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_eq_path("tests/snapshots/output.txt");
+    /// ```
     #[track_caller]
     pub fn stdout_eq_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
         let expected_path = expected_path.as_ref();
@@ -369,6 +458,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stdout`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_matches("he[..]o");
+    /// ```
     #[track_caller]
     pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -395,6 +495,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stdout`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_matches_path("tests/snapshots/output.txt");
+    /// ```
     #[track_caller]
     pub fn stdout_matches_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
         let expected_path = expected_path.as_ref();
@@ -418,6 +529,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_eq("world");
+    /// ```
     #[track_caller]
     pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -444,6 +566,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_eq_path("tests/snapshots/err.txt");
+    /// ```
     #[track_caller]
     pub fn stderr_eq_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
         let expected_path = expected_path.as_ref();
@@ -467,6 +600,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_matches("wo[..]d");
+    /// ```
     #[track_caller]
     pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -493,6 +637,17 @@ impl OutputAssert {
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_matches_path("tests/snapshots/err.txt");
+    /// ```
     #[track_caller]
     pub fn stderr_matches_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
         let expected_path = expected_path.as_ref();

@@ -58,6 +58,9 @@ color = ["yansi", "concolor/std"]
 ## Auto-detect whether to use colors
 color-auto = ["color", "concolor/auto"]
 
+[[bin]]
+name = "snap-fixture"
+
 [dependencies]
 normalize-line-endings = "0.3.0"
 snapbox-macros = { path = "../snapbox-macros", version = "0.1.2" }
