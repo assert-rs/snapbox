@@ -1,3 +1,4 @@
+/// Working directory for tests
 #[derive(Debug)]
 pub struct PathFixture(PathFixtureInner);
 

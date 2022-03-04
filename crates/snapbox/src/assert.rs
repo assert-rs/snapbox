@@ -15,7 +15,7 @@ use crate::Action;
 pub struct Assert {
     action: Action,
     substitutions: crate::Substitutions,
-    palette: crate::report::Palette,
+    pub(crate) palette: crate::report::Palette,
     binary: Option<bool>,
 }
 
@@ -193,7 +193,7 @@ impl Assert {
         }
     }
 
-    fn normalize_eq(
+    pub(crate) fn normalize_eq(
         &self,
         mut actual: crate::Data,
         expected: crate::Result<crate::Data>,
@@ -206,7 +206,7 @@ impl Assert {
         (actual, expected)
     }
 
-    fn normalize_match(
+    pub(crate) fn normalize_match(
         &self,
         mut actual: crate::Data,
         expected: crate::Result<crate::Data>,
@@ -222,7 +222,7 @@ impl Assert {
         (actual, expected)
     }
 
-    fn try_verify(
+    pub(crate) fn try_verify(
         &self,
         actual: &crate::Data,
         expected: &crate::Data,

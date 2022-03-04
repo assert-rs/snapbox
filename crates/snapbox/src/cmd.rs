@@ -86,6 +86,16 @@ impl Command {
         self
     }
 
+    #[track_caller]
+    pub fn assert(self) -> OutputAssert {
+        match self.output() {
+            Ok(output) => OutputAssert::new(output),
+            Err(err) => {
+                panic!("Failed to spawn: {}", err)
+            }
+        }
+    }
+
     #[cfg(feature = "cmd")]
     pub fn output(self) -> Result<std::process::Output, std::io::Error> {
         if self._stderr_to_stdout {
@@ -192,6 +202,254 @@ fn process_io(
 impl From<std::process::Command> for Command {
     fn from(cmd: std::process::Command) -> Self {
         Self::from_std(cmd)
+    }
+}
+
+/// Assert the state of a [`Command`][cmd::Command]'s [`Output`].
+///
+/// Create an `OutputAssert` through the [`Command::assert`].
+///
+/// [`Output`]: std::process::Output
+pub struct OutputAssert {
+    output: std::process::Output,
+    config: crate::Assert,
+}
+
+impl OutputAssert {
+    /// Create an `Assert` for a given [`Output`].
+    ///
+    /// [`Output`]: std::process::Output
+    pub fn new(output: std::process::Output) -> Self {
+        Self {
+            output,
+            config: crate::Assert::new(),
+        }
+    }
+
+    /// Customize the assertion behavior
+    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+        self.config = config;
+        self
+    }
+
+    /// Access the contained [`Output`].
+    ///
+    /// [`Output`]: std::process::Output
+    pub fn get_output(&self) -> &std::process::Output {
+        &self.output
+    }
+
+    /// Ensure the command succeeded.
+    #[track_caller]
+    pub fn success(self) -> Self {
+        if !self.output.status.success() {
+            let desc = format!(
+                "Expected {}, was {}",
+                self.config.palette.info("success"),
+                self.config.palette.error(display_code(&self.output))
+            );
+
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_stdout(&mut buf).unwrap();
+            self.write_stderr(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+        self
+    }
+
+    /// Ensure the command failed.
+    #[track_caller]
+    pub fn failure(self) -> Self {
+        if self.output.status.success() {
+            let desc = format!(
+                "Expected {}, was {}",
+                self.config.palette.info("failure"),
+                self.config.palette.error("success")
+            );
+
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_stdout(&mut buf).unwrap();
+            self.write_stderr(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+        self
+    }
+
+    /// Ensure the command aborted before returning a code.
+    #[track_caller]
+    pub fn interrupted(self) -> Self {
+        if self.output.status.code().is_some() {
+            let desc = format!(
+                "Expected {}, was {}",
+                self.config.palette.info("interrupted"),
+                self.config.palette.error(display_code(&self.output))
+            );
+
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_stdout(&mut buf).unwrap();
+            self.write_stderr(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+        self
+    }
+
+    /// Ensure the command returned the expected code.
+    #[track_caller]
+    pub fn code(self, expected: i32) -> Self {
+        if self.output.status.code() != Some(expected) {
+            let desc = format!(
+                "Expected {}, was {}",
+                self.config.palette.info(expected),
+                self.config.palette.error(display_code(&self.output))
+            );
+
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_stdout(&mut buf).unwrap();
+            self.write_stderr(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stdout`.
+    #[track_caller]
+    pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
+        let expected = expected.into();
+        self.stdout_eq_inner(expected)
+    }
+
+    #[track_caller]
+    fn stdout_eq_inner(self, expected: crate::Data) -> Self {
+        let actual = crate::Data::from(self.output.stdout.as_slice());
+        let (actual, pattern) = self.config.normalize_eq(actual, Ok(expected));
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stdout")))
+        {
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_status(&mut buf).unwrap();
+            self.write_stderr(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stdout`.
+    #[track_caller]
+    pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
+        let expected = expected.into();
+        self.stdout_matches_inner(expected)
+    }
+
+    #[track_caller]
+    fn stdout_matches_inner(self, expected: crate::Data) -> Self {
+        let actual = crate::Data::from(self.output.stdout.as_slice());
+        let (actual, pattern) = self.config.normalize_match(actual, Ok(expected));
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stdout")))
+        {
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_status(&mut buf).unwrap();
+            self.write_stderr(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stderr`.
+    #[track_caller]
+    pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
+        let expected = expected.into();
+        self.stderr_eq_inner(expected)
+    }
+
+    #[track_caller]
+    fn stderr_eq_inner(self, expected: crate::Data) -> Self {
+        let actual = crate::Data::from(self.output.stderr.as_slice());
+        let (actual, pattern) = self.config.normalize_eq(actual, Ok(expected));
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stderr")))
+        {
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_status(&mut buf).unwrap();
+            self.write_stdout(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stderr`.
+    #[track_caller]
+    pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
+        let expected = expected.into();
+        self.stderr_matches_inner(expected)
+    }
+
+    #[track_caller]
+    fn stderr_matches_inner(self, expected: crate::Data) -> Self {
+        let actual = crate::Data::from(self.output.stderr.as_slice());
+        let (actual, pattern) = self.config.normalize_match(actual, Ok(expected));
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stderr")))
+        {
+            use std::fmt::Write;
+            let mut buf = String::new();
+            write!(&mut buf, "{}", desc).unwrap();
+            self.write_status(&mut buf).unwrap();
+            self.write_stdout(&mut buf).unwrap();
+            panic!("{}", buf);
+        }
+
+        self
+    }
+
+    fn write_status(&self, writer: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
+        writeln!(writer, "Exit status: {}", display_code(&self.output))?;
+        Ok(())
+    }
+
+    fn write_stdout(&self, writer: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
+        if !self.output.stdout.is_empty() {
+            writeln!(writer, "stdout:")?;
+            writeln!(writer, "```")?;
+            writeln!(writer, "{}", String::from_utf8_lossy(&self.output.stdout))?;
+            writeln!(writer, "```")?;
+        }
+        Ok(())
+    }
+
+    fn write_stderr(&self, writer: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
+        if !self.output.stderr.is_empty() {
+            writeln!(writer, "stderr:")?;
+            writeln!(writer, "```")?;
+            writeln!(writer, "{}", String::from_utf8_lossy(&self.output.stderr))?;
+            writeln!(writer, "```")?;
+        }
+        Ok(())
+    }
+}
+
+fn display_code(output: &std::process::Output) -> String {
+    if let Some(code) = output.status.code() {
+        code.to_string()
+    } else {
+        "interrupted".to_owned()
     }
 }
 

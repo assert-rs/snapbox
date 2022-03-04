@@ -12,8 +12,12 @@
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Filesystem:
-//! - [`path::PathFixture`]
-//! - [`Assert()`]
+//! - [`path::PathFixture`]: Working directory for tests
+//! - [`Assert()`]: Diff a directory against files present in a pattern directory
+//!
+//! Commands:
+//! - [`cmd::Command`]: Process spawning for testing of non-interactive commands
+//! - [`cmd::OutputAssert`]: Assert the state of a [`Command`][cmd::Command]'s [`Output`].
 //!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
