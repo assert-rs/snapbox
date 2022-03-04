@@ -491,74 +491,14 @@ impl Case {
                                 expected_path,
                             });
                         }
-                        Err(snapbox::path::PathDiff::Failure(err)) => {
-                            fs.context.push(FileStatus::Failure(err));
-                            ok = false;
-                        }
-                        Err(snapbox::path::PathDiff::TypeMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_type,
-                            actual_type,
-                        }) => {
+                        Err(diff) => {
                             let mut is_current_ok = false;
                             if *mode == Mode::Overwrite {
-                                if snapbox::path::shallow_copy(&expected_path, &actual_path).is_ok()
-                                {
+                                if diff.overwrite().is_ok() {
                                     is_current_ok = true;
                                 }
                             }
-                            fs.context.push(FileStatus::TypeMismatch {
-                                actual_path,
-                                expected_path,
-                                actual_type,
-                                expected_type,
-                            });
-                            if !is_current_ok {
-                                ok = false;
-                            }
-                        }
-                        Err(snapbox::path::PathDiff::LinkMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_target,
-                            actual_target,
-                        }) => {
-                            let mut is_current_ok = false;
-                            if *mode == Mode::Overwrite {
-                                if snapbox::path::shallow_copy(&expected_path, &actual_path).is_ok()
-                                {
-                                    is_current_ok = true;
-                                }
-                            }
-                            fs.context.push(FileStatus::LinkMismatch {
-                                actual_path,
-                                expected_path,
-                                actual_target,
-                                expected_target,
-                            });
-                            if !is_current_ok {
-                                ok = false;
-                            }
-                        }
-                        Err(snapbox::path::PathDiff::ContentMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_content,
-                            actual_content,
-                        }) => {
-                            let mut is_current_ok = false;
-                            if *mode == Mode::Overwrite {
-                                if actual_content.write_to(&expected_path).is_ok() {
-                                    is_current_ok = true;
-                                }
-                            }
-                            fs.context.push(FileStatus::ContentMismatch {
-                                actual_path,
-                                expected_path,
-                                actual_content,
-                                expected_content,
-                            });
+                            fs.context.push(diff.into());
                             if !is_current_ok {
                                 ok = false;
                             }
@@ -917,6 +857,47 @@ impl FileStatus {
             | Self::TypeMismatch { .. }
             | Self::LinkMismatch { .. }
             | Self::ContentMismatch { .. } => false,
+        }
+    }
+}
+
+impl From<snapbox::path::PathDiff> for FileStatus {
+    fn from(other: snapbox::path::PathDiff) -> Self {
+        match other {
+            snapbox::path::PathDiff::Failure(err) => FileStatus::Failure(err),
+            snapbox::path::PathDiff::TypeMismatch {
+                expected_path,
+                actual_path,
+                expected_type,
+                actual_type,
+            } => FileStatus::TypeMismatch {
+                actual_path,
+                expected_path,
+                actual_type,
+                expected_type,
+            },
+            snapbox::path::PathDiff::LinkMismatch {
+                expected_path,
+                actual_path,
+                expected_target,
+                actual_target,
+            } => FileStatus::LinkMismatch {
+                actual_path,
+                expected_path,
+                actual_target,
+                expected_target,
+            },
+            snapbox::path::PathDiff::ContentMismatch {
+                expected_path,
+                actual_path,
+                expected_content,
+                actual_content,
+            } => FileStatus::ContentMismatch {
+                actual_path,
+                expected_path,
+                actual_content,
+                expected_content,
+            },
         }
     }
 }

@@ -322,6 +322,34 @@ pub enum PathDiff {
     },
 }
 
+impl PathDiff {
+    pub fn overwrite(&self) -> Result<(), crate::Error> {
+        match self {
+            // Not passing the error up because users most likely want to treat a processing error
+            // differently than an overwrite error
+            Self::Failure(_err) => Ok(()),
+            Self::TypeMismatch {
+                expected_path,
+                actual_path,
+                expected_type: _,
+                actual_type: _,
+            } => shallow_copy(&expected_path, &actual_path),
+            Self::LinkMismatch {
+                expected_path,
+                actual_path,
+                expected_target: _,
+                actual_target: _,
+            } => shallow_copy(&expected_path, &actual_path),
+            Self::ContentMismatch {
+                expected_path,
+                actual_path: _,
+                expected_content: _,
+                actual_content,
+            } => actual_content.write_to(&expected_path),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum FileType {
     Dir,
