@@ -42,11 +42,8 @@ impl Assert {
             actual = actual.try_text().map_text(crate::utils::normalize_lines);
         }
 
-        if actual != expected {
-            let mut buf = String::new();
-            crate::report::write_diff(&mut buf, &expected, &actual, None, None, self.palette)
-                .expect("diff should always succeed");
-            panic!("{}: {}", self.palette.error("Eq failed"), buf);
+        if let Err(err) = self.try_verify(&actual, &expected, None) {
+            panic!("{}: {}", self.palette.error("Eq failed"), err);
         }
     }
 
@@ -77,11 +74,8 @@ impl Assert {
                 .map_text(|t| self.substitutions.normalize(t, pattern));
         }
 
-        if actual != pattern {
-            let mut buf = String::new();
-            crate::report::write_diff(&mut buf, &pattern, &actual, None, None, self.palette)
-                .expect("diff should always succeed");
-            panic!("{}: {}", self.palette.error("Match failed"), buf);
+        if let Err(err) = self.try_verify(&actual, &pattern, None) {
+            panic!("{}: {}", self.palette.error("Match failed"), err);
         }
     }
 
@@ -114,7 +108,8 @@ impl Assert {
             actual = actual.try_text().map_text(crate::utils::normalize_lines);
         }
 
-        let result = expected.and_then(|e| self.try_verify(&actual, &e, pattern_path));
+        let result =
+            expected.and_then(|e| self.try_verify(&actual, &e, Some(&pattern_path.display())));
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),
@@ -185,7 +180,8 @@ impl Assert {
                 .map_text(|t| self.substitutions.normalize(t, expected));
         }
 
-        let result = expected.and_then(|e| self.try_verify(&actual, &e, pattern_path));
+        let result =
+            expected.and_then(|e| self.try_verify(&actual, &e, Some(&pattern_path.display())));
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),
@@ -221,19 +217,12 @@ impl Assert {
         &self,
         actual: &crate::Data,
         expected: &crate::Data,
-        expected_path: &std::path::Path,
+        name: Option<&dyn std::fmt::Display>,
     ) -> crate::Result<()> {
         if actual != expected {
             let mut buf = String::new();
-            crate::report::write_diff(
-                &mut buf,
-                expected,
-                actual,
-                Some(&expected_path.display()),
-                Some(&expected_path.display()),
-                self.palette,
-            )
-            .map_err(|e| e.to_string())?;
+            crate::report::write_diff(&mut buf, expected, actual, name, name, self.palette)
+                .map_err(|e| e.to_string())?;
             Err(buf.into())
         } else {
             Ok(())
