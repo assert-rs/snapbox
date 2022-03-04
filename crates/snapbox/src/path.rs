@@ -131,9 +131,7 @@ impl PathAssert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let checks: Vec<_> = self
-            .subset_eq_iter_inner(actual_root, expected_root)
-            .collect();
+        let checks: Vec<_> = PathDiff::subset_eq_iter_inner(actual_root, expected_root).collect();
         self.verify(checks);
     }
 
@@ -159,9 +157,9 @@ impl PathAssert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let checks: Vec<_> = self
-            .subset_matches_iter_inner(actual_root, expected_root)
-            .collect();
+        let checks: Vec<_> =
+            PathDiff::subset_matches_iter_inner(actual_root, expected_root, &self.substitutions)
+                .collect();
         self.verify(checks);
     }
 
@@ -276,156 +274,6 @@ impl PathAssert {
     }
 }
 
-/// # Building Blocks
-impl PathAssert {
-    pub fn subset_eq_iter<'s>(
-        &'s self,
-        actual_root: impl Into<std::path::PathBuf>,
-        pattern_root: impl Into<std::path::PathBuf>,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
-        let actual_root = actual_root.into();
-        let pattern_root = pattern_root.into();
-        self.subset_eq_iter_inner(actual_root, pattern_root)
-    }
-
-    fn subset_eq_iter_inner<'s>(
-        &'s self,
-        actual_root: std::path::PathBuf,
-        expected_root: std::path::PathBuf,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
-        let walker = Walk::new(&expected_root);
-        walker.map(move |r| {
-            let expected_path = r.map_err(|e| PathDiff::Failure(e.to_string().into()))?;
-            let rel = expected_path.strip_prefix(&expected_root).unwrap();
-            let actual_path = actual_root.join(rel);
-
-            let expected_type = FileType::from_path(&expected_path);
-            let actual_type = FileType::from_path(&actual_path);
-            if expected_type != actual_type {
-                return Err(PathDiff::TypeMismatch {
-                    expected_path,
-                    actual_path,
-                    expected_type,
-                    actual_type,
-                });
-            }
-
-            match expected_type {
-                FileType::Symlink => {
-                    let expected_target = std::fs::read_link(&expected_path).ok();
-                    let actual_target = std::fs::read_link(&actual_path).ok();
-                    if expected_target != actual_target {
-                        return Err(PathDiff::LinkMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_target: expected_target.unwrap(),
-                            actual_target: actual_target.unwrap(),
-                        });
-                    }
-                }
-                FileType::File => {
-                    let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(PathDiff::Failure)?;
-
-                    let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.map_text(crate::utils::normalize_lines))
-                        .map_err(PathDiff::Failure)?;
-                    if expected.as_str().is_some() {
-                        actual = actual.try_text().map_text(crate::utils::normalize_lines);
-                    }
-
-                    if expected != actual {
-                        return Err(PathDiff::ContentMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_content: expected,
-                            actual_content: actual,
-                        });
-                    }
-                }
-                FileType::Dir | FileType::Unknown | FileType::Missing => {}
-            }
-
-            Ok((actual_path, expected_path))
-        })
-    }
-
-    pub fn subset_matches_iter<'s>(
-        &'s self,
-        actual_root: impl Into<std::path::PathBuf>,
-        pattern_root: impl Into<std::path::PathBuf>,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
-        let actual_root = actual_root.into();
-        let pattern_root = pattern_root.into();
-        self.subset_matches_iter_inner(actual_root, pattern_root)
-    }
-
-    fn subset_matches_iter_inner<'s>(
-        &'s self,
-        actual_root: std::path::PathBuf,
-        expected_root: std::path::PathBuf,
-    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>> + 's {
-        let walker = Walk::new(&expected_root);
-        walker.map(move |r| {
-            let expected_path = r.map_err(|e| PathDiff::Failure(e.to_string().into()))?;
-            let rel = expected_path.strip_prefix(&expected_root).unwrap();
-            let actual_path = actual_root.join(rel);
-
-            let expected_type = FileType::from_path(&expected_path);
-            let actual_type = FileType::from_path(&actual_path);
-            if expected_type != actual_type {
-                return Err(PathDiff::TypeMismatch {
-                    expected_path,
-                    actual_path,
-                    expected_type,
-                    actual_type,
-                });
-            }
-
-            match expected_type {
-                FileType::Symlink => {
-                    let expected_target = std::fs::read_link(&expected_path).ok();
-                    let actual_target = std::fs::read_link(&actual_path).ok();
-                    if expected_target != actual_target {
-                        return Err(PathDiff::LinkMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_target: expected_target.unwrap(),
-                            actual_target: actual_target.unwrap(),
-                        });
-                    }
-                }
-                FileType::File => {
-                    let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(PathDiff::Failure)?;
-
-                    let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.map_text(crate::utils::normalize_lines))
-                        .map_err(PathDiff::Failure)?;
-                    if let Some(expected) = expected.as_str() {
-                        actual = actual
-                            .try_text()
-                            .map_text(crate::utils::normalize_text)
-                            .map_text(|t| self.substitutions.normalize(t, expected));
-                    }
-
-                    if expected != actual {
-                        return Err(PathDiff::ContentMismatch {
-                            expected_path,
-                            actual_path,
-                            expected_content: expected,
-                            actual_content: actual,
-                        });
-                    }
-                }
-                FileType::Dir | FileType::Unknown | FileType::Missing => {}
-            }
-
-            Ok((actual_path, expected_path))
-        })
-    }
-}
-
 impl Default for PathAssert {
     fn default() -> Self {
         Self {
@@ -457,6 +305,153 @@ pub enum PathDiff {
         expected_content: crate::Data,
         actual_content: crate::Data,
     },
+}
+
+impl PathDiff {
+    pub fn subset_eq_iter(
+        actual_root: impl Into<std::path::PathBuf>,
+        pattern_root: impl Into<std::path::PathBuf>,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> {
+        let actual_root = actual_root.into();
+        let pattern_root = pattern_root.into();
+        Self::subset_eq_iter_inner(actual_root, pattern_root)
+    }
+
+    fn subset_eq_iter_inner(
+        actual_root: std::path::PathBuf,
+        expected_root: std::path::PathBuf,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> {
+        let walker = Walk::new(&expected_root);
+        walker.map(move |r| {
+            let expected_path = r.map_err(|e| Self::Failure(e.to_string().into()))?;
+            let rel = expected_path.strip_prefix(&expected_root).unwrap();
+            let actual_path = actual_root.join(rel);
+
+            let expected_type = FileType::from_path(&expected_path);
+            let actual_type = FileType::from_path(&actual_path);
+            if expected_type != actual_type {
+                return Err(Self::TypeMismatch {
+                    expected_path,
+                    actual_path,
+                    expected_type,
+                    actual_type,
+                });
+            }
+
+            match expected_type {
+                FileType::Symlink => {
+                    let expected_target = std::fs::read_link(&expected_path).ok();
+                    let actual_target = std::fs::read_link(&actual_path).ok();
+                    if expected_target != actual_target {
+                        return Err(Self::LinkMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_target: expected_target.unwrap(),
+                            actual_target: actual_target.unwrap(),
+                        });
+                    }
+                }
+                FileType::File => {
+                    let mut actual =
+                        crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
+
+                    let expected = crate::Data::read_from(&expected_path, None)
+                        .map(|d| d.map_text(crate::utils::normalize_lines))
+                        .map_err(Self::Failure)?;
+                    if expected.as_str().is_some() {
+                        actual = actual.try_text().map_text(crate::utils::normalize_lines);
+                    }
+
+                    if expected != actual {
+                        return Err(Self::ContentMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_content: expected,
+                            actual_content: actual,
+                        });
+                    }
+                }
+                FileType::Dir | FileType::Unknown | FileType::Missing => {}
+            }
+
+            Ok((actual_path, expected_path))
+        })
+    }
+
+    pub fn subset_matches_iter<'s>(
+        actual_root: impl Into<std::path::PathBuf>,
+        pattern_root: impl Into<std::path::PathBuf>,
+        substitutions: &'s crate::Substitutions,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + 's {
+        let actual_root = actual_root.into();
+        let pattern_root = pattern_root.into();
+        Self::subset_matches_iter_inner(actual_root, pattern_root, substitutions)
+    }
+
+    fn subset_matches_iter_inner<'s>(
+        actual_root: std::path::PathBuf,
+        expected_root: std::path::PathBuf,
+        substitutions: &'s crate::Substitutions,
+    ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + 's {
+        let walker = Walk::new(&expected_root);
+        walker.map(move |r| {
+            let expected_path = r.map_err(|e| Self::Failure(e.to_string().into()))?;
+            let rel = expected_path.strip_prefix(&expected_root).unwrap();
+            let actual_path = actual_root.join(rel);
+
+            let expected_type = FileType::from_path(&expected_path);
+            let actual_type = FileType::from_path(&actual_path);
+            if expected_type != actual_type {
+                return Err(Self::TypeMismatch {
+                    expected_path,
+                    actual_path,
+                    expected_type,
+                    actual_type,
+                });
+            }
+
+            match expected_type {
+                FileType::Symlink => {
+                    let expected_target = std::fs::read_link(&expected_path).ok();
+                    let actual_target = std::fs::read_link(&actual_path).ok();
+                    if expected_target != actual_target {
+                        return Err(Self::LinkMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_target: expected_target.unwrap(),
+                            actual_target: actual_target.unwrap(),
+                        });
+                    }
+                }
+                FileType::File => {
+                    let mut actual =
+                        crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
+
+                    let expected = crate::Data::read_from(&expected_path, None)
+                        .map(|d| d.map_text(crate::utils::normalize_lines))
+                        .map_err(Self::Failure)?;
+                    if let Some(expected) = expected.as_str() {
+                        actual = actual
+                            .try_text()
+                            .map_text(crate::utils::normalize_text)
+                            .map_text(|t| substitutions.normalize(t, expected));
+                    }
+
+                    if expected != actual {
+                        return Err(Self::ContentMismatch {
+                            expected_path,
+                            actual_path,
+                            expected_content: expected,
+                            actual_content: actual,
+                        });
+                    }
+                }
+                FileType::Dir | FileType::Unknown | FileType::Missing => {}
+            }
+
+            Ok((actual_path, expected_path))
+        })
+    }
 }
 
 impl PathDiff {

@@ -480,10 +480,11 @@ impl Case {
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for status in snapbox::path::path_assert()
-                    .substitutions(substitutions.clone())
-                    .subset_matches_iter(actual_root, fixture_root)
-                {
+                for status in snapbox::path::PathDiff::subset_matches_iter(
+                    actual_root,
+                    fixture_root,
+                    substitutions,
+                ) {
                     match status {
                         Ok((actual_path, expected_path)) => {
                             fs.context.push(FileStatus::Ok {
@@ -907,7 +908,7 @@ impl std::fmt::Display for FileStatus {
         let palette = snapbox::report::Palette::auto();
 
         match &self {
-            FileStatus::Ok {
+            Self::Ok {
                 expected_path,
                 actual_path: _actual_path,
             } => {
@@ -918,10 +919,10 @@ impl std::fmt::Display for FileStatus {
                     palette.info("good"),
                 )?;
             }
-            FileStatus::Failure(msg) => {
+            Self::Failure(msg) => {
                 writeln!(f, "{}", palette.error(msg))?;
             }
-            FileStatus::TypeMismatch {
+            Self::TypeMismatch {
                 expected_path,
                 actual_path: _actual_path,
                 expected_type,
@@ -935,7 +936,7 @@ impl std::fmt::Display for FileStatus {
                     palette.error(actual_type)
                 )?;
             }
-            FileStatus::LinkMismatch {
+            Self::LinkMismatch {
                 expected_path,
                 actual_path: _actual_path,
                 expected_target,
@@ -949,7 +950,7 @@ impl std::fmt::Display for FileStatus {
                     palette.error(actual_target.display())
                 )?;
             }
-            FileStatus::ContentMismatch {
+            Self::ContentMismatch {
                 expected_path,
                 actual_path,
                 expected_content,
