@@ -330,9 +330,10 @@ impl OutputAssert {
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
         let (actual, pattern) = self.config.normalize_eq(actual, Ok(expected));
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stdout")))
-        {
+        if let Err(desc) = pattern.and_then(|p| {
+            self.config
+                .try_verify(&actual, &p, Some(&"stdout"), Some(&"stdout"))
+        }) {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -355,9 +356,10 @@ impl OutputAssert {
     fn stdout_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
         let (actual, pattern) = self.config.normalize_match(actual, Ok(expected));
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stdout")))
-        {
+        if let Err(desc) = pattern.and_then(|p| {
+            self.config
+                .try_verify(&actual, &p, Some(&"stdout"), Some(&"stdout"))
+        }) {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -380,9 +382,10 @@ impl OutputAssert {
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
         let (actual, pattern) = self.config.normalize_eq(actual, Ok(expected));
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stderr")))
-        {
+        if let Err(desc) = pattern.and_then(|p| {
+            self.config
+                .try_verify(&actual, &p, Some(&"stderr"), Some(&"stderr"))
+        }) {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -405,9 +408,10 @@ impl OutputAssert {
     fn stderr_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
         let (actual, pattern) = self.config.normalize_match(actual, Ok(expected));
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&actual, &p, Some(&"stderr")))
-        {
+        if let Err(desc) = pattern.and_then(|p| {
+            self.config
+                .try_verify(&actual, &p, Some(&"stderr"), Some(&"stderr"))
+        }) {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();

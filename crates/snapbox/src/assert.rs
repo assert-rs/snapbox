@@ -38,7 +38,7 @@ impl Assert {
     #[track_caller]
     fn eq_inner(&self, actual: crate::Data, expected: crate::Data) {
         let (actual, pattern) = self.normalize_eq(actual, Ok(expected));
-        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None)) {
+        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None, None)) {
             panic!("{}: {}", self.palette.error("Eq failed"), desc);
         }
     }
@@ -63,7 +63,7 @@ impl Assert {
     #[track_caller]
     fn matches_inner(&self, actual: crate::Data, pattern: crate::Data) {
         let (actual, pattern) = self.normalize_match(actual, Ok(pattern));
-        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None)) {
+        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None, None)) {
             panic!("{}: {}", self.palette.error("Match failed"), desc);
         }
     }
@@ -94,8 +94,14 @@ impl Assert {
         let expected = crate::Data::read_from(pattern_path, self.binary);
         let (actual, expected) = self.normalize_eq(actual, expected);
 
-        let result =
-            expected.and_then(|e| self.try_verify(&actual, &e, Some(&pattern_path.display())));
+        let result = expected.and_then(|e| {
+            self.try_verify(
+                &actual,
+                &e,
+                Some(&"In-memory"),
+                Some(&pattern_path.display()),
+            )
+        });
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),
@@ -160,8 +166,14 @@ impl Assert {
         let expected = crate::Data::read_from(pattern_path, self.binary);
         let (actual, expected) = self.normalize_match(actual, expected);
 
-        let result =
-            expected.and_then(|e| self.try_verify(&actual, &e, Some(&pattern_path.display())));
+        let result = expected.and_then(|e| {
+            self.try_verify(
+                &actual,
+                &e,
+                Some(&"In-memory"),
+                Some(&pattern_path.display()),
+            )
+        });
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),
@@ -226,12 +238,20 @@ impl Assert {
         &self,
         actual: &crate::Data,
         expected: &crate::Data,
-        name: Option<&dyn std::fmt::Display>,
+        actual_name: Option<&dyn std::fmt::Display>,
+        expected_name: Option<&dyn std::fmt::Display>,
     ) -> crate::Result<()> {
         if actual != expected {
             let mut buf = String::new();
-            crate::report::write_diff(&mut buf, expected, actual, name, name, self.palette)
-                .map_err(|e| e.to_string())?;
+            crate::report::write_diff(
+                &mut buf,
+                expected,
+                actual,
+                expected_name,
+                actual_name,
+                self.palette,
+            )
+            .map_err(|e| e.to_string())?;
             Err(buf.into())
         } else {
             Ok(())
