@@ -6,16 +6,25 @@
 //! - You need a lot of customization around an individual test
 //! - You need to build your own test harness instead of using something like [`trycmd`][trycmd]
 //!
+//! In-memory:
+//! - [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
+//! - [`file_assert`] for one-off assertions with the snapshot stored in a file
+//! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
+//!
+//! Filesystem:
+//! - [`path::PathFixture`]
+//! - [`path::path_assert()`]
+//!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
 //! # Examples
 //!
-//! [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing:
+//! [`assert_matches`]
 //! ```rust
 //! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
 //! ```
 //!
-//! [`file_assert`] for one-off assertions with the snapshot stored in a file:
+//! [`file_assert`]
 //! ```rust,no_run
 //! let actual = "...";
 //! snapbox::file_assert()
@@ -23,7 +32,7 @@
 //!     .matches(actual, "tests/fixtures/help_output_is_clean.txt");
 //! ```
 //!
-//! [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
+//! [`harness::Harness`]
 #![cfg_attr(not(feature = "harness"), doc = " ```rust,ignore")]
 #![cfg_attr(feature = "harness", doc = " ```rust,no_run")]
 //! snapbox::harness::Harness::new(
@@ -63,6 +72,7 @@ mod error;
 mod file;
 mod substitutions;
 
+pub mod path;
 pub mod report;
 pub mod utils;
 
@@ -76,6 +86,9 @@ pub use data::Data;
 pub use error::Error;
 pub use file::file_assert;
 pub use file::FileAssert;
+pub use path::path_assert;
+pub use path::PathAssert;
+pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

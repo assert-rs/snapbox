@@ -103,13 +103,13 @@ impl TryCmd {
             .fs
             .base
             .take()
-            .map(|p| crate::filesystem::resolve_dir(p).map_err(|e| e.to_string()))
+            .map(|p| snapbox::path::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
         sequence.fs.cwd = sequence
             .fs
             .cwd
             .take()
-            .map(|p| crate::filesystem::resolve_dir(p).map_err(|e| e.to_string()))
+            .map(|p| snapbox::path::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
 
         Ok(sequence)
@@ -182,13 +182,13 @@ impl TryCmd {
                         match lang {
                             "trycmd" | "console" => {
                                 if info.any(|i| i == "ignore") {
-                                    debug!("ignore from infostring: {:?}", info);
+                                    snapbox::debug!("ignore from infostring: {:?}", info);
                                 } else {
                                     break;
                                 }
                             }
                             _ => {
-                                debug!("ignore from lang: {:?}", lang);
+                                snapbox::debug!("ignore from lang: {:?}", lang);
                             }
                         }
                     }

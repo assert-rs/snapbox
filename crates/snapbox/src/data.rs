@@ -76,11 +76,6 @@ impl Data {
         }
     }
 
-    pub fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
-        *self = Self::Text(std::mem::take(self).into_string()?);
-        Ok(())
-    }
-
     pub fn try_text(self) -> Self {
         match self {
             Self::Binary(data) => {
@@ -100,6 +95,17 @@ impl Data {
         }
     }
 
+    /// Coerce to a string
+    ///
+    /// Note: this will **not** do a binary-content check
+    pub fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
+        *self = Self::Text(std::mem::take(self).into_string()?);
+        Ok(())
+    }
+
+    /// Coerce to a string
+    ///
+    /// Note: this will **not** do a binary-content check
     pub fn into_string(self) -> Result<String, std::str::Utf8Error> {
         match self {
             Self::Binary(data) => {
@@ -110,6 +116,9 @@ impl Data {
         }
     }
 
+    /// Return the underlying `str`
+    ///
+    /// Note: this will not inspect binary data for being a valid `str`.
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Self::Binary(_) => None,
@@ -241,10 +250,7 @@ pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::
 fn assert_matches_inner(mut actual: crate::Data, pattern: crate::Data) {
     let pattern = pattern.try_text().map_text(crate::utils::normalize_lines);
     if let Some(pattern) = pattern.as_str() {
-        let mut substitutions = crate::Substitutions::new();
-        substitutions
-            .insert("[EXE]", std::env::consts::EXE_SUFFIX)
-            .unwrap();
+        let substitutions = crate::Substitutions::with_exe();
         actual = actual
             .try_text()
             .map_text(crate::utils::normalize_text)

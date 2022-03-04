@@ -1,0 +1,41 @@
+[package]
+name = "snapbox-macros"
+version = "0.1.2"
+description = "Snapshot testing toolbox"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/assert-rs/trycmd/"
+homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
+documentation = "http://docs.rs/snapbox/"
+readme = "README.md"
+categories = ["development-tools::testing"]
+keywords = ["cli", "test", "assert", "command"]
+edition = "2018"
+include = [
+  "build.rs",
+  "src/**/*",
+  "Cargo.toml",
+  "LICENSE*",
+  "README.md",
+  "benches/**/*",
+  "examples/**/*"
+]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[package.metadata.release]
+pre-release-replacements = [
+  {file="CHANGELOG.md", search="Unreleased", replace="{{version}}", min=1},
+  {file="CHANGELOG.md", search="\\.\\.\\.HEAD", replace="...{{tag_name}}", exactly=1},
+  {file="CHANGELOG.md", search="ReleaseDate", replace="{{date}}", min=1},
+  {file="CHANGELOG.md", search="<!-- next-header -->", replace="<!-- next-header -->\n## [Unreleased] - ReleaseDate\n", exactly=1},
+  {file="CHANGELOG.md", search="<!-- next-url -->", replace="<!-- next-url -->\n[Unreleased]: https://github.com/assert-rs/snapbox/compare/{{tag_name}}...HEAD", exactly=1},
+]
+
+[features]
+default = []
+
+## Extra debugging information
+debug = []
+
+[dependencies]
