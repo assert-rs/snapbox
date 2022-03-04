@@ -13,6 +13,7 @@
 //!
 //! Filesystem:
 //! - [`path::PathFixture`]
+//! - [`path::path_assert()`]
 //!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
