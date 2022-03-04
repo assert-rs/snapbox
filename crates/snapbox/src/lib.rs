@@ -8,7 +8,7 @@
 //!
 //! In-memory:
 //! - [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
-//! - [`Assert`] for one-off assertions with the snapshot stored in a file
+//! - [`assert_eq`][crate::assert_eq_path] and [`assert_matches_path`] for one-off assertions with the snapshot stored in a file
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Filesystem:
@@ -112,4 +112,30 @@ pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data
 #[track_caller]
 pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
     Assert::new().matches(actual, pattern);
+}
+
+/// Check if a value matches the content of a file
+///
+/// When the content is text, newlines are normalized.
+#[track_caller]
+pub fn assert_eq_path(actual: impl Into<crate::Data>, expected_path: impl AsRef<std::path::Path>) {
+    Assert::new().eq_path(actual, expected_path);
+}
+
+/// Check if a value matches the pattern in a file
+///
+/// Pattern syntax:
+/// - `...` is a line-wildcard when on a line by itself
+/// - `[..]` is a character-wildcard when inside a line
+/// - `[EXE]` matches `.exe` on Windows
+///
+/// Normalization:
+/// - Newlines
+/// - `\` to `/`
+#[track_caller]
+pub fn assert_matches_path(
+    actual: impl Into<crate::Data>,
+    pattern_path: impl AsRef<std::path::Path>,
+) {
+    Assert::new().matches_path(actual, pattern_path);
 }

@@ -106,11 +106,11 @@ impl Assert {
     pub fn eq_path(
         &self,
         actual: impl Into<crate::Data>,
-        pattern_path: impl AsRef<std::path::Path>,
+        expected_path: impl AsRef<std::path::Path>,
     ) {
         let actual = actual.into();
-        let pattern_path = pattern_path.as_ref();
-        self.eq_path_inner(actual, pattern_path);
+        let expected_path = expected_path.as_ref();
+        self.eq_path_inner(actual, expected_path);
     }
 
     #[track_caller]
