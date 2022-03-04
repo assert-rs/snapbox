@@ -13,7 +13,7 @@
 //!
 //! Filesystem:
 //! - [`path::PathFixture`]
-//! - [`path::path_assert()`]
+//! - [`Assert()`]
 //!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
@@ -84,8 +84,6 @@ pub use action::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use error::Error;
-pub use path::path_assert;
-pub use path::PathAssert;
 pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;
 
