@@ -2,8 +2,8 @@ pub fn write_diff(
     writer: &mut dyn std::fmt::Write,
     expected: &crate::Data,
     actual: &crate::Data,
-    expected_name: &dyn std::fmt::Display,
-    actual_name: &dyn std::fmt::Display,
+    expected_name: Option<&dyn std::fmt::Display>,
+    actual_name: Option<&dyn std::fmt::Display>,
     palette: crate::report::Palette,
 ) -> Result<(), std::fmt::Error> {
     #[allow(unused_mut)]
@@ -22,9 +22,17 @@ pub fn write_diff(
     }
 
     if !rendered {
-        writeln!(writer, "{} {}:", expected_name, palette.info("(expected)"))?;
+        if let Some(expected_name) = expected_name {
+            writeln!(writer, "{} {}:", expected_name, palette.info("(expected)"))?;
+        } else {
+            writeln!(writer, "{}:", palette.info("Expected"))?;
+        }
         writeln!(writer, "{}", palette.info(&expected))?;
-        writeln!(writer, "{} {}:", actual_name, palette.error("(actual)"))?;
+        if let Some(actual_name) = actual_name {
+            writeln!(writer, "{} {}:", actual_name, palette.error("(actual)"))?;
+        } else {
+            writeln!(writer, "{}:", palette.error("Actual"))?;
+        }
         writeln!(writer, "{}", palette.error(&actual))?;
     }
     Ok(())
@@ -35,8 +43,8 @@ fn write_diff_inner(
     writer: &mut dyn std::fmt::Write,
     expected: &str,
     actual: &str,
-    expected_name: &dyn std::fmt::Display,
-    actual_name: &dyn std::fmt::Display,
+    expected_name: Option<&dyn std::fmt::Display>,
+    actual_name: Option<&dyn std::fmt::Display>,
     palette: crate::report::Palette,
 ) -> Result<(), std::fmt::Error> {
     let changes = similar::TextDiff::configure()
@@ -46,16 +54,24 @@ fn write_diff_inner(
         .diff_lines(expected, actual);
 
     writeln!(writer)?;
-    writeln!(
-        writer,
-        "{}",
-        palette.info(format_args!("--- {} (expected)", expected_name))
-    )?;
-    writeln!(
-        writer,
-        "{}",
-        palette.error(format_args!("+++ {} (actual)", actual_name))
-    )?;
+    if let Some(expected_name) = expected_name {
+        writeln!(
+            writer,
+            "{}",
+            palette.info(format_args!("--- {} (expected)", expected_name))
+        )?;
+    } else {
+        writeln!(writer, "{}", palette.info(format_args!("--- Expected")))?;
+    }
+    if let Some(actual_name) = actual_name {
+        writeln!(
+            writer,
+            "{}",
+            palette.error(format_args!("+++ {} (actual)", actual_name))
+        )?;
+    } else {
+        writeln!(writer, "{}", palette.error(format_args!("+++ Actual")))?;
+    }
     for op in changes.ops() {
         for change in changes.iter_inline_changes(op) {
             match change.tag() {
@@ -124,8 +140,8 @@ mod test {
             &mut actual_diff,
             expected,
             actual,
-            &expected_name,
-            &actual_name,
+            Some(&expected_name),
+            Some(&actual_name),
             palette,
         )
         .unwrap();
@@ -153,8 +169,8 @@ mod test {
             &mut actual_diff,
             expected,
             actual,
-            &expected_name,
-            &actual_name,
+            Some(&expected_name),
+            Some(&actual_name),
             palette,
         )
         .unwrap();
@@ -182,8 +198,8 @@ mod test {
             &mut actual_diff,
             expected,
             actual,
-            &expected_name,
-            &actual_name,
+            Some(&expected_name),
+            Some(&actual_name),
             palette,
         )
         .unwrap();
@@ -212,8 +228,8 @@ mod test {
             &mut actual_diff,
             expected,
             actual,
-            &expected_name,
-            &actual_name,
+            Some(&expected_name),
+            Some(&actual_name),
             palette,
         )
         .unwrap();

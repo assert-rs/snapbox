@@ -1,5 +1,4 @@
-use crate::Action;
-
+/// Working directory for tests
 #[derive(Debug)]
 pub struct PathFixture(PathFixtureInner);
 
@@ -101,189 +100,6 @@ impl Default for PathFixture {
     }
 }
 
-pub fn path_assert() -> PathAssert {
-    Default::default()
-}
-
-pub struct PathAssert {
-    action: Action,
-    substitutions: crate::Substitutions,
-    palette: crate::report::Palette,
-}
-
-/// # Assertions
-impl PathAssert {
-    pub fn subset_eq(
-        &self,
-        actual_root: impl Into<std::path::PathBuf>,
-        pattern_root: impl Into<std::path::PathBuf>,
-    ) {
-        let actual_root = actual_root.into();
-        let pattern_root = pattern_root.into();
-        self.subset_eq_inner(actual_root, pattern_root)
-    }
-
-    fn subset_eq_inner(&self, actual_root: std::path::PathBuf, expected_root: std::path::PathBuf) {
-        match self.action {
-            Action::Skip => {
-                return;
-            }
-            Action::Ignore | Action::Verify | Action::Overwrite => {}
-        }
-
-        let checks: Vec<_> = PathDiff::subset_eq_iter_inner(actual_root, expected_root).collect();
-        self.verify(checks);
-    }
-
-    pub fn subset_matches(
-        &self,
-        actual_root: impl Into<std::path::PathBuf>,
-        pattern_root: impl Into<std::path::PathBuf>,
-    ) {
-        let actual_root = actual_root.into();
-        let pattern_root = pattern_root.into();
-        self.subset_matches_inner(actual_root, pattern_root)
-    }
-
-    fn subset_matches_inner(
-        &self,
-        actual_root: std::path::PathBuf,
-        expected_root: std::path::PathBuf,
-    ) {
-        match self.action {
-            Action::Skip => {
-                return;
-            }
-            Action::Ignore | Action::Verify | Action::Overwrite => {}
-        }
-
-        let checks: Vec<_> =
-            PathDiff::subset_matches_iter_inner(actual_root, expected_root, &self.substitutions)
-                .collect();
-        self.verify(checks);
-    }
-
-    fn verify(&self, mut checks: Vec<Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>>) {
-        if checks.iter().all(Result::is_ok) {
-            for check in checks {
-                let (_actual_path, _expected_path) = check.unwrap();
-                crate::debug!(
-                    "{}: is {}",
-                    _expected_path.display(),
-                    self.palette.info("good")
-                );
-            }
-        } else {
-            checks.sort_by_key(|c| match c {
-                Ok((_actual_path, expected_path)) => Some(expected_path.clone()),
-                Err(diff) => diff.expected_path().map(|p| p.to_owned()),
-            });
-
-            let mut buffer = String::new();
-            let mut ok = true;
-            for check in checks {
-                use std::fmt::Write;
-                match check {
-                    Ok((_actual_path, expected_path)) => {
-                        let _ = writeln!(
-                            &mut buffer,
-                            "{}: is {}",
-                            expected_path.display(),
-                            self.palette.info("good"),
-                        );
-                    }
-                    Err(diff) => {
-                        let _ = diff.write(&mut buffer, self.palette);
-                        match self.action {
-                            Action::Skip => unreachable!("Bailed out earlier"),
-                            Action::Ignore | Action::Verify => {
-                                ok = false;
-                            }
-                            Action::Overwrite => {
-                                if let Err(err) = diff.overwrite() {
-                                    ok = false;
-                                    let path = diff
-                                        .expected_path()
-                                        .expect("always present when overwrite can fail");
-                                    let _ = writeln!(
-                                        &mut buffer,
-                                        "{} to overwrite {}: {}",
-                                        self.palette.error("Failed"),
-                                        path.display(),
-                                        err
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if ok {
-                use std::io::Write;
-                let _ = write!(std::io::stderr(), "{}", buffer);
-                match self.action {
-                    Action::Skip => unreachable!("Bailed out earlier"),
-                    Action::Ignore => {
-                        let _ = write!(
-                            std::io::stderr(),
-                            "{}",
-                            self.palette.warn("Ignoring above failures")
-                        );
-                    }
-                    Action::Verify => unreachable!("Something had to fail to get here"),
-                    Action::Overwrite => {
-                        let _ = write!(
-                            std::io::stderr(),
-                            "{}",
-                            self.palette.warn("Overwrote above failures")
-                        );
-                    }
-                }
-            } else {
-                panic!("{}", buffer);
-            }
-        }
-    }
-}
-
-/// # Customize Behavior
-impl PathAssert {
-    /// Override the color palette
-    pub fn palette(mut self, palette: crate::report::Palette) -> Self {
-        self.palette = palette;
-        self
-    }
-
-    /// Read the failure action from an environment variable
-    pub fn action_env(mut self, var_name: &str) -> Self {
-        let action = Action::with_env_var(var_name);
-        self.action = action.unwrap_or(self.action);
-        self
-    }
-
-    /// Override the failure action
-    pub fn action(mut self, action: Action) -> Self {
-        self.action = action;
-        self
-    }
-
-    /// Override the default [`Substitutions`][crate::Substitutions]
-    pub fn substitutions(mut self, substitutions: crate::Substitutions) -> Self {
-        self.substitutions = substitutions;
-        self
-    }
-}
-
-impl Default for PathAssert {
-    fn default() -> Self {
-        Self {
-            action: Action::Verify,
-            substitutions: crate::Substitutions::with_exe(),
-            palette: crate::report::Palette::auto(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathDiff {
     Failure(crate::Error),
@@ -308,6 +124,9 @@ pub enum PathDiff {
 }
 
 impl PathDiff {
+    /// Report differences between `actual_root` and `pattern_root`
+    ///
+    /// Note: Requires feature flag `path`
     pub fn subset_eq_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
@@ -317,7 +136,7 @@ impl PathDiff {
         Self::subset_eq_iter_inner(actual_root, pattern_root)
     }
 
-    fn subset_eq_iter_inner(
+    pub(crate) fn subset_eq_iter_inner(
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> {
@@ -378,6 +197,9 @@ impl PathDiff {
         })
     }
 
+    /// Report differences between `actual_root` and `pattern_root`
+    ///
+    /// Note: Requires feature flag `path`
     pub fn subset_matches_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
@@ -388,7 +210,7 @@ impl PathDiff {
         Self::subset_matches_iter_inner(actual_root, pattern_root, substitutions)
     }
 
-    fn subset_matches_iter_inner(
+    pub(crate) fn subset_matches_iter_inner(
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
         substitutions: &crate::Substitutions,
@@ -526,8 +348,8 @@ impl PathDiff {
                     f,
                     expected_content,
                     actual_content,
-                    &expected_path.display(),
-                    &actual_path.display(),
+                    Some(&expected_path.display()),
+                    Some(&actual_path.display()),
                     palette,
                 )?;
             }

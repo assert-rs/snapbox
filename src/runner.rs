@@ -334,7 +334,10 @@ impl Case {
             None => {}
         }
 
-        let cmd_output = step.to_output(cwd).map_err(|e| output.clone().error(e))?;
+        let cmd = step.to_command(cwd).map_err(|e| output.clone().error(e))?;
+        let cmd_output = cmd
+            .output()
+            .map_err(|e| output.clone().error(e.to_string().into()))?;
         let output = output.output(cmd_output);
 
         // For Mode::Dump's sake, allow running all
@@ -748,8 +751,8 @@ impl std::fmt::Display for Stream {
                     f,
                     expected,
                     &self.content,
-                    &self.stream,
-                    &self.stream,
+                    Some(&self.stream),
+                    Some(&self.stream),
                     palette,
                 )?;
             }
@@ -958,8 +961,8 @@ impl std::fmt::Display for FileStatus {
                     f,
                     expected_content,
                     actual_content,
-                    &expected_path.display(),
-                    &actual_path.display(),
+                    Some(&expected_path.display()),
+                    Some(&actual_path.display()),
                     palette,
                 )?;
             }
