@@ -149,6 +149,12 @@ impl Default for Data {
     }
 }
 
+impl<'d> From<&'d Data> for Data {
+    fn from(other: &'d Data) -> Self {
+        other.clone()
+    }
+}
+
 impl From<Vec<u8>> for Data {
     fn from(other: Vec<u8>) -> Self {
         Self::Binary(other)

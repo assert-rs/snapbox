@@ -334,7 +334,10 @@ impl Case {
             None => {}
         }
 
-        let cmd_output = step.to_output(cwd).map_err(|e| output.clone().error(e))?;
+        let cmd = step.to_command(cwd).map_err(|e| output.clone().error(e))?;
+        let cmd_output = cmd
+            .output()
+            .map_err(|e| output.clone().error(e.to_string().into()))?;
         let output = output.output(cmd_output);
 
         // For Mode::Dump's sake, allow running all

@@ -4,7 +4,6 @@
 
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
-use std::io::prelude::*;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct TryCmd {
@@ -412,7 +411,7 @@ impl Step {
     pub(crate) fn to_command(
         &self,
         cwd: Option<&std::path::Path>,
-    ) -> Result<std::process::Command, crate::Error> {
+    ) -> Result<snapbox::cmd::Command, crate::Error> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
             Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name).into()),
@@ -423,59 +422,26 @@ impl Step {
             return Err(format!("Bin doesn't exist: {}", bin.display()).into());
         }
 
-        let mut cmd = std::process::Command::new(bin);
-        cmd.args(&self.args);
+        let mut cmd = snapbox::cmd::Command::new(bin).args(&self.args);
         if let Some(cwd) = cwd {
-            cmd.current_dir(cwd);
+            cmd = cmd.current_dir(cwd);
         }
-        self.env.apply(&mut cmd);
+        if let Some(stdin) = &self.stdin {
+            cmd = cmd.stdin(stdin);
+        }
+        if self.stderr_to_stdout {
+            cmd = cmd.stderr_to_stdout();
+        }
+        if let Some(timeout) = self.timeout {
+            cmd = cmd.timeout(timeout)
+        }
+        cmd = self.env.apply(cmd);
 
         Ok(cmd)
     }
 
-    pub(crate) fn to_output(
-        &self,
-        cwd: Option<&std::path::Path>,
-    ) -> Result<std::process::Output, crate::Error> {
-        let mut cmd = self.to_command(cwd)?;
-
-        if self.stderr_to_stdout {
-            cmd.stdin(std::process::Stdio::piped());
-            let (mut reader, writer) = os_pipe::pipe().map_err(|e| e.to_string())?;
-            let writer_clone = writer.try_clone().map_err(|e| e.to_string())?;
-            cmd.stdout(writer);
-            cmd.stderr(writer_clone);
-            let child = cmd.spawn().map_err(|e| e.to_string())?;
-
-            // Avoid a deadlock! This parent process is still holding open pipe
-            // writers (inside the Command object), and we have to close those
-            // before we read. Here we do this by dropping the Command object.
-            drop(cmd);
-
-            let mut output = crate::wait_with_input_output(child, self.stdin(), self.timeout)
-                .map_err(|e| e.to_string())?;
-            assert!(output.stdout.is_empty());
-            assert!(output.stderr.is_empty());
-            reader
-                .read_to_end(&mut output.stdout)
-                .map_err(|e| e.to_string())?;
-            Ok(output)
-        } else {
-            cmd.stdin(std::process::Stdio::piped());
-            cmd.stdout(std::process::Stdio::piped());
-            cmd.stderr(std::process::Stdio::piped());
-            let child = cmd.spawn().map_err(|e| e.to_string())?;
-            crate::wait_with_input_output(child, self.stdin(), self.timeout)
-                .map_err(|e| e.to_string().into())
-        }
-    }
-
     pub(crate) fn expected_status(&self) -> CommandStatus {
         self.expected_status.unwrap_or_default()
-    }
-
-    pub(crate) fn stdin(&self) -> Option<&[u8]> {
-        self.stdin.as_ref().map(|f| f.as_bytes())
     }
 }
 
@@ -662,14 +628,14 @@ impl Env {
         self.remove.extend(other.remove.iter().cloned());
     }
 
-    pub(crate) fn apply(&self, command: &mut std::process::Command) {
+    pub(crate) fn apply(&self, mut command: snapbox::cmd::Command) -> snapbox::cmd::Command {
         if !self.inherit() {
-            command.env_clear();
+            command = command.env_clear();
         }
         for remove in &self.remove {
-            command.env_remove(&remove);
+            command = command.env_remove(&remove);
         }
-        command.envs(&self.add);
+        command.envs(&self.add)
     }
 
     pub(crate) fn inherit(&self) -> bool {
