@@ -332,8 +332,23 @@ impl PathDiff {
                 expected_path,
                 actual_path,
                 expected_type: _,
-                actual_type: _,
-            } => shallow_copy(&expected_path, &actual_path),
+                actual_type,
+            } => {
+                match actual_type {
+                    FileType::Dir => {
+                        std::fs::remove_dir_all(expected_path).map_err(|e| {
+                            format!("Failed to remove {}: {}", expected_path.display(), e)
+                        })?;
+                    }
+                    FileType::File | FileType::Symlink => {
+                        std::fs::remove_file(expected_path).map_err(|e| {
+                            format!("Failed to remove {}: {}", expected_path.display(), e)
+                        })?;
+                    }
+                    FileType::Unknown | FileType::Missing => {}
+                }
+                shallow_copy(&expected_path, &actual_path)
+            }
             Self::LinkMismatch {
                 expected_path,
                 actual_path,
