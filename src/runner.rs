@@ -751,8 +751,8 @@ impl std::fmt::Display for Stream {
                     f,
                     expected,
                     &self.content,
-                    &self.stream,
-                    &self.stream,
+                    Some(&self.stream),
+                    Some(&self.stream),
                     palette,
                 )?;
             }
@@ -961,8 +961,8 @@ impl std::fmt::Display for FileStatus {
                     f,
                     expected_content,
                     actual_content,
-                    &expected_path.display(),
-                    &actual_path.display(),
+                    Some(&expected_path.display()),
+                    Some(&actual_path.display()),
                     palette,
                 )?;
             }

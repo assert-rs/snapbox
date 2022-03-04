@@ -44,15 +44,8 @@ impl Assert {
 
         if actual != expected {
             let mut buf = String::new();
-            crate::report::write_diff(
-                &mut buf,
-                &expected,
-                &actual,
-                &"expected",
-                &"actual",
-                self.palette,
-            )
-            .expect("diff should always succeed");
+            crate::report::write_diff(&mut buf, &expected, &actual, None, None, self.palette)
+                .expect("diff should always succeed");
             panic!("{}: {}", self.palette.error("Eq failed"), buf);
         }
     }
@@ -86,15 +79,8 @@ impl Assert {
 
         if actual != pattern {
             let mut buf = String::new();
-            crate::report::write_diff(
-                &mut buf,
-                &pattern,
-                &actual,
-                &"pattern",
-                &"actual",
-                self.palette,
-            )
-            .expect("diff should always succeed");
+            crate::report::write_diff(&mut buf, &pattern, &actual, None, None, self.palette)
+                .expect("diff should always succeed");
             panic!("{}: {}", self.palette.error("Match failed"), buf);
         }
     }
@@ -243,8 +229,8 @@ impl Assert {
                 &mut buf,
                 expected,
                 actual,
-                &expected_path.display(),
-                &expected_path.display(),
+                Some(&expected_path.display()),
+                Some(&expected_path.display()),
                 self.palette,
             )
             .map_err(|e| e.to_string())?;

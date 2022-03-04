@@ -347,8 +347,8 @@ impl PathDiff {
                     f,
                     expected_content,
                     actual_content,
-                    &expected_path.display(),
-                    &actual_path.display(),
+                    Some(&expected_path.display()),
+                    Some(&actual_path.display()),
                     palette,
                 )?;
             }

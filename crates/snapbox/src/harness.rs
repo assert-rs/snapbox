@@ -221,8 +221,8 @@ impl Verifier {
                 &mut buf,
                 &expected,
                 &actual,
-                &expected_path.display(),
-                &expected_path.display(),
+                Some(&expected_path.display()),
+                Some(&expected_path.display()),
                 self.palette,
             )
             .map_err(|e| e.to_string())?;
