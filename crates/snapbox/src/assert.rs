@@ -36,14 +36,10 @@ impl Assert {
     }
 
     #[track_caller]
-    fn eq_inner(&self, mut actual: crate::Data, expected: crate::Data) {
-        let expected = expected.try_text().map_text(crate::utils::normalize_lines);
-        if expected.as_str().is_some() {
-            actual = actual.try_text().map_text(crate::utils::normalize_lines);
-        }
-
-        if let Err(err) = self.try_verify(&actual, &expected, None) {
-            panic!("{}: {}", self.palette.error("Eq failed"), err);
+    fn eq_inner(&self, actual: crate::Data, expected: crate::Data) {
+        let (actual, pattern) = self.normalize_eq(actual, Ok(expected));
+        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None)) {
+            panic!("{}: {}", self.palette.error("Eq failed"), desc);
         }
     }
 
@@ -65,17 +61,10 @@ impl Assert {
     }
 
     #[track_caller]
-    fn matches_inner(&self, mut actual: crate::Data, pattern: crate::Data) {
-        let pattern = pattern.try_text().map_text(crate::utils::normalize_lines);
-        if let Some(pattern) = pattern.as_str() {
-            actual = actual
-                .try_text()
-                .map_text(crate::utils::normalize_text)
-                .map_text(|t| self.substitutions.normalize(t, pattern));
-        }
-
-        if let Err(err) = self.try_verify(&actual, &pattern, None) {
-            panic!("{}: {}", self.palette.error("Match failed"), err);
+    fn matches_inner(&self, actual: crate::Data, pattern: crate::Data) {
+        let (actual, pattern) = self.normalize_match(actual, Ok(pattern));
+        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None)) {
+            panic!("{}: {}", self.palette.error("Match failed"), desc);
         }
     }
 
@@ -94,7 +83,7 @@ impl Assert {
     }
 
     #[track_caller]
-    fn eq_path_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
+    fn eq_path_inner(&self, actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {
                 return;
@@ -102,11 +91,8 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let expected = crate::Data::read_from(pattern_path, self.binary)
-            .map(|d| d.map_text(crate::utils::normalize_lines));
-        if expected.as_ref().ok().and_then(|d| d.as_str()).is_some() {
-            actual = actual.try_text().map_text(crate::utils::normalize_lines);
-        }
+        let expected = crate::Data::read_from(pattern_path, self.binary);
+        let (actual, expected) = self.normalize_eq(actual, expected);
 
         let result =
             expected.and_then(|e| self.try_verify(&actual, &e, Some(&pattern_path.display())));
@@ -163,7 +149,7 @@ impl Assert {
     }
 
     #[track_caller]
-    fn matches_path_inner(&self, mut actual: crate::Data, pattern_path: &std::path::Path) {
+    fn matches_path_inner(&self, actual: crate::Data, pattern_path: &std::path::Path) {
         match self.action {
             Action::Skip => {
                 return;
@@ -171,14 +157,8 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let expected = crate::Data::read_from(pattern_path, self.binary)
-            .map(|d| d.map_text(crate::utils::normalize_lines));
-        if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
-            actual = actual
-                .try_text()
-                .map_text(crate::utils::normalize_text)
-                .map_text(|t| self.substitutions.normalize(t, expected));
-        }
+        let expected = crate::Data::read_from(pattern_path, self.binary);
+        let (actual, expected) = self.normalize_match(actual, expected);
 
         let result =
             expected.and_then(|e| self.try_verify(&actual, &e, Some(&pattern_path.display())));
@@ -211,6 +191,35 @@ impl Assert {
                 }
             }
         }
+    }
+
+    fn normalize_eq(
+        &self,
+        mut actual: crate::Data,
+        expected: crate::Result<crate::Data>,
+    ) -> (crate::Data, crate::Result<crate::Data>) {
+        let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
+        if expected.as_ref().ok().and_then(|d| d.as_str()).is_some() {
+            actual = actual.try_text().map_text(crate::utils::normalize_lines);
+        }
+
+        (actual, expected)
+    }
+
+    fn normalize_match(
+        &self,
+        mut actual: crate::Data,
+        expected: crate::Result<crate::Data>,
+    ) -> (crate::Data, crate::Result<crate::Data>) {
+        let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
+        if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
+            actual = actual
+                .try_text()
+                .map_text(crate::utils::normalize_text)
+                .map_text(|t| self.substitutions.normalize(t, expected));
+        }
+
+        (actual, expected)
     }
 
     fn try_verify(
