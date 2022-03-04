@@ -113,6 +113,7 @@ pub struct PathAssert {
 
 /// # Assertions
 impl PathAssert {
+    #[track_caller]
     pub fn subset_eq(
         &self,
         actual_root: impl Into<std::path::PathBuf>,
@@ -123,6 +124,7 @@ impl PathAssert {
         self.subset_eq_inner(actual_root, pattern_root)
     }
 
+    #[track_caller]
     fn subset_eq_inner(&self, actual_root: std::path::PathBuf, expected_root: std::path::PathBuf) {
         match self.action {
             Action::Skip => {
@@ -135,6 +137,7 @@ impl PathAssert {
         self.verify(checks);
     }
 
+    #[track_caller]
     pub fn subset_matches(
         &self,
         actual_root: impl Into<std::path::PathBuf>,
@@ -145,6 +148,7 @@ impl PathAssert {
         self.subset_matches_inner(actual_root, pattern_root)
     }
 
+    #[track_caller]
     fn subset_matches_inner(
         &self,
         actual_root: std::path::PathBuf,
@@ -163,6 +167,7 @@ impl PathAssert {
         self.verify(checks);
     }
 
+    #[track_caller]
     fn verify(&self, mut checks: Vec<Result<(std::path::PathBuf, std::path::PathBuf), PathDiff>>) {
         if checks.iter().all(Result::is_ok) {
             for check in checks {
