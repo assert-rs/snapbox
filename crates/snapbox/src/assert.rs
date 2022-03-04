@@ -94,43 +94,13 @@ impl Assert {
         let expected = crate::Data::read_from(pattern_path, self.binary);
         let (actual, expected) = self.normalize_eq(actual, expected);
 
-        let result = expected.and_then(|e| {
-            self.try_verify(
-                &actual,
-                &e,
-                Some(&"In-memory"),
-                Some(&pattern_path.display()),
-            )
-        });
-        if let Err(err) = result {
-            match self.action {
-                Action::Skip => unreachable!("Bailed out earlier"),
-                Action::Ignore => {
-                    use std::io::Write;
-
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "{}: {}",
-                        self.palette.warn("Ignoring eq failure"),
-                        err
-                    );
-                }
-                Action::Verify => {
-                    panic!("{}: {}", self.palette.error("Not eq"), err);
-                }
-                Action::Overwrite => {
-                    use std::io::Write;
-
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "{}: {}",
-                        self.palette.warn("Overwriting failed eq check"),
-                        err
-                    );
-                    actual.write_to(pattern_path).unwrap();
-                }
-            }
-        }
+        self.do_action(
+            actual,
+            expected,
+            pattern_path,
+            Some(&"In-memory"),
+            Some(&pattern_path.display()),
+        );
     }
 
     /// Check if a value matches the pattern in a file
@@ -166,43 +136,13 @@ impl Assert {
         let expected = crate::Data::read_from(pattern_path, self.binary);
         let (actual, expected) = self.normalize_match(actual, expected);
 
-        let result = expected.and_then(|e| {
-            self.try_verify(
-                &actual,
-                &e,
-                Some(&"In-memory"),
-                Some(&pattern_path.display()),
-            )
-        });
-        if let Err(err) = result {
-            match self.action {
-                Action::Skip => unreachable!("Bailed out earlier"),
-                Action::Ignore => {
-                    use std::io::Write;
-
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "{}: {}",
-                        self.palette.warn("Ignoring match failure"),
-                        err
-                    );
-                }
-                Action::Verify => {
-                    panic!("{}: {}", self.palette.error("Match failed"), err);
-                }
-                Action::Overwrite => {
-                    use std::io::Write;
-
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "{}: {}",
-                        self.palette.warn("Overwriting failed match"),
-                        err
-                    );
-                    actual.write_to(pattern_path).unwrap();
-                }
-            }
-        }
+        self.do_action(
+            actual,
+            expected,
+            pattern_path,
+            Some(&"In-memory"),
+            Some(&pattern_path.display()),
+        );
     }
 
     pub(crate) fn normalize_eq(
@@ -232,6 +172,48 @@ impl Assert {
         }
 
         (actual, expected)
+    }
+
+    #[track_caller]
+    pub(crate) fn do_action(
+        &self,
+        actual: crate::Data,
+        expected: crate::Result<crate::Data>,
+        expected_path: &std::path::Path,
+        actual_name: Option<&dyn std::fmt::Display>,
+        expected_name: Option<&dyn std::fmt::Display>,
+    ) {
+        let result =
+            expected.and_then(|e| self.try_verify(&actual, &e, actual_name, expected_name));
+        if let Err(err) = result {
+            match self.action {
+                Action::Skip => unreachable!("Bailed out earlier"),
+                Action::Ignore => {
+                    use std::io::Write;
+
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "{}: {}",
+                        self.palette.warn("Ignoring failure"),
+                        err
+                    );
+                }
+                Action::Verify => {
+                    panic!("{}", err);
+                }
+                Action::Overwrite => {
+                    use std::io::Write;
+
+                    let _ = writeln!(
+                        std::io::stderr(),
+                        "{}: {}",
+                        self.palette.warn("Fixing"),
+                        err
+                    );
+                    actual.write_to(expected_path).unwrap();
+                }
+            }
+        }
     }
 
     pub(crate) fn try_verify(
