@@ -347,6 +347,29 @@ impl OutputAssert {
 
     /// Ensure the command wrote the expected data to `stdout`.
     #[track_caller]
+    pub fn stdout_eq_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
+        let expected_path = expected_path.as_ref();
+        self.stdout_eq_path_inner(expected_path)
+    }
+
+    #[track_caller]
+    fn stdout_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
+        let actual = crate::Data::from(self.output.stdout.as_slice());
+        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let (actual, pattern) = self.config.normalize_eq(actual, expected);
+        self.config.do_action(
+            actual,
+            pattern,
+            expected_path,
+            Some(&"stdout"),
+            Some(&expected_path.display()),
+        );
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stdout`.
+    #[track_caller]
     pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
         self.stdout_matches_inner(expected)
@@ -367,6 +390,29 @@ impl OutputAssert {
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
         }
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stdout`.
+    #[track_caller]
+    pub fn stdout_matches_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
+        let expected_path = expected_path.as_ref();
+        self.stdout_matches_path_inner(expected_path)
+    }
+
+    #[track_caller]
+    fn stdout_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
+        let actual = crate::Data::from(self.output.stdout.as_slice());
+        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let (actual, pattern) = self.config.normalize_match(actual, expected);
+        self.config.do_action(
+            actual,
+            pattern,
+            expected_path,
+            Some(&"stdout"),
+            Some(&expected_path.display()),
+        );
 
         self
     }
@@ -399,6 +445,29 @@ impl OutputAssert {
 
     /// Ensure the command wrote the expected data to `stderr`.
     #[track_caller]
+    pub fn stderr_eq_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
+        let expected_path = expected_path.as_ref();
+        self.stderr_eq_path_inner(expected_path)
+    }
+
+    #[track_caller]
+    fn stderr_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
+        let actual = crate::Data::from(self.output.stderr.as_slice());
+        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let (actual, pattern) = self.config.normalize_eq(actual, expected);
+        self.config.do_action(
+            actual,
+            pattern,
+            expected_path,
+            Some(&"stderr"),
+            Some(&expected_path.display()),
+        );
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stderr`.
+    #[track_caller]
     pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
         self.stderr_matches_inner(expected)
@@ -419,6 +488,29 @@ impl OutputAssert {
             self.write_stdout(&mut buf).unwrap();
             panic!("{}", buf);
         }
+
+        self
+    }
+
+    /// Ensure the command wrote the expected data to `stderr`.
+    #[track_caller]
+    pub fn stderr_matches_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
+        let expected_path = expected_path.as_ref();
+        self.stderr_matches_path_inner(expected_path)
+    }
+
+    #[track_caller]
+    fn stderr_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
+        let actual = crate::Data::from(self.output.stderr.as_slice());
+        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let (actual, pattern) = self.config.normalize_match(actual, expected);
+        self.config.do_action(
+            actual,
+            pattern,
+            expected_path,
+            Some(&"stderr"),
+            Some(&expected_path.display()),
+        );
 
         self
     }

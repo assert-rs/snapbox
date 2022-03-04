@@ -16,7 +16,7 @@ pub struct Assert {
     action: Action,
     substitutions: crate::Substitutions,
     pub(crate) palette: crate::report::Palette,
-    binary: Option<bool>,
+    pub(crate) binary: Option<bool>,
 }
 
 /// # Assertions
