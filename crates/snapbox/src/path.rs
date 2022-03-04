@@ -112,6 +112,7 @@ pub struct PathAssert {
 }
 
 /// # Assertions
+#[cfg(feature = "path")]
 impl PathAssert {
     #[track_caller]
     pub fn subset_eq(
@@ -313,6 +314,9 @@ pub enum PathDiff {
 }
 
 impl PathDiff {
+    /// Report differences between `actual_root` and `pattern_root`
+    ///
+    /// Note: Requires feature flag `path`
     pub fn subset_eq_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
@@ -383,6 +387,9 @@ impl PathDiff {
         })
     }
 
+    /// Report differences between `actual_root` and `pattern_root`
+    ///
+    /// Note: Requires feature flag `path`
     pub fn subset_matches_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
