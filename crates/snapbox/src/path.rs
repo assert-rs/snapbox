@@ -497,7 +497,7 @@ pub fn copy_template(source: &std::path::Path, dest: &std::path::Path) -> Result
 }
 
 /// Copy a file system entry, without recursing
-pub fn shallow_copy(source: &std::path::Path, dest: &std::path::Path) -> Result<(), crate::Error> {
+fn shallow_copy(source: &std::path::Path, dest: &std::path::Path) -> Result<(), crate::Error> {
     let meta = source
         .symlink_metadata()
         .map_err(|e| format!("Failed to read metadata from {}: {}", source.display(), e))?;
