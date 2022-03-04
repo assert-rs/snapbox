@@ -222,7 +222,7 @@ impl Verifier {
                 &expected,
                 &actual,
                 Some(&expected_path.display()),
-                Some(&expected_path.display()),
+                None,
                 self.palette,
             )
             .map_err(|e| e.to_string())?;
