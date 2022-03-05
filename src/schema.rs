@@ -282,7 +282,7 @@ impl TryCmd {
                     stderr_to_stdout: true,
                     expected_status,
                     expected_stdout_source: Some(stdout_start..post_stdout_start),
-                    expected_stdout: Some(crate::Data::Text(stdout)),
+                    expected_stdout: Some(crate::Data::text(stdout)),
                     expected_stderr_source: None,
                     expected_stderr: None,
                     binary: false,
@@ -314,31 +314,28 @@ fn overwrite_toml_output(
         if output_path.exists() {
             output.write_to(&output_path)?;
         } else {
-            match output {
-                crate::Data::Binary(_) => {
-                    output.write_to(&output_path)?;
+            if let Some(output) = output.as_str() {
+                let raw = std::fs::read_to_string(path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                let mut doc = raw
+                    .parse::<toml_edit::Document>()
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                if let Some(output_value) = doc.get_mut(output_field) {
+                    *output_value = toml_edit::value(output);
+                }
+                std::fs::write(path, doc.to_string())
+                    .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+            } else {
+                output.write_to(&output_path)?;
 
-                    let raw = std::fs::read_to_string(path)
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    let mut doc = raw
-                        .parse::<toml_edit::Document>()
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    doc[output_field] = toml_edit::Item::None;
-                    std::fs::write(path, doc.to_string())
-                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
-                }
-                crate::Data::Text(output) => {
-                    let raw = std::fs::read_to_string(path)
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    let mut doc = raw
-                        .parse::<toml_edit::Document>()
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    if let Some(output_value) = doc.get_mut(output_field) {
-                        *output_value = toml_edit::value(output);
-                    }
-                    std::fs::write(path, doc.to_string())
-                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
-                }
+                let raw = std::fs::read_to_string(path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                let mut doc = raw
+                    .parse::<toml_edit::Document>()
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                doc[output_field] = toml_edit::Item::None;
+                std::fs::write(path, doc.to_string())
+                    .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
             }
         }
     }
@@ -375,13 +372,13 @@ impl From<OneShot> for TryCmd {
                 bin,
                 args: args.into_vec(),
                 env,
-                stdin: stdin.map(crate::Data::Text),
+                stdin: stdin.map(crate::Data::text),
                 stderr_to_stdout,
                 expected_status: status,
                 expected_stdout_source: None,
-                expected_stdout: stdout.map(crate::Data::Text),
+                expected_stdout: stdout.map(crate::Data::text),
                 expected_stderr_source: None,
-                expected_stderr: stderr.map(crate::Data::Text),
+                expected_stderr: stderr.map(crate::Data::text),
                 binary,
                 timeout,
             }],
@@ -905,7 +902,7 @@ $ cmd
                 expected_status: Some(CommandStatus::Success),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(4..6),
-                expected_stdout: Some(crate::Data::Text("Hello World\n".into())),
+                expected_stdout: Some(crate::Data::text("Hello World\n")),
                 expected_stderr: None,
                 ..Default::default()
             }],

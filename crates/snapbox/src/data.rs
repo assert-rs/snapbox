@@ -1,20 +1,29 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Data {
+pub struct Data {
+    inner: DataInner,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum DataInner {
     Binary(Vec<u8>),
     Text(String),
 }
 
 impl Data {
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
-        Self::Binary(raw.into())
+        Self {
+            inner: DataInner::Binary(raw.into()),
+        }
     }
 
     pub fn text(raw: impl Into<String>) -> Self {
-        Self::Text(raw.into())
+        Self {
+            inner: DataInner::Text(raw.into()),
+        }
     }
 
     pub fn new() -> Self {
-        Self::Text("".into())
+        Self::text("")
     }
 
     pub fn read_from(path: &std::path::Path, binary: Option<bool>) -> Result<Self, crate::Error> {
@@ -22,17 +31,17 @@ impl Data {
             Some(true) => {
                 let data = std::fs::read(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::Binary(data)
+                Self::binary(data)
             }
             Some(false) => {
                 let data = std::fs::read_to_string(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::Text(data)
+                Self::text(data)
             }
             None => {
                 let data = std::fs::read(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::Binary(data).try_text()
+                Self::binary(data).try_text()
             }
         };
         Ok(data)
@@ -73,33 +82,33 @@ impl Data {
             }
         }
 
-        *self = Self::Text(output_lines);
+        *self = Self::text(output_lines);
         Ok(())
     }
 
     pub fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
-        match self {
-            Self::Binary(data) => Self::Binary(data),
-            Self::Text(data) => Self::Text(op(&data)),
+        match self.inner {
+            DataInner::Binary(data) => Self::binary(data),
+            DataInner::Text(data) => Self::text(op(&data)),
         }
     }
 
     pub fn try_text(self) -> Self {
-        match self {
-            Self::Binary(data) => {
+        match self.inner {
+            DataInner::Binary(data) => {
                 if is_binary(&data) {
-                    Self::Binary(data)
+                    Self::binary(data)
                 } else {
                     match String::from_utf8(data) {
-                        Ok(data) => Self::Text(data),
+                        Ok(data) => Self::text(data),
                         Err(err) => {
                             let data = err.into_bytes();
-                            Self::Binary(data)
+                            Self::binary(data)
                         }
                     }
                 }
             }
-            Self::Text(data) => Self::Text(data),
+            DataInner::Text(data) => Self::text(data),
         }
     }
 
@@ -107,7 +116,7 @@ impl Data {
     ///
     /// Note: this will **not** do a binary-content check
     pub fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
-        *self = Self::Text(std::mem::take(self).into_string()?);
+        *self = Self::text(std::mem::take(self).into_string()?);
         Ok(())
     }
 
@@ -115,12 +124,12 @@ impl Data {
     ///
     /// Note: this will **not** do a binary-content check
     pub fn into_string(self) -> Result<String, std::str::Utf8Error> {
-        match self {
-            Self::Binary(data) => {
+        match self.inner {
+            DataInner::Binary(data) => {
                 let data = String::from_utf8(data).map_err(|e| e.utf8_error())?;
                 Ok(data)
             }
-            Self::Text(data) => Ok(data),
+            DataInner::Text(data) => Ok(data),
         }
     }
 
@@ -128,25 +137,25 @@ impl Data {
     ///
     /// Note: this will not inspect binary data for being a valid `str`.
     pub fn as_str(&self) -> Option<&str> {
-        match self {
-            Self::Binary(_) => None,
-            Self::Text(data) => Some(data.as_str()),
+        match &self.inner {
+            DataInner::Binary(_) => None,
+            DataInner::Text(data) => Some(data.as_str()),
         }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
-        match self {
-            Self::Binary(data) => data,
-            Self::Text(data) => data.as_bytes(),
+        match &self.inner {
+            DataInner::Binary(data) => data,
+            DataInner::Text(data) => data.as_bytes(),
         }
     }
 }
 
 impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Binary(data) => String::from_utf8_lossy(data).fmt(f),
-            Self::Text(data) => data.fmt(f),
+        match &self.inner {
+            DataInner::Binary(data) => String::from_utf8_lossy(data).fmt(f),
+            DataInner::Text(data) => data.fmt(f),
         }
     }
 }
@@ -165,7 +174,7 @@ impl<'d> From<&'d Data> for Data {
 
 impl From<Vec<u8>> for Data {
     fn from(other: Vec<u8>) -> Self {
-        Self::Binary(other)
+        Self::binary(other)
     }
 }
 
@@ -177,7 +186,7 @@ impl<'b> From<&'b [u8]> for Data {
 
 impl From<String> for Data {
     fn from(other: String) -> Self {
-        Self::Text(other)
+        Self::text(other)
     }
 }
 
@@ -219,9 +228,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World\n";
-        let expected = Data::Text("One\nWorld\nThree".into());
+        let expected = Data::text("One\nWorld\nThree");
 
-        let mut actual = Data::Text(input.into());
+        let mut actual = Data::text(input);
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -231,9 +240,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World\nTrees\n";
-        let expected = Data::Text("One\nWorld\nTrees\nThree".into());
+        let expected = Data::text("One\nWorld\nTrees\nThree");
 
-        let mut actual = Data::Text(input.into());
+        let mut actual = Data::text(input);
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -243,9 +252,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "";
-        let expected = Data::Text("One\nThree".into());
+        let expected = Data::text("One\nThree");
 
-        let mut actual = Data::Text(input.into());
+        let mut actual = Data::text(input);
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -255,9 +264,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World";
-        let expected = Data::Text("One\nWorld\nThree".into());
+        let expected = Data::text("One\nWorld\nThree");
 
-        let mut actual = Data::Text(input.into());
+        let mut actual = Data::text(input);
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -267,9 +276,9 @@ mod test {
         let input = "One\nTwo\nThree";
         let line_nums = 2..2;
         let replacement = "World\n";
-        let expected = Data::Text("One\nWorld\nTwo\nThree".into());
+        let expected = Data::text("One\nWorld\nTwo\nThree");
 
-        let mut actual = Data::Text(input.into());
+        let mut actual = Data::text(input);
         actual.replace_lines(line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
