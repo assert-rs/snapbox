@@ -5,6 +5,14 @@ pub enum Data {
 }
 
 impl Data {
+    pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
+        Self::Binary(raw.into())
+    }
+
+    pub fn text(raw: impl Into<String>) -> Self {
+        Self::Text(raw.into())
+    }
+
     pub fn new() -> Self {
         Self::Text("".into())
     }
