@@ -1,3 +1,5 @@
+//! Utilities to report test results to users
+
 mod color;
 mod diff;
 

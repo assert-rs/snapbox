@@ -1,3 +1,5 @@
+//! Initialize working directories and assert on how they've changed
+
 /// Working directory for tests
 #[derive(Debug)]
 pub struct PathFixture(PathFixtureInner);

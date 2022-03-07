@@ -6,14 +6,18 @@
 //! results, taking inspiration from
 //! [trybuild](https://crates.io/crates/trybuild) and [cram](https://bitheap.org/cram/).
 //!
-//! Which tool is right:
-//! - Hand-written test cases: for peculiar circumstances
-//! - [assert_cmd](https://crates.io/crates/assert_cmd): Test cases follow a certain pattern but
-//!   special attention is needed in how to verify the results.
+//! ## Which tool is right
+//!
+//! - [cram](https://bitheap.org/cram/): End-to-end CLI snapshotting agnostic of any programming language
 //! - `trycmd`: For running a lot of blunt tests (limited test predicates)
 //!   - Particular attention is given to allow the test data to be pulled into documentation, like
 //!     with [mdbook](https://rust-lang.github.io/mdBook/)
-//! - [cram](https://bitheap.org/cram/): For cases agnostic of any programming language
+//! - [snapbox](https://crates.io/crates/snapbox): When you want something like `trycmd` in one off
+//!   cases or you need to customize `trycmd`s behavior.
+//! - [assert_cmd](https://crates.io/crates/assert_cmd) +
+//!   [assert_fs](https://crates.io/crates/assert_fs): Test cases follow a certain pattern but
+//!   special attention is needed in how to verify the results.
+//! - Hand-written test cases: for peculiar circumstances
 //!
 //! ## Getting Started
 //!
@@ -168,13 +172,34 @@
 //!
 //! `.keep` files will be ignored.
 //!
-//! # Related Crates
+//! ## Related crates
 //!
-//! - [`snapbox`](https://crates.io/crates/snapbox): Lower level primitives used in `trycmd`
-//! - [`insta`](https://insta.rs/): Snapshot testing of Rust data types
-//! - [`term-transcript`](https://crates.io/crates/term-transcript): CLI snapshot testing, including
-//!   colors
-//! - [`runt`](https://crates.io/crates/runt): External CLI snapshot test command
+//! For testing command line programs.
+//! - [escargot][escargot] for more control over configuring the crate's binary.
+//! - [duct][duct] for orchestrating multiple processes.
+//!   - or [commandspec] for easier writing of commands
+//! - [`assert_cmd`][assert_cmd] for test cases that are individual pets, rather than herd of cattle
+//! - [`assert_fs`][assert_fs] for filesystem fixtures and assertions.
+//!   - or [tempfile][tempfile] for scratchpad directories.
+//! - [rexpect][rexpect] for testing interactive programs.
+//! - [dir-diff][dir-diff] for testing file side-effects.
+//!
+//! For snapshot testing:
+//! - [insta](https://crates.io/crates/insta)
+//! - [fn-fixture](https://crates.io/crates/fn-fixture)
+//! - [runt](https://crates.io/crates/runt)
+//!   - [turnt](https://github.com/cucapra/turnt)
+//!   - [cram](https://bitheap.org/cram/)
+//! - [term-transcript](https://crates.io/crates/term-transcript): CLI snapshot testing, including colors
+//!
+//! [escargot]: http://docs.rs/escargot
+//! [rexpect]: https://crates.io/crates/rexpect
+//! [dir-diff]: https://crates.io/crates/dir-diff
+//! [tempfile]: https://crates.io/crates/tempfile
+//! [duct]: https://crates.io/crates/duct
+//! [assert_fs]: https://crates.io/crates/assert_fs
+//! [assert_cmd]: https://crates.io/crates/assert_cmd
+//! [commandspec]: https://crates.io/crates/commandspec
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 // Doesn't distinguish between incidental sharing vs essential sharing

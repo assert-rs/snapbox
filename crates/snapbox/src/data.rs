@@ -1,3 +1,6 @@
+/// Test fixture, actual output, or expected result
+///
+/// This provides conveniences for tracking the intended format (binary vs text).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Data {
     inner: DataInner,
@@ -10,22 +13,26 @@ enum DataInner {
 }
 
 impl Data {
+    /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
         Self {
             inner: DataInner::Binary(raw.into()),
         }
     }
 
+    /// Mark the data as text (post-processing)
     pub fn text(raw: impl Into<String>) -> Self {
         Self {
             inner: DataInner::Text(raw.into()),
         }
     }
 
+    /// Empty test data
     pub fn new() -> Self {
         Self::text("")
     }
 
+    /// Load test data from a file
     pub fn read_from(path: &std::path::Path, binary: Option<bool>) -> Result<Self, crate::Error> {
         let data = match binary {
             Some(true) => {
@@ -47,6 +54,7 @@ impl Data {
         Ok(data)
     }
 
+    /// Overwrite a snapshot
     pub fn write_to(&self, path: &std::path::Path) -> Result<(), crate::Error> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
@@ -57,6 +65,7 @@ impl Data {
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
+    /// Update an inline snapshot
     pub fn replace_lines(
         &mut self,
         line_nums: std::ops::Range<usize>,
@@ -86,6 +95,9 @@ impl Data {
         Ok(())
     }
 
+    /// Post-process text
+    ///
+    /// See [utils][crate::utils]
     pub fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
         match self.inner {
             DataInner::Binary(data) => Self::binary(data),
@@ -93,6 +105,9 @@ impl Data {
         }
     }
 
+    /// Convert from binary to text, if possible
+    ///
+    /// This will do extra binary file detection if `detect-encoding` feature flag is set
     pub fn try_text(self) -> Self {
         match self.inner {
             DataInner::Binary(data) => {
