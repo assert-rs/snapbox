@@ -28,6 +28,7 @@ See the [docs](http://docs.rs/trycmd) for more.
 
 - [typos](https://github.com/crate-ci/typos) (source code spell checker)
   - See [port from `assert_cmd`](https://github.com/crate-ci/typos/compare/a8ae8a5..cdfdc4084c928423211c6a80acbd24dbed7108f6)
+- [clap](https://github.com/clap-rs/clap/) to test examples
 
 ## Relevant crates
 
