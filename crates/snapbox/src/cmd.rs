@@ -559,11 +559,10 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let (actual, pattern) = self.config.normalize_eq(actual, Ok(expected));
-        if let Err(desc) = pattern.and_then(|p| {
-            self.config
-                .try_verify(&actual, &p, Some(&"stdout"), Some(&"stdout"))
-        }) {
+        let (pattern, actual) = self.config.normalize_eq(Ok(expected), actual);
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stdout")))
+        {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -597,13 +596,13 @@ impl OutputAssert {
     fn stdout_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
         let expected = crate::Data::read_from(expected_path, self.config.binary);
-        let (actual, pattern) = self.config.normalize_eq(actual, expected);
+        let (pattern, actual) = self.config.normalize_eq(expected, actual);
         self.config.do_action(
-            actual,
             pattern,
-            expected_path,
-            Some(&"stdout"),
+            actual,
             Some(&expected_path.display()),
+            Some(&"stdout"),
+            expected_path,
         );
 
         self
@@ -630,11 +629,10 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let (actual, pattern) = self.config.normalize_match(actual, Ok(expected));
-        if let Err(desc) = pattern.and_then(|p| {
-            self.config
-                .try_verify(&actual, &p, Some(&"stdout"), Some(&"stdout"))
-        }) {
+        let (pattern, actual) = self.config.normalize_match(Ok(expected), actual);
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stdout")))
+        {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -668,13 +666,13 @@ impl OutputAssert {
     fn stdout_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
         let expected = crate::Data::read_from(expected_path, self.config.binary);
-        let (actual, pattern) = self.config.normalize_match(actual, expected);
+        let (pattern, actual) = self.config.normalize_match(expected, actual);
         self.config.do_action(
-            actual,
             pattern,
-            expected_path,
-            Some(&"stdout"),
+            actual,
             Some(&expected_path.display()),
+            Some(&"stdout"),
+            expected_path,
         );
 
         self
@@ -701,11 +699,10 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let (actual, pattern) = self.config.normalize_eq(actual, Ok(expected));
-        if let Err(desc) = pattern.and_then(|p| {
-            self.config
-                .try_verify(&actual, &p, Some(&"stderr"), Some(&"stderr"))
-        }) {
+        let (pattern, actual) = self.config.normalize_eq(Ok(expected), actual);
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stderr")))
+        {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -739,13 +736,13 @@ impl OutputAssert {
     fn stderr_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
         let expected = crate::Data::read_from(expected_path, self.config.binary);
-        let (actual, pattern) = self.config.normalize_eq(actual, expected);
+        let (pattern, actual) = self.config.normalize_eq(expected, actual);
         self.config.do_action(
-            actual,
             pattern,
-            expected_path,
-            Some(&"stderr"),
+            actual,
             Some(&expected_path.display()),
+            Some(&"stderr"),
+            expected_path,
         );
 
         self
@@ -772,11 +769,10 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let (actual, pattern) = self.config.normalize_match(actual, Ok(expected));
-        if let Err(desc) = pattern.and_then(|p| {
-            self.config
-                .try_verify(&actual, &p, Some(&"stderr"), Some(&"stderr"))
-        }) {
+        let (pattern, actual) = self.config.normalize_match(Ok(expected), actual);
+        if let Err(desc) =
+            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stderr")))
+        {
             use std::fmt::Write;
             let mut buf = String::new();
             write!(&mut buf, "{}", desc).unwrap();
@@ -810,13 +806,13 @@ impl OutputAssert {
     fn stderr_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
         let expected = crate::Data::read_from(expected_path, self.config.binary);
-        let (actual, pattern) = self.config.normalize_match(actual, expected);
+        let (pattern, actual) = self.config.normalize_match(expected, actual);
         self.config.do_action(
-            actual,
             pattern,
-            expected_path,
-            Some(&"stderr"),
+            actual,
             Some(&expected_path.display()),
+            Some(&"stderr"),
+            expected_path,
         );
 
         self

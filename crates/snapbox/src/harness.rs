@@ -26,9 +26,9 @@
 //!     let raw = std::fs::read_to_string(input_path)?;
 //!     let num = raw.parse::<usize>()?;
 //!
-//!     let expected = num + 10;
+//!     let actual = num + 10;
 //!
-//!     Ok(expected)
+//!     Ok(actual)
 //! }
 //! ```
 
@@ -125,7 +125,7 @@ where
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
-                    verify.verify(actual, &test.data.expected)
+                    verify.verify(&test.data.expected, actual)
                 }
                 Err(err) => libtest_mimic::Outcome::Failed {
                     msg: Some(err.to_string()),
@@ -158,26 +158,26 @@ impl Verifier {
 
     fn verify(
         &self,
-        actual: crate::Data,
         expected_path: &std::path::Path,
+        actual: crate::Data,
     ) -> libtest_mimic::Outcome {
         match self.action {
             Action::Skip => libtest_mimic::Outcome::Ignored,
             Action::Ignore => {
-                let _ = self.do_verify(actual, expected_path);
+                let _ = self.do_verify(expected_path, actual);
                 libtest_mimic::Outcome::Ignored
             }
-            Action::Verify => self.do_verify(actual, expected_path),
-            Action::Overwrite => self.do_overwrite(actual, expected_path),
+            Action::Verify => self.do_verify(expected_path, actual),
+            Action::Overwrite => self.do_overwrite(expected_path, actual),
         }
     }
 
     fn do_overwrite(
         &self,
-        actual: crate::Data,
         expected_path: &std::path::Path,
+        actual: crate::Data,
     ) -> libtest_mimic::Outcome {
-        match self.try_overwrite(actual, expected_path) {
+        match self.try_overwrite(expected_path, actual) {
             Ok(()) => libtest_mimic::Outcome::Passed,
             Err(err) => libtest_mimic::Outcome::Failed {
                 msg: Some(err.to_string()),
@@ -187,8 +187,8 @@ impl Verifier {
 
     fn try_overwrite(
         &self,
-        actual: crate::Data,
         expected_path: &std::path::Path,
+        actual: crate::Data,
     ) -> crate::Result<()> {
         actual.write_to(expected_path)?;
         Ok(())
@@ -196,10 +196,10 @@ impl Verifier {
 
     fn do_verify(
         &self,
-        actual: crate::Data,
         expected_path: &std::path::Path,
+        actual: crate::Data,
     ) -> libtest_mimic::Outcome {
-        match self.try_verify(actual, expected_path) {
+        match self.try_verify(expected_path, actual) {
             Ok(()) => libtest_mimic::Outcome::Passed,
             Err(err) => libtest_mimic::Outcome::Failed {
                 msg: Some(err.to_string()),
@@ -209,13 +209,13 @@ impl Verifier {
 
     fn try_verify(
         &self,
-        actual: crate::Data,
         expected_path: &std::path::Path,
+        actual: crate::Data,
     ) -> crate::Result<()> {
         let expected = crate::Data::read_from(expected_path, Some(false))?
             .map_text(crate::utils::normalize_lines);
 
-        if actual != expected {
+        if expected != actual {
             let mut buf = String::new();
             crate::report::write_diff(
                 &mut buf,

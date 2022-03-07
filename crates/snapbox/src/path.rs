@@ -131,18 +131,18 @@ impl PathDiff {
     /// Note: Requires feature flag `path`
     #[cfg(feature = "path")]
     pub fn subset_eq_iter(
-        actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
+        actual_root: impl Into<std::path::PathBuf>,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> {
-        let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
-        Self::subset_eq_iter_inner(actual_root, pattern_root)
+        let actual_root = actual_root.into();
+        Self::subset_eq_iter_inner(pattern_root, actual_root)
     }
 
     #[cfg(feature = "path")]
     pub(crate) fn subset_eq_iter_inner(
-        actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
+        actual_root: std::path::PathBuf,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> {
         let walker = Walk::new(&expected_root);
         walker.map(move |r| {
@@ -197,7 +197,7 @@ impl PathDiff {
                 FileType::Dir | FileType::Unknown | FileType::Missing => {}
             }
 
-            Ok((actual_path, expected_path))
+            Ok((expected_path, actual_path))
         })
     }
 
@@ -206,19 +206,19 @@ impl PathDiff {
     /// Note: Requires feature flag `path`
     #[cfg(feature = "path")]
     pub fn subset_matches_iter(
-        actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
+        actual_root: impl Into<std::path::PathBuf>,
         substitutions: &crate::Substitutions,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
-        let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
-        Self::subset_matches_iter_inner(actual_root, pattern_root, substitutions)
+        let actual_root = actual_root.into();
+        Self::subset_matches_iter_inner(pattern_root, actual_root, substitutions)
     }
 
     #[cfg(feature = "path")]
     pub(crate) fn subset_matches_iter_inner(
-        actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
+        actual_root: std::path::PathBuf,
         substitutions: &crate::Substitutions,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let walker = Walk::new(&expected_root);
@@ -277,7 +277,7 @@ impl PathDiff {
                 FileType::Dir | FileType::Unknown | FileType::Missing => {}
             }
 
-            Ok((actual_path, expected_path))
+            Ok((expected_path, actual_path))
         })
     }
 }
