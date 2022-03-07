@@ -313,30 +313,28 @@ fn overwrite_toml_output(
         let output_path = path.with_extension(output_ext);
         if output_path.exists() {
             output.write_to(&output_path)?;
-        } else {
-            if let Some(output) = output.as_str() {
-                let raw = std::fs::read_to_string(path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let mut doc = raw
-                    .parse::<toml_edit::Document>()
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                if let Some(output_value) = doc.get_mut(output_field) {
-                    *output_value = toml_edit::value(output);
-                }
-                std::fs::write(path, doc.to_string())
-                    .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
-            } else {
-                output.write_to(&output_path)?;
-
-                let raw = std::fs::read_to_string(path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let mut doc = raw
-                    .parse::<toml_edit::Document>()
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                doc[output_field] = toml_edit::Item::None;
-                std::fs::write(path, doc.to_string())
-                    .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+        } else if let Some(output) = output.as_str() {
+            let raw = std::fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+            let mut doc = raw
+                .parse::<toml_edit::Document>()
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+            if let Some(output_value) = doc.get_mut(output_field) {
+                *output_value = toml_edit::value(output);
             }
+            std::fs::write(path, doc.to_string())
+                .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+        } else {
+            output.write_to(&output_path)?;
+
+            let raw = std::fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+            let mut doc = raw
+                .parse::<toml_edit::Document>()
+                .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+            doc[output_field] = toml_edit::Item::None;
+            std::fs::write(path, doc.to_string())
+                .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
         }
     }
 
