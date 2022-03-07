@@ -176,6 +176,7 @@
 //!   colors
 //! - [`runt`](https://crates.io/crates/runt): External CLI snapshot test command
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 // Doesn't distinguish between incidental sharing vs essential sharing
 #![allow(clippy::branches_sharing_code)]
 

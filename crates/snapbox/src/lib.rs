@@ -71,6 +71,8 @@
 //!
 //! [trycmd]: https://docs.rs/trycmd
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
 mod action;
 mod assert;
 mod data;
