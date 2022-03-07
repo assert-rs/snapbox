@@ -127,6 +127,7 @@ impl PathDiff {
     /// Report differences between `actual_root` and `pattern_root`
     ///
     /// Note: Requires feature flag `path`
+    #[cfg(feature = "path")]
     pub fn subset_eq_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
@@ -136,6 +137,7 @@ impl PathDiff {
         Self::subset_eq_iter_inner(actual_root, pattern_root)
     }
 
+    #[cfg(feature = "path")]
     pub(crate) fn subset_eq_iter_inner(
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
@@ -200,6 +202,7 @@ impl PathDiff {
     /// Report differences between `actual_root` and `pattern_root`
     ///
     /// Note: Requires feature flag `path`
+    #[cfg(feature = "path")]
     pub fn subset_matches_iter(
         actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
@@ -210,6 +213,7 @@ impl PathDiff {
         Self::subset_matches_iter_inner(actual_root, pattern_root, substitutions)
     }
 
+    #[cfg(feature = "path")]
     pub(crate) fn subset_matches_iter_inner(
         actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
@@ -485,25 +489,6 @@ impl Iterator for Walk {
                 return Some(entry);
             }
         }
-        None
-    }
-}
-
-#[cfg(not(feature = "path"))]
-pub struct Walk {}
-
-#[cfg(not(feature = "path"))]
-impl Walk {
-    pub fn new(_path: &std::path::Path) -> Self {
-        Self {}
-    }
-}
-
-#[cfg(not(feature = "path"))]
-impl Iterator for Walk {
-    type Item = Result<std::path::PathBuf, std::io::Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
         None
     }
 }
