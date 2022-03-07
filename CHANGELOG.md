@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+None known, just a significant internal release
+
+### Features
+
+- Diffs now show full context, with highlighting of changes within lines and a marker for no newline at end of file
+
 ## [0.12.2] - 2022-01-27
 
 ### Fixes

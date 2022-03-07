@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+- Name changed from `fs_snapshot`
+
+### Features
+
+- More flexible return types
+- Diffs now show full context, with highlighting of changes within lines and a marker for no newline at end of file
+- Everything needed to implement `trycmd` is now included
+
 ## [0.1.2] - 2022-01-11
 
 ## [0.1.1] - 2021-12-28
