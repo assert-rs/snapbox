@@ -176,7 +176,12 @@ impl Assert {
         mut actual: crate::Data,
     ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
-        if expected.as_ref().ok().and_then(|d| d.as_str()).is_some() {
+        // On `expected` being an error, make a best guess
+        if expected
+            .as_ref()
+            .map(|d| d.as_str().is_some())
+            .unwrap_or(true)
+        {
             actual = actual.try_text().map_text(crate::utils::normalize_lines);
         }
 
@@ -189,7 +194,8 @@ impl Assert {
         mut actual: crate::Data,
     ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
-        if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
+        // On `expected` being an error, make a best guess
+        if let Some(expected) = expected.as_ref().map(|d| d.as_str()).unwrap_or(Some("")) {
             actual = actual
                 .try_text()
                 .map_text(crate::utils::normalize_text)
