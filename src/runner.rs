@@ -485,8 +485,8 @@ impl Case {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
                 for status in snapbox::path::PathDiff::subset_matches_iter(
-                    actual_root,
                     fixture_root,
+                    actual_root,
                     substitutions,
                 ) {
                     match status {

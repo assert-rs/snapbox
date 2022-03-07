@@ -8,6 +8,7 @@ fn cli_tests() {
     }
     #[cfg(not(feature = "filesystem"))]
     {
+        t.skip("tests/cmd/diff_subset.toml");
         t.skip("tests/cmd/sandbox.toml");
         t.skip("tests/cmd/multistep.trycmd");
         t.skip("tests/cmd/normalize.toml");
