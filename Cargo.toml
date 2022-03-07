@@ -3,7 +3,7 @@ members = ["crates/*"]
 
 [package]
 name = "trycmd"
-version = "0.12.2"
+version = "0.13.0"
 description = "Snapshot testing for a herd of CLI tests"
 authors = ["Ed Page <eopage@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -55,7 +55,7 @@ name = "trycmd-schema"
 required-features = ["schema"]
 
 [dependencies]
-snapbox = { path = "crates/snapbox", version = "0.1.2", default-features = false, features = ["cmd"] }
+snapbox = { path = "crates/snapbox", version = "0.2.0", default-features = false, features = ["cmd"] }
 
 glob = "0.3.0"
 rayon = "1.5.1"
