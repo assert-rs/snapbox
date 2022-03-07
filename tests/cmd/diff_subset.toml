@@ -1,0 +1,5 @@
+bin.name = "bin-fixture"
+fs.sandbox = true
+
+[env.add]
+stdout = "Hello\r\nWorld!\r\n"
