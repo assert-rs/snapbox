@@ -478,6 +478,7 @@ impl Case {
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 
+        #[cfg(feature = "filesystem")]
         if let Mode::Dump(_) = mode {
             // Handled as part of PathFixture
         } else {

@@ -1,21 +1,19 @@
 # snapbox
 
-> Snapshot testing toolbox
+> When you have to treat your tests like pets, instead of [cattle][trycmd]
 
 [![Documentation](https://img.shields.io/badge/docs-master-blue.svg)][Documentation]
 ![License](https://img.shields.io/crates/l/snapbox.svg)
 [![Crates Status](https://img.shields.io/crates/v/snapbox.svg)](https://crates.io/crates/snapbox)
 
-## Relevant crates
+`snapbox` is a snapshot-testing toolbox that is ready to use for verifying output from
+- Function return values
+- CLI stdout/stderr
+- Filesystem changes
 
-Other crates that might be useful in testing command line programs.
-- [`trycmd`](https://crates.io/crates/trycmd) Command snapshot testing
-- [`assert_cmd`](https://crates.io/crates/assert_cmd) for command fixtures and assertions.
-- [`assert_fs`](https://crates.io/crates/assert_fs) for filesystem fixtures and assertions.
-- [`insta`](https://insta.rs/): Snapshot testing of Rust data types
-- [`term-transcript`](https://crates.io/crates/term-transcript): CLI snapshot testing, including
-  colors
-- [`runt`](https://crates.io/crates/runt): External CLI snapshot test command
+It is also flexible enough to build your own test harness like [trycmd](https://crates.io/crates/trycmd).
+
+See the [docs](http://docs.rs/snapbox) for more.
 
 ## License
 

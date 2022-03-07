@@ -1,3 +1,5 @@
+//! Run commands and assert on their behavior
+
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
 pub struct Command {
@@ -7,6 +9,7 @@ pub struct Command {
     _stderr_to_stdout: bool,
 }
 
+/// # Builder API
 impl Command {
     pub fn new(program: impl AsRef<std::ffi::OsStr>) -> Self {
         Self {
@@ -27,16 +30,87 @@ impl Command {
         }
     }
 
+    /// Adds an argument to pass to the program.
+    ///
+    /// Only one argument can be passed per use. So instead of:
+    ///
+    /// ```no_run
+    /// # snapbox::cmd::Command::new("sh")
+    /// .arg("-C /path/to/repo")
+    /// # ;
+    /// ```
+    ///
+    /// usage would be:
+    ///
+    /// ```no_run
+    /// # snapbox::cmd::Command::new("sh")
+    /// .arg("-C")
+    /// .arg("/path/to/repo")
+    /// # ;
+    /// ```
+    ///
+    /// To pass multiple arguments see [`args`].
+    ///
+    /// [`args`]: Command::args()
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    ///
+    /// Command::new("ls")
+    ///         .arg("-l")
+    ///         .arg("-a")
+    ///         .assert()
+    ///         .success();
+    /// ```
     pub fn arg(mut self, arg: impl AsRef<std::ffi::OsStr>) -> Self {
         self.cmd.arg(arg);
         self
     }
 
+    /// Adds multiple arguments to pass to the program.
+    ///
+    /// To pass a single argument see [`arg`].
+    ///
+    /// [`arg`]: Command::arg()
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    ///
+    /// Command::new("ls")
+    ///         .args(&["-l", "-a"])
+    ///         .assert()
+    ///         .success();
+    /// ```
     pub fn args(mut self, args: impl IntoIterator<Item = impl AsRef<std::ffi::OsStr>>) -> Self {
         self.cmd.args(args);
         self
     }
 
+    /// Inserts or updates an environment variable mapping.
+    ///
+    /// Note that environment variable names are case-insensitive (but case-preserving) on Windows,
+    /// and case-sensitive on all other platforms.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    ///
+    /// Command::new("ls")
+    ///         .env("PATH", "/bin")
+    ///         .assert()
+    ///         .failure();
+    /// ```
     pub fn env(
         mut self,
         key: impl AsRef<std::ffi::OsStr>,
@@ -46,6 +120,29 @@ impl Command {
         self
     }
 
+    /// Adds or updates multiple environment variable mappings.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    /// use std::process::Stdio;
+    /// use std::env;
+    /// use std::collections::HashMap;
+    ///
+    /// let filtered_env : HashMap<String, String> =
+    ///     env::vars().filter(|&(ref k, _)|
+    ///         k == "TERM" || k == "TZ" || k == "LANG" || k == "PATH"
+    ///     ).collect();
+    ///
+    /// Command::new("printenv")
+    ///         .env_clear()
+    ///         .envs(&filtered_env)
+    ///         .assert()
+    ///         .success();
+    /// ```
     pub fn envs(
         mut self,
         vars: impl IntoIterator<Item = (impl AsRef<std::ffi::OsStr>, impl AsRef<std::ffi::OsStr>)>,
@@ -54,16 +151,68 @@ impl Command {
         self
     }
 
+    /// Removes an environment variable mapping.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    ///
+    /// Command::new("ls")
+    ///         .env_remove("PATH")
+    ///         .assert()
+    ///         .failure();
+    /// ```
     pub fn env_remove(mut self, key: impl AsRef<std::ffi::OsStr>) -> Self {
         self.cmd.env_remove(key);
         self
     }
 
+    /// Clears the entire environment map for the child process.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    ///
+    /// Command::new("ls")
+    ///         .env_clear()
+    ///         .assert()
+    ///         .failure();
+    /// ```
     pub fn env_clear(mut self) -> Self {
         self.cmd.env_clear();
         self
     }
 
+    /// Sets the working directory for the child process.
+    ///
+    /// # Platform-specific behavior
+    ///
+    /// If the program path is relative (e.g., `"./script.sh"`), it's ambiguous
+    /// whether it should be interpreted relative to the parent's working
+    /// directory or relative to `current_dir`. The behavior in this case is
+    /// platform specific and unstable, and it's recommended to use
+    /// [`canonicalize`] to get an absolute program path instead.
+    ///
+    /// # Examples
+    ///
+    /// Basic usage:
+    ///
+    /// ```no_run
+    /// use snapbox::cmd::Command;
+    ///
+    /// Command::new("ls")
+    ///         .current_dir("/bin")
+    ///         .assert()
+    ///         .success();
+    /// ```
+    ///
+    /// [`canonicalize`]: std::fs::canonicalize()
     pub fn current_dir(mut self, dir: impl AsRef<std::path::Path>) -> Self {
         self.cmd.current_dir(dir);
         self
@@ -96,8 +245,8 @@ impl Command {
     /// let assert = Command::new(cargo_bin("snap_fixture"))
     ///     .timeout(std::time::Duration::from_secs(1))
     ///     .env("sleep", "100")
-    ///     .assert();
-    /// assert.failure();
+    ///     .assert()
+    ///     .failure();
     /// ```
     #[cfg(feature = "cmd")]
     pub fn timeout(mut self, timeout: std::time::Duration) -> Self {
@@ -111,7 +260,10 @@ impl Command {
         self._stderr_to_stdout = true;
         self
     }
+}
 
+/// # Run Command
+impl Command {
     /// Run the command and assert on the results
     ///
     /// ```rust

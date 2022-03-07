@@ -121,7 +121,7 @@ where
             match (self.test)(&test.data.fixture) {
                 Ok(actual) => {
                     let actual = actual.to_string();
-                    let actual = crate::Data::Text(actual).map_text(crate::utils::normalize_lines);
+                    let actual = crate::Data::text(actual).map_text(crate::utils::normalize_lines);
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
