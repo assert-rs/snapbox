@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Remove need for doing `<VAR>=overwrite` twice due to lack of normalization on first call
+
 ## [0.2.0] - 2022-03-07
 
 ### Breaking Changes
