@@ -28,7 +28,11 @@ impl PathFixture {
 
     #[cfg(feature = "path")]
     pub fn mutable_temp() -> Result<Self, crate::Error> {
-        let temp = tempfile::tempdir().map_err(|e| e.to_string())?;
+        let temp = if let Some(parent) = std::env::var_os("CARGO_TARGET_TMPDIR") {
+            tempfile::tempdir_in(parent).map_err(|e| e.to_string())?
+        } else {
+            tempfile::tempdir().map_err(|e| e.to_string())?
+        };
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
         let path = canonicalize(temp.path())
