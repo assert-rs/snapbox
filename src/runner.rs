@@ -490,7 +490,7 @@ impl Case {
                     substitutions,
                 ) {
                     match status {
-                        Ok((actual_path, expected_path)) => {
+                        Ok((expected_path, actual_path)) => {
                             fs.context.push(FileStatus::Ok {
                                 actual_path,
                                 expected_path,

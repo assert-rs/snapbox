@@ -399,7 +399,7 @@ mod test {
         ];
         for (line, pattern, expected) in cases {
             let actual = line_matches(line, pattern, &Substitutions::new());
-            assert_eq!(actual, expected, "line={:?}  pattern={:?}", line, pattern);
+            assert_eq!(expected, actual, "line={:?}  pattern={:?}", line, pattern);
         }
     }
 
@@ -414,7 +414,7 @@ mod test {
         ];
         for (key, expected) in cases {
             let actual = validate_key(key).is_ok();
-            assert_eq!(actual, expected, "key={:?}", key);
+            assert_eq!(expected, actual, "key={:?}", key);
         }
     }
 }

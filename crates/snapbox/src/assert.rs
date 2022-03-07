@@ -32,19 +32,20 @@ impl Assert {
     ///
     /// ```rust
     /// let output = "something";
-    /// snapbox::Assert::new().eq(output, "something");
+    /// let expected = "something";
+    /// snapbox::Assert::new().eq(expected, output);
     /// ```
     #[track_caller]
-    pub fn eq(&self, actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
-        let actual = actual.into();
+    pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
-        self.eq_inner(actual, expected);
+        let actual = actual.into();
+        self.eq_inner(expected, actual);
     }
 
     #[track_caller]
-    fn eq_inner(&self, actual: crate::Data, expected: crate::Data) {
-        let (actual, pattern) = self.normalize_eq(actual, Ok(expected));
-        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None, None)) {
+    fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
+        let (pattern, actual) = self.normalize_eq(Ok(expected), actual);
+        if let Err(desc) = pattern.and_then(|p| self.try_verify(&p, &actual, None, None)) {
             panic!("{}: {}", self.palette.error("Eq failed"), desc);
         }
     }
@@ -62,19 +63,20 @@ impl Assert {
     ///
     /// ```rust
     /// let output = "something";
-    /// snapbox::Assert::new().matches(output, "so[..]g");
+    /// let expected = "so[..]g";
+    /// snapbox::Assert::new().matches(expected, output);
     /// ```
     #[track_caller]
-    pub fn matches(&self, actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
-        let actual = actual.into();
+    pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
-        self.matches_inner(actual, pattern);
+        let actual = actual.into();
+        self.matches_inner(pattern, actual);
     }
 
     #[track_caller]
-    fn matches_inner(&self, actual: crate::Data, pattern: crate::Data) {
-        let (actual, pattern) = self.normalize_match(actual, Ok(pattern));
-        if let Err(desc) = pattern.and_then(|p| self.try_verify(&actual, &p, None, None)) {
+    fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
+        let (pattern, actual) = self.normalize_match(Ok(pattern), actual);
+        if let Err(desc) = pattern.and_then(|p| self.try_verify(&p, &actual, None, None)) {
             panic!("{}: {}", self.palette.error("Match failed"), desc);
         }
     }
@@ -85,21 +87,22 @@ impl Assert {
     ///
     /// ```rust,no_run
     /// let output = "something";
-    /// snapbox::Assert::new().eq_path(output, "tests/snapshots/output.txt");
+    /// let expected_path = "tests/snapshots/output.txt";
+    /// snapbox::Assert::new().eq_path(output, expected_path);
     /// ```
     #[track_caller]
     pub fn eq_path(
         &self,
-        actual: impl Into<crate::Data>,
         expected_path: impl AsRef<std::path::Path>,
+        actual: impl Into<crate::Data>,
     ) {
-        let actual = actual.into();
         let expected_path = expected_path.as_ref();
-        self.eq_path_inner(actual, expected_path);
+        let actual = actual.into();
+        self.eq_path_inner(expected_path, actual);
     }
 
     #[track_caller]
-    fn eq_path_inner(&self, actual: crate::Data, pattern_path: &std::path::Path) {
+    fn eq_path_inner(&self, pattern_path: &std::path::Path, actual: crate::Data) {
         match self.action {
             Action::Skip => {
                 return;
@@ -108,14 +111,14 @@ impl Assert {
         }
 
         let expected = crate::Data::read_from(pattern_path, self.binary);
-        let (actual, expected) = self.normalize_eq(actual, expected);
+        let (expected, actual) = self.normalize_eq(expected, actual);
 
         self.do_action(
-            actual,
             expected,
-            pattern_path,
-            Some(&"In-memory"),
+            actual,
             Some(&pattern_path.display()),
+            Some(&"In-memory"),
+            pattern_path,
         );
     }
 
@@ -132,21 +135,22 @@ impl Assert {
     ///
     /// ```rust,no_run
     /// let output = "something";
-    /// snapbox::Assert::new().matches_path(output, "tests/snapshots/output.txt");
+    /// let expected_path = "tests/snapshots/output.txt";
+    /// snapbox::Assert::new().matches_path(expected_path, output);
     /// ```
     #[track_caller]
     pub fn matches_path(
         &self,
-        actual: impl Into<crate::Data>,
         pattern_path: impl AsRef<std::path::Path>,
+        actual: impl Into<crate::Data>,
     ) {
-        let actual = actual.into();
         let pattern_path = pattern_path.as_ref();
-        self.matches_path_inner(actual, pattern_path);
+        let actual = actual.into();
+        self.matches_path_inner(pattern_path, actual);
     }
 
     #[track_caller]
-    fn matches_path_inner(&self, actual: crate::Data, pattern_path: &std::path::Path) {
+    fn matches_path_inner(&self, pattern_path: &std::path::Path, actual: crate::Data) {
         match self.action {
             Action::Skip => {
                 return;
@@ -155,35 +159,35 @@ impl Assert {
         }
 
         let expected = crate::Data::read_from(pattern_path, self.binary);
-        let (actual, expected) = self.normalize_match(actual, expected);
+        let (expected, actual) = self.normalize_match(expected, actual);
 
         self.do_action(
-            actual,
             expected,
-            pattern_path,
-            Some(&"In-memory"),
+            actual,
             Some(&pattern_path.display()),
+            Some(&"In-memory"),
+            pattern_path,
         );
     }
 
     pub(crate) fn normalize_eq(
         &self,
-        mut actual: crate::Data,
         expected: crate::Result<crate::Data>,
-    ) -> (crate::Data, crate::Result<crate::Data>) {
+        mut actual: crate::Data,
+    ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
         if expected.as_ref().ok().and_then(|d| d.as_str()).is_some() {
             actual = actual.try_text().map_text(crate::utils::normalize_lines);
         }
 
-        (actual, expected)
+        (expected, actual)
     }
 
     pub(crate) fn normalize_match(
         &self,
-        mut actual: crate::Data,
         expected: crate::Result<crate::Data>,
-    ) -> (crate::Data, crate::Result<crate::Data>) {
+        mut actual: crate::Data,
+    ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
         if let Some(expected) = expected.as_ref().ok().and_then(|d| d.as_str()) {
             actual = actual
@@ -192,20 +196,20 @@ impl Assert {
                 .map_text(|t| self.substitutions.normalize(t, expected));
         }
 
-        (actual, expected)
+        (expected, actual)
     }
 
     #[track_caller]
     pub(crate) fn do_action(
         &self,
-        actual: crate::Data,
         expected: crate::Result<crate::Data>,
-        expected_path: &std::path::Path,
-        actual_name: Option<&dyn std::fmt::Display>,
+        actual: crate::Data,
         expected_name: Option<&dyn std::fmt::Display>,
+        actual_name: Option<&dyn std::fmt::Display>,
+        expected_path: &std::path::Path,
     ) {
         let result =
-            expected.and_then(|e| self.try_verify(&actual, &e, actual_name, expected_name));
+            expected.and_then(|e| self.try_verify(&e, &actual, expected_name, actual_name));
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),
@@ -251,12 +255,12 @@ impl Assert {
 
     pub(crate) fn try_verify(
         &self,
-        actual: &crate::Data,
         expected: &crate::Data,
-        actual_name: Option<&dyn std::fmt::Display>,
+        actual: &crate::Data,
         expected_name: Option<&dyn std::fmt::Display>,
+        actual_name: Option<&dyn std::fmt::Display>,
     ) -> crate::Result<()> {
-        if actual != expected {
+        if expected != actual {
             let mut buf = String::new();
             crate::report::write_diff(
                 &mut buf,
@@ -280,16 +284,16 @@ impl Assert {
     #[track_caller]
     pub fn subset_eq(
         &self,
-        actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
+        actual_root: impl Into<std::path::PathBuf>,
     ) {
-        let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
-        self.subset_eq_inner(actual_root, pattern_root)
+        let actual_root = actual_root.into();
+        self.subset_eq_inner(pattern_root, actual_root)
     }
 
     #[track_caller]
-    fn subset_eq_inner(&self, actual_root: std::path::PathBuf, expected_root: std::path::PathBuf) {
+    fn subset_eq_inner(&self, expected_root: std::path::PathBuf, actual_root: std::path::PathBuf) {
         match self.action {
             Action::Skip => {
                 return;
@@ -298,26 +302,26 @@ impl Assert {
         }
 
         let checks: Vec<_> =
-            crate::path::PathDiff::subset_eq_iter_inner(actual_root, expected_root).collect();
+            crate::path::PathDiff::subset_eq_iter_inner(expected_root, actual_root).collect();
         self.verify(checks);
     }
 
     #[track_caller]
     pub fn subset_matches(
         &self,
-        actual_root: impl Into<std::path::PathBuf>,
         pattern_root: impl Into<std::path::PathBuf>,
+        actual_root: impl Into<std::path::PathBuf>,
     ) {
-        let actual_root = actual_root.into();
         let pattern_root = pattern_root.into();
-        self.subset_matches_inner(actual_root, pattern_root)
+        let actual_root = actual_root.into();
+        self.subset_matches_inner(pattern_root, actual_root)
     }
 
     #[track_caller]
     fn subset_matches_inner(
         &self,
-        actual_root: std::path::PathBuf,
         expected_root: std::path::PathBuf,
+        actual_root: std::path::PathBuf,
     ) {
         match self.action {
             Action::Skip => {
@@ -327,8 +331,8 @@ impl Assert {
         }
 
         let checks: Vec<_> = crate::path::PathDiff::subset_matches_iter_inner(
-            actual_root,
             expected_root,
+            actual_root,
             &self.substitutions,
         )
         .collect();
@@ -342,7 +346,7 @@ impl Assert {
     ) {
         if checks.iter().all(Result::is_ok) {
             for check in checks {
-                let (_actual_path, _expected_path) = check.unwrap();
+                let (_expected_path, _actual_path) = check.unwrap();
                 crate::debug!(
                     "{}: is {}",
                     _expected_path.display(),
@@ -351,7 +355,7 @@ impl Assert {
             }
         } else {
             checks.sort_by_key(|c| match c {
-                Ok((_actual_path, expected_path)) => Some(expected_path.clone()),
+                Ok((expected_path, _actual_path)) => Some(expected_path.clone()),
                 Err(diff) => diff.expected_path().map(|p| p.to_owned()),
             });
 
@@ -360,7 +364,7 @@ impl Assert {
             for check in checks {
                 use std::fmt::Write;
                 match check {
-                    Ok((_actual_path, expected_path)) => {
+                    Ok((expected_path, _actual_path)) => {
                         let _ = writeln!(
                             &mut buffer,
                             "{}: is {}",

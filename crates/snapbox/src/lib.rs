@@ -47,15 +47,16 @@
 //!
 //! [`assert_matches`]
 //! ```rust
-//! snapbox::assert_matches("Hello many people!", "Hello [..] people!");
+//! snapbox::assert_matches("Hello [..] people!", "Hello many people!");
 //! ```
 //!
 //! [`Assert`]
 //! ```rust,no_run
 //! let actual = "...";
+//! let expected_path = "tests/fixtures/help_output_is_clean.txt";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOT_ACTION")
-//!     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
+//!     .matches_path(expected_path, actual);
 //! ```
 //!
 //! [`harness::Harness`]
@@ -84,9 +85,9 @@
 //!     let raw = std::fs::read_to_string(input_path)?;
 //!     let num = raw.parse::<usize>()?;
 //!
-//!     let expected = num + 10;
+//!     let actual = num + 10;
 //!
-//!     Ok(expected)
+//!     Ok(actual)
 //! }
 //! ```
 //!
@@ -123,11 +124,12 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 ///
 /// ```rust
 /// let output = "something";
-/// snapbox::assert_eq(output, "something");
+/// let expected = "something";
+/// snapbox::assert_matches(expected, output);
 /// ```
 #[track_caller]
-pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
-    Assert::new().eq(actual, expected);
+pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
+    Assert::new().eq(expected, actual);
 }
 
 /// Check if a value matches a pattern
@@ -143,11 +145,12 @@ pub fn assert_eq(actual: impl Into<crate::Data>, expected: impl Into<crate::Data
 ///
 /// ```rust
 /// let output = "something";
-/// snapbox::assert_matches(output, "so[..]g");
+/// let expected = "so[..]g";
+/// snapbox::assert_matches(expected, output);
 /// ```
 #[track_caller]
-pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::Data>) {
-    Assert::new().matches(actual, pattern);
+pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
+    Assert::new().matches(pattern, actual);
 }
 
 /// Check if a value matches the content of a file
@@ -156,11 +159,12 @@ pub fn assert_matches(actual: impl Into<crate::Data>, pattern: impl Into<crate::
 ///
 /// ```rust,no_run
 /// let output = "something";
-/// snapbox::assert_eq_path(output, "tests/snapshots/output.txt");
+/// let expected_path = "tests/snapshots/output.txt";
+/// snapbox::assert_eq_path(expected_path, output);
 /// ```
 #[track_caller]
-pub fn assert_eq_path(actual: impl Into<crate::Data>, expected_path: impl AsRef<std::path::Path>) {
-    Assert::new().eq_path(actual, expected_path);
+pub fn assert_eq_path(expected_path: impl AsRef<std::path::Path>, actual: impl Into<crate::Data>) {
+    Assert::new().eq_path(expected_path, actual);
 }
 
 /// Check if a value matches the pattern in a file
@@ -176,12 +180,13 @@ pub fn assert_eq_path(actual: impl Into<crate::Data>, expected_path: impl AsRef<
 ///
 /// ```rust,no_run
 /// let output = "something";
-/// snapbox::assert_matches_path(output, "tests/snapshots/output.txt");
+/// let expected_path = "tests/snapshots/output.txt";
+/// snapbox::assert_matches_path(expected_path, output);
 /// ```
 #[track_caller]
 pub fn assert_matches_path(
-    actual: impl Into<crate::Data>,
     pattern_path: impl AsRef<std::path::Path>,
+    actual: impl Into<crate::Data>,
 ) {
-    Assert::new().matches_path(actual, pattern_path);
+    Assert::new().matches_path(pattern_path, actual);
 }

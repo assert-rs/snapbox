@@ -152,7 +152,7 @@ mod test {
    2    2   World
 ";
 
-        assert_eq!(actual_diff, expected_diff);
+        assert_eq!(expected_diff, actual_diff);
     }
 
     #[cfg(feature = "diff")]
@@ -181,7 +181,7 @@ mod test {
    2      - World
 ";
 
-        assert_eq!(actual_diff, expected_diff);
+        assert_eq!(expected_diff, actual_diff);
     }
 
     #[cfg(feature = "diff")]
@@ -211,7 +211,7 @@ mod test {
         2 + World
 ";
 
-        assert_eq!(actual_diff, expected_diff);
+        assert_eq!(expected_diff, actual_diff);
     }
 
     #[cfg(feature = "diff")]
@@ -241,6 +241,6 @@ mod test {
         2 + World∅
 ";
 
-        assert_eq!(actual_diff, expected_diff);
+        assert_eq!(expected_diff, actual_diff);
     }
 }
