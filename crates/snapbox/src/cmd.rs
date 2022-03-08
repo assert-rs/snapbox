@@ -412,7 +412,7 @@ impl OutputAssert {
     pub fn new(output: std::process::Output) -> Self {
         Self {
             output,
-            config: crate::Assert::new(),
+            config: crate::Assert::new().action_env("SNAPSHOTS"),
         }
     }
 
