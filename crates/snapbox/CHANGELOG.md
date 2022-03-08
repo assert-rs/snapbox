@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Configure asserts on the `Command` itself
+
+### Fixes
+
+- When manually setting `Action`, overwrite the env var
+
 ## [0.2.6] - 2022-03-08
 
 ### Fixes
