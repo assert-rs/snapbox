@@ -469,6 +469,7 @@ impl Assert {
     /// Override the failure action
     pub fn action(mut self, action: Action) -> Self {
         self.action = action;
+        self.action_var = None;
         self
     }
 
