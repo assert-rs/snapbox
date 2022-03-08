@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Have standard gutter divider in Diffs
+
 ## [0.13.1] - 2022-03-07
 
 ### Fixes

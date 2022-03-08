@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Have standard gutter divider in Diffs
+- Improve command assertion output
+
 ## [0.2.4] - 2022-03-08
 
 ### Fixes
