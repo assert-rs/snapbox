@@ -82,7 +82,7 @@ fn write_diff_inner(
                     write_change(writer, change, "-", palette.expected, palette.info, palette)?;
                 }
                 similar::ChangeTag::Equal => {
-                    write_change(writer, change, " ", palette.hint, palette.hint, palette)?;
+                    write_change(writer, change, "|", palette.hint, palette.hint, palette)?;
                 }
             }
         }
@@ -148,8 +148,8 @@ mod test {
         let expected_diff = "
 --- A (expected)
 +++ B (actual)
-   1    1   Hello
-   2    2   World
+   1    1 | Hello
+   2    2 | World
 ";
 
         assert_eq!(expected_diff, actual_diff);
@@ -177,7 +177,7 @@ mod test {
         let expected_diff = "
 --- A (expected)
 +++ B (actual)
-   1    1   Hello
+   1    1 | Hello
    2      - World
 ";
 
@@ -206,7 +206,7 @@ mod test {
         let expected_diff = "
 --- A (expected)
 +++ B (actual)
-   1    1   Hello
+   1    1 | Hello
    2      - World∅
         2 + World
 ";
@@ -236,7 +236,7 @@ mod test {
         let expected_diff = "
 --- A (expected)
 +++ B (actual)
-   1    1   Hello
+   1    1 | Hello
    2      - World
         2 + World∅
 ";
