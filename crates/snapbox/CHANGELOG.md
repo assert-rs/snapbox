@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.2.7] - 2022-03-08
+
 ### Features
 
 - Configure asserts on the `Command` itself
@@ -76,7 +78,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.6...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.7...HEAD
+[0.2.7]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.6...snapbox-v0.2.7
 [0.2.6]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.5...snapbox-v0.2.6
 [0.2.5]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.4...snapbox-v0.2.5
 [0.2.4]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.3...snapbox-v0.2.4
