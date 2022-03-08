@@ -509,6 +509,8 @@ pub fn copy_template(
     let dest = dest.as_ref();
     let source = canonicalize(source)
         .map_err(|e| format!("Failed to canonicalize {}: {}", source.display(), e))?;
+    std::fs::create_dir_all(dest)
+        .map_err(|e| format!("Failed to create {}: {}", dest.display(), e))?;
     let dest = canonicalize(dest)
         .map_err(|e| format!("Failed to canonicalize {}: {}", dest.display(), e))?;
 
