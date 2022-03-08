@@ -58,7 +58,7 @@ fn write_diff_inner(
         writeln!(
             writer,
             "{}",
-            palette.info(format_args!("--- {} (expected)", expected_name))
+            palette.info(format_args!("{:->4} expected: {}", "", expected_name))
         )?;
     } else {
         writeln!(writer, "{}", palette.info(format_args!("--- Expected")))?;
@@ -67,7 +67,7 @@ fn write_diff_inner(
         writeln!(
             writer,
             "{}",
-            palette.error(format_args!("+++ {} (actual)", actual_name))
+            palette.error(format_args!("{:+>4} actual:   {}", "", actual_name))
         )?;
     } else {
         writeln!(writer, "{}", palette.error(format_args!("+++ Actual")))?;
@@ -146,8 +146,8 @@ mod test {
         )
         .unwrap();
         let expected_diff = "
---- A (expected)
-+++ B (actual)
+---- expected: A
+++++ actual:   B
    1    1 | Hello
    2    2 | World
 ";
@@ -175,8 +175,8 @@ mod test {
         )
         .unwrap();
         let expected_diff = "
---- A (expected)
-+++ B (actual)
+---- expected: A
+++++ actual:   B
    1    1 | Hello
    2      - World
 ";
@@ -204,8 +204,8 @@ mod test {
         )
         .unwrap();
         let expected_diff = "
---- A (expected)
-+++ B (actual)
+---- expected: A
+++++ actual:   B
    1    1 | Hello
    2      - World∅
         2 + World
@@ -234,8 +234,8 @@ mod test {
         )
         .unwrap();
         let expected_diff = "
---- A (expected)
-+++ B (actual)
+---- expected: A
+++++ actual:   B
    1    1 | Hello
    2      - World
         2 + World∅
