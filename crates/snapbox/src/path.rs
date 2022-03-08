@@ -501,7 +501,12 @@ impl Iterator for Walk {
 ///
 /// Note: Ignores `.keep` files
 #[cfg(feature = "path")]
-pub fn copy_template(source: &std::path::Path, dest: &std::path::Path) -> Result<(), crate::Error> {
+pub fn copy_template(
+    source: impl AsRef<std::path::Path>,
+    dest: impl AsRef<std::path::Path>,
+) -> Result<(), crate::Error> {
+    let source = source.as_ref();
+    let dest = dest.as_ref();
     let source = canonicalize(source)
         .map_err(|e| format!("Failed to canonicalize {}: {}", source.display(), e))?;
     let dest = canonicalize(dest)
@@ -553,17 +558,20 @@ fn symlink_to_file(link: &std::path::Path, target: &std::path::Path) -> Result<(
     std::os::unix::fs::symlink(target, link)
 }
 
-pub fn resolve_dir(path: std::path::PathBuf) -> Result<std::path::PathBuf, std::io::Error> {
-    let meta = std::fs::symlink_metadata(&path)?;
+pub fn resolve_dir(
+    path: impl AsRef<std::path::Path>,
+) -> Result<std::path::PathBuf, std::io::Error> {
+    let path = path.as_ref();
+    let meta = std::fs::symlink_metadata(path)?;
     if meta.is_dir() {
-        canonicalize(&path)
+        canonicalize(path)
     } else if meta.is_file() {
         // Git might checkout symlinks as files
-        let target = std::fs::read_to_string(&path)?;
+        let target = std::fs::read_to_string(path)?;
         let target_path = path.parent().unwrap().join(target);
         resolve_dir(target_path)
     } else {
-        canonicalize(&path)
+        canonicalize(path)
     }
 }
 
