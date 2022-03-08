@@ -542,11 +542,48 @@ fn shallow_copy(source: &std::path::Path, dest: &std::path::Path) -> Result<(), 
                 e
             )
         })?;
+        // Avoid a mtime check race where:
+        // - Copy files
+        // - Test checks mtime
+        // - Test writes
+        // - Test checks mtime
+        //
+        // If all of this happens too close to each other, then the second mtime check will think
+        // nothing was written by the test.
+        //
+        // Instead of just setting 1s in the past, we'll just respect the existing mtime.
+        copy_stats(&meta, dest).map_err(|e| {
+            format!(
+                "Failed to copy {} metadata to {}: {}",
+                source.display(),
+                dest.display(),
+                e
+            )
+        })?;
     } else if let Ok(target) = std::fs::read_link(source) {
         symlink_to_file(dest, &target)
             .map_err(|e| format!("Failed to create symlink {}: {}", dest.display(), e))?;
     }
 
+    Ok(())
+}
+
+#[cfg(feature = "path")]
+fn copy_stats(
+    source_meta: &std::fs::Metadata,
+    dest: &std::path::Path,
+) -> Result<(), std::io::Error> {
+    let src_mtime = filetime::FileTime::from_last_modification_time(source_meta);
+    filetime::set_file_mtime(&dest, src_mtime)?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "path"))]
+fn copy_stats(
+    _source_meta: &std::fs::Metadata,
+    _dest: &std::path::Path,
+) -> Result<(), std::io::Error> {
     Ok(())
 }
 
