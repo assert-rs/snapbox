@@ -491,11 +491,12 @@ impl Assert {
 impl Default for Assert {
     fn default() -> Self {
         Self {
-            action: Action::Verify,
-            action_var: None,
-            substitutions: crate::Substitutions::with_exe(),
+            action: Default::default(),
+            action_var: Default::default(),
+            substitutions: Default::default(),
             palette: crate::report::Palette::auto(),
-            binary: None,
+            binary: Default::default(),
         }
+        .substitutions(crate::Substitutions::with_exe())
     }
 }
