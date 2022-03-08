@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Defaulted the action env to `SNAPSHOTS`
+- Made path function more accepting of inputs
+
 ## [0.2.1] - 2022-03-07
 
 ### Fixes
