@@ -290,12 +290,12 @@ impl Assert {
     #[track_caller]
     pub fn subset_eq(
         &self,
-        pattern_root: impl Into<std::path::PathBuf>,
+        expected_root: impl Into<std::path::PathBuf>,
         actual_root: impl Into<std::path::PathBuf>,
     ) {
-        let pattern_root = pattern_root.into();
+        let expected_root = expected_root.into();
         let actual_root = actual_root.into();
-        self.subset_eq_inner(pattern_root, actual_root)
+        self.subset_eq_inner(expected_root, actual_root)
     }
 
     #[track_caller]
