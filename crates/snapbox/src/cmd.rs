@@ -600,7 +600,7 @@ impl OutputAssert {
         self.config.do_action(
             pattern,
             actual,
-            Some(&expected_path.display()),
+            Some(&crate::path::display_relpath(expected_path)),
             Some(&"stdout"),
             expected_path,
         );
@@ -810,7 +810,7 @@ impl OutputAssert {
         self.config.do_action(
             pattern,
             actual,
-            Some(&expected_path.display()),
+            Some(&crate::path::display_relpath(expected_path)),
             Some(&"stderr"),
             expected_path,
         );
