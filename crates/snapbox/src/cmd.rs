@@ -7,6 +7,7 @@ pub struct Command {
     stdin: Option<crate::Data>,
     timeout: Option<std::time::Duration>,
     _stderr_to_stdout: bool,
+    config: crate::Assert,
 }
 
 /// # Builder API
@@ -17,6 +18,7 @@ impl Command {
             stdin: None,
             timeout: None,
             _stderr_to_stdout: false,
+            config: crate::Assert::new().action_env("SNAPSHOTS"),
         }
     }
 
@@ -27,7 +29,14 @@ impl Command {
             stdin: None,
             timeout: None,
             _stderr_to_stdout: false,
+            config: crate::Assert::new().action_env("SNAPSHOTS"),
         }
+    }
+
+    /// Customize the assertion behavior
+    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+        self.config = config;
+        self
     }
 
     /// Adds an argument to pass to the program.
@@ -277,8 +286,9 @@ impl Command {
     /// ```
     #[track_caller]
     pub fn assert(self) -> OutputAssert {
+        let config = self.config.clone();
         match self.output() {
-            Ok(output) => OutputAssert::new(output),
+            Ok(output) => OutputAssert::new(output).with_assert(config),
             Err(err) => {
                 panic!("Failed to spawn: {}", err)
             }

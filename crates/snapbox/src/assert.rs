@@ -12,6 +12,7 @@ use crate::Action;
 ///     .action_env("SNAPSHOT_ACTION")
 ///     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
 /// ```
+#[derive(Clone, Debug)]
 pub struct Assert {
     action: Action,
     action_var: Option<String>,
