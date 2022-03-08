@@ -593,6 +593,19 @@ pub fn strip_trailing_slash(path: &std::path::Path) -> &std::path::Path {
     path.components().as_path()
 }
 
+pub(crate) fn display_relpath(path: impl AsRef<std::path::Path>) -> String {
+    let path = path.as_ref();
+    let relpath = if let Ok(cwd) = std::env::current_dir() {
+        match path.strip_prefix(cwd) {
+            Ok(path) => path,
+            Err(_) => path,
+        }
+    } else {
+        path
+    };
+    relpath.display().to_string()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

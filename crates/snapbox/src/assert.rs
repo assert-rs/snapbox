@@ -116,7 +116,7 @@ impl Assert {
         self.do_action(
             expected,
             actual,
-            Some(&pattern_path.display()),
+            Some(&crate::path::display_relpath(pattern_path)),
             Some(&"In-memory"),
             pattern_path,
         );
@@ -164,7 +164,7 @@ impl Assert {
         self.do_action(
             expected,
             actual,
-            Some(&pattern_path.display()),
+            Some(&crate::path::display_relpath(pattern_path)),
             Some(&"In-memory"),
             pattern_path,
         );
