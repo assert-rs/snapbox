@@ -450,7 +450,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{}", desc).unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -480,7 +480,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{}", desc).unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -500,7 +500,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{}", desc).unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -530,7 +530,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{}", desc).unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
