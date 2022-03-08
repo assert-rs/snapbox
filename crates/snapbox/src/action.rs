@@ -1,3 +1,5 @@
+pub const DEFAULT_ACTION_ENV: &str = "SNAPSHOTS";
+
 /// Test action, see [`Assert`][crate::Assert]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Action {

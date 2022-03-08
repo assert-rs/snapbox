@@ -9,9 +9,10 @@ use crate::Action;
 /// ```rust,no_run
 /// let actual = "...";
 /// snapbox::Assert::new()
-///     .action_env("SNAPSHOT_ACTION")
+///     .action_env("SNAPSHOTS")
 ///     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
 /// ```
+#[derive(Clone, Debug)]
 pub struct Assert {
     action: Action,
     action_var: Option<String>,
@@ -468,6 +469,7 @@ impl Assert {
     /// Override the failure action
     pub fn action(mut self, action: Action) -> Self {
         self.action = action;
+        self.action_var = None;
         self
     }
 
@@ -489,11 +491,12 @@ impl Assert {
 impl Default for Assert {
     fn default() -> Self {
         Self {
-            action: Action::Verify,
-            action_var: None,
-            substitutions: crate::Substitutions::with_exe(),
+            action: Default::default(),
+            action_var: Default::default(),
+            substitutions: Default::default(),
             palette: crate::report::Palette::auto(),
-            binary: None,
+            binary: Default::default(),
         }
+        .substitutions(crate::Substitutions::with_exe())
     }
 }
