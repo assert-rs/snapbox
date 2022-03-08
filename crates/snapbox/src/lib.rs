@@ -164,7 +164,9 @@ pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::
 /// ```
 #[track_caller]
 pub fn assert_eq_path(expected_path: impl AsRef<std::path::Path>, actual: impl Into<crate::Data>) {
-    Assert::new().eq_path(expected_path, actual);
+    Assert::new()
+        .action_env("SNAPSHOTS")
+        .eq_path(expected_path, actual);
 }
 
 /// Check if a value matches the pattern in a file
@@ -188,5 +190,7 @@ pub fn assert_matches_path(
     pattern_path: impl AsRef<std::path::Path>,
     actual: impl Into<crate::Data>,
 ) {
-    Assert::new().matches_path(pattern_path, actual);
+    Assert::new()
+        .action_env("SNAPSHOTS")
+        .matches_path(pattern_path, actual);
 }
