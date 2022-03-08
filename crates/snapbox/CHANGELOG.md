@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.2.4] - 2022-03-08
+
 ### Fixes
 
 - Create target directory when needed
@@ -53,7 +55,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.3...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.4...HEAD
+[0.2.4]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.3...snapbox-v0.2.4
 [0.2.3]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.2...snapbox-v0.2.3
 [0.2.2]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.1...snapbox-v0.2.2
 [0.2.1]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.0...snapbox-v0.2.1
