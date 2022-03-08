@@ -55,7 +55,7 @@
 //! let actual = "...";
 //! let expected_path = "tests/fixtures/help_output_is_clean.txt";
 //! snapbox::Assert::new()
-//!     .action_env("SNAPSHOT_ACTION")
+//!     .action_env("SNAPSHOTS")
 //!     .matches_path(expected_path, actual);
 //! ```
 //!
@@ -68,7 +68,7 @@
 //!     test,
 //! )
 //! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOT_ACTION")
+//! .action_env("SNAPSHOTS")
 //! .test();
 //!
 //! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
@@ -110,6 +110,7 @@ pub mod utils;
 pub mod harness;
 
 pub use action::Action;
+pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
 pub use error::Error;
@@ -165,7 +166,7 @@ pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::
 #[track_caller]
 pub fn assert_eq_path(expected_path: impl AsRef<std::path::Path>, actual: impl Into<crate::Data>) {
     Assert::new()
-        .action_env("SNAPSHOTS")
+        .action_env(DEFAULT_ACTION_ENV)
         .eq_path(expected_path, actual);
 }
 
@@ -191,7 +192,7 @@ pub fn assert_matches_path(
     actual: impl Into<crate::Data>,
 ) {
     Assert::new()
-        .action_env("SNAPSHOTS")
+        .action_env(DEFAULT_ACTION_ENV)
         .matches_path(pattern_path, actual);
 }
 
@@ -211,7 +212,7 @@ pub fn assert_subset_eq(
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env("SNAPSHOTS")
+        .action_env(DEFAULT_ACTION_ENV)
         .subset_eq(expected_root, actual_root);
 }
 
@@ -238,6 +239,6 @@ pub fn assert_subset_matches(
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env("SNAPSHOTS")
+        .action_env(DEFAULT_ACTION_ENV)
         .subset_matches(pattern_root, actual_root);
 }

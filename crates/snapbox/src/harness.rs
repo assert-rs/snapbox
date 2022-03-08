@@ -9,7 +9,7 @@
 //!     test,
 //! )
 //! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOT_ACTION")
+//! .action_env("SNAPSHOTS")
 //! .test();
 //!
 //! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {

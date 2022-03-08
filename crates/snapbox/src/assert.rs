@@ -9,7 +9,7 @@ use crate::Action;
 /// ```rust,no_run
 /// let actual = "...";
 /// snapbox::Assert::new()
-///     .action_env("SNAPSHOT_ACTION")
+///     .action_env("SNAPSHOTS")
 ///     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
 /// ```
 #[derive(Clone, Debug)]
