@@ -205,6 +205,12 @@ impl From<String> for Data {
     }
 }
 
+impl<'s> From<&'s String> for Data {
+    fn from(other: &'s String) -> Self {
+        other.clone().into()
+    }
+}
+
 impl<'s> From<&'s str> for Data {
     fn from(other: &'s str) -> Self {
         other.to_owned().into()
