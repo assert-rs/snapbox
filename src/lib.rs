@@ -172,6 +172,13 @@
 //!
 //! `.keep` files will be ignored.
 //!
+//! ## Examples
+//!
+//! - Simple cargo binary: [trycmd's integration tests](https://github.com/assert-rs/trycmd/blob/main/tests/cli_tests.rs)
+//! - Simple example: [trycmd's integration tests](https://github.com/assert-rs/trycmd/blob/main/tests/example_tests.rs)
+//! - [typos](https://github.com/crate-ci/typos) (source code spell checker)
+//! - [clap](https://github.com/clap-rs/clap/) (CLI parser) to test examples
+//!
 //! ## Related crates
 //!
 //! For testing command line programs.
