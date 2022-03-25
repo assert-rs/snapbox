@@ -11,7 +11,7 @@
 - CLI stdout/stderr
 - Filesystem changes
 
-It is also flexible enough to build your own test harness like [trycmd](https://crates.io/crates/trycmd).
+It is also flexible enough to build your own test harness like [trycmd].
 
 See the [docs](http://docs.rs/snapbox) for more.
 
@@ -33,3 +33,4 @@ conditions.
 
 [Crates.io]: https://crates.io/crates/snapbox
 [Documentation]: https://docs.rs/snapbox
+[trycmd]: https://crates.io/crates/trycmd
