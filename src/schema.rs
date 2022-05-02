@@ -723,6 +723,16 @@ mod test {
     use super::*;
 
     #[test]
+    fn parse_trycmd_empty() {
+        let expected = TryCmd {
+            steps: vec![],
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn parse_trycmd_command() {
         let expected = TryCmd {
             steps: vec![Step {
