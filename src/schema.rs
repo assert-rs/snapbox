@@ -170,8 +170,15 @@ impl TryCmd {
             .map(|(i, l)| (i + 1, l))
             .collect();
         'outer: loop {
+            let mut fence_pattern = "```".to_owned();
             while let Some((_, line)) = lines.pop_front() {
-                if let Some(raw) = line.trim().strip_prefix("```") {
+                let tick_end = line
+                    .char_indices()
+                    .find_map(|(i, c)| (c != '`').then(|| i))
+                    .unwrap_or_else(|| line.len());
+                if 3 <= tick_end {
+                    fence_pattern = line[..tick_end].to_owned();
+                    let raw = line[tick_end..].trim();
                     if raw.is_empty() {
                         // Assuming a trycmd block
                         break;
@@ -194,7 +201,7 @@ impl TryCmd {
 
                     // Irrelevant block, consume to end
                     while let Some((_, line)) = lines.pop_front() {
-                        if line.starts_with("```") {
+                        if line.starts_with(&fence_pattern) {
                             continue 'outer;
                         }
                     }
@@ -245,7 +252,7 @@ impl TryCmd {
                         lines.push_front((line_num, line));
                         post_stdout_start = line_num;
                         break;
-                    } else if line.starts_with("```") {
+                    } else if line.starts_with(&fence_pattern) {
                         block_done = true;
                         post_stdout_start = line_num;
                         break;
@@ -723,6 +730,16 @@ mod test {
     use super::*;
 
     #[test]
+    fn parse_trycmd_empty() {
+        let expected = TryCmd {
+            steps: vec![],
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd("").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn parse_trycmd_command() {
         let expected = TryCmd {
             steps: vec![Step {
@@ -913,6 +930,34 @@ $ cmd
 Hello World
 
 ```",
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_escaped_stdout() {
+        let expected = TryCmd {
+            steps: vec![Step {
+                id: Some("3".into()),
+                bin: Some(Bin::Name("cmd".into())),
+                expected_status: Some(CommandStatus::Success),
+                stderr_to_stdout: true,
+                expected_stdout_source: Some(4..7),
+                expected_stdout: Some(crate::Data::text("```\nHello World\n```")),
+                expected_stderr: None,
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd(
+            "
+````
+$ cmd
+```
+Hello World
+```
+````",
         )
         .unwrap();
         assert_eq!(expected, actual);
