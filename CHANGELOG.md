@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Allow 3+ backtick code fences to escape code fences in stdout
+
 ## [0.13.3] - 2022-03-21
 
 ### Documentation
