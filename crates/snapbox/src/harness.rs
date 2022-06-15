@@ -22,7 +22,7 @@
 //!     }
 //! }
 //!
-//! fn test(input_path: &std::path::Path) -> Result<usize, Box<std::error::Error>> {
+//! fn test(input_path: &std::path::Path) -> Result<usize, Box<dyn std::error::Error>> {
 //!     let raw = std::fs::read_to_string(input_path)?;
 //!     let num = raw.parse::<usize>()?;
 //!

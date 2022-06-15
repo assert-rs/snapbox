@@ -9,7 +9,8 @@ documentation = "http://docs.rs/snapbox/"
 readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.56.0"
 include = [
   "build.rs",
   "src/**/*",
