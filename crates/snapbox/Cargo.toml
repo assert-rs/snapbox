@@ -68,7 +68,7 @@ name = "snap-fixture"
 normalize-line-endings = "0.3.0"
 snapbox-macros = { path = "../snapbox-macros", version = "0.2.1" }
 
-libtest-mimic = { version = "0.3.0", optional = true }
+libtest-mimic = { version = "0.4.0", optional = true }
 ignore = { version = "0.4", optional = true }
 
 content_inspector = { version = "0.2.4", optional = true }
