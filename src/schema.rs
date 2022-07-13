@@ -149,7 +149,7 @@ impl TryCmd {
                     stdout.push('\n');
                     let mut raw = crate::Data::read_from(path, Some(false))?
                         .map_text(snapbox::utils::normalize_lines);
-                    raw.replace_lines(line_nums, &stdout)?;
+                    replace_lines(&mut raw, line_nums, &stdout)?;
                     raw.write_to(path)?;
                 }
             } else {
@@ -345,6 +345,36 @@ fn overwrite_toml_output(
         }
     }
 
+    Ok(())
+}
+
+/// Update an inline snapshot
+fn replace_lines(
+    data: &mut crate::Data,
+    line_nums: std::ops::Range<usize>,
+    text: &str,
+) -> Result<(), crate::Error> {
+    let mut output_lines = String::new();
+
+    let s = data
+        .as_str()
+        .ok_or("Binary file can't have lines replaced")?;
+    for (line_num, line) in snapbox::utils::LinesWithTerminator::new(s)
+        .enumerate()
+        .map(|(i, l)| (i + 1, l))
+    {
+        if line_num == line_nums.start {
+            output_lines.push_str(text);
+            if !text.is_empty() && !text.ends_with('\n') {
+                output_lines.push('\n');
+            }
+        }
+        if !line_nums.contains(&line_num) {
+            output_lines.push_str(line);
+        }
+    }
+
+    *data = crate::Data::text(output_lines);
     Ok(())
 }
 
@@ -728,6 +758,7 @@ impl std::str::FromStr for CommandStatus {
 #[cfg(test)]
 mod test {
     use super::*;
+    use snapbox::Data;
 
     #[test]
     fn parse_trycmd_empty() {
@@ -1160,6 +1191,66 @@ $ rust-cmd1
             ..Default::default()
         };
         let actual = OneShot::parse_toml("status.code = 42").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_same_line_count() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "World\n";
+        let expected = Data::text("One\nWorld\nThree");
+
+        let mut actual = Data::text(input);
+        replace_lines(&mut actual, line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_grow() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "World\nTrees\n";
+        let expected = Data::text("One\nWorld\nTrees\nThree");
+
+        let mut actual = Data::text(input);
+        replace_lines(&mut actual, line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_shrink() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "";
+        let expected = Data::text("One\nThree");
+
+        let mut actual = Data::text(input);
+        replace_lines(&mut actual, line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_no_trailing() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..3;
+        let replacement = "World";
+        let expected = Data::text("One\nWorld\nThree");
+
+        let mut actual = Data::text(input);
+        replace_lines(&mut actual, line_nums, replacement).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn replace_lines_empty_range() {
+        let input = "One\nTwo\nThree";
+        let line_nums = 2..2;
+        let replacement = "World\n";
+        let expected = Data::text("One\nWorld\nTwo\nThree");
+
+        let mut actual = Data::text(input);
+        replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
 }
