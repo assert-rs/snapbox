@@ -605,7 +605,7 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_eq(expected, actual);
         self.config.do_action(
             pattern,
@@ -675,7 +675,7 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_match(expected, actual);
         self.config.do_action(
             pattern,
@@ -745,7 +745,7 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_eq(expected, actual);
         self.config.do_action(
             pattern,
@@ -815,7 +815,7 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.binary);
+        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_match(expected, actual);
         self.config.do_action(
             pattern,

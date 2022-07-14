@@ -12,6 +12,12 @@ enum DataInner {
     Text(String),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
+pub enum DataFormat {
+    Binary,
+    Text,
+}
+
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
@@ -33,18 +39,23 @@ impl Data {
     }
 
     /// Load test data from a file
-    pub fn read_from(path: &std::path::Path, binary: Option<bool>) -> Result<Self, crate::Error> {
-        let data = match binary {
-            Some(true) => {
-                let data = std::fs::read(&path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::binary(data)
-            }
-            Some(false) => {
-                let data = std::fs::read_to_string(&path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::text(data)
-            }
+    pub fn read_from(
+        path: &std::path::Path,
+        data_format: Option<DataFormat>,
+    ) -> Result<Self, crate::Error> {
+        let data = match data_format {
+            Some(df) => match df {
+                DataFormat::Binary => {
+                    let data = std::fs::read(&path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    Self::binary(data)
+                }
+                DataFormat::Text => {
+                    let data = std::fs::read_to_string(&path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    Self::text(data)
+                }
+            },
             None => {
                 let data = std::fs::read(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
