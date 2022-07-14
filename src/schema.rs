@@ -19,7 +19,10 @@ impl TryCmd {
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                 let one_shot = OneShot::parse_toml(&raw)?;
                 let mut sequence: Self = one_shot.into();
-                let is_binary = sequence.steps[0].binary;
+                let is_binary = match sequence.steps[0].binary {
+                    true => snapbox::DataFormat::Binary,
+                    false => snapbox::DataFormat::Text,
+                };
 
                 if sequence.steps[0].stdin.is_none() {
                     let stdin_path = path.with_extension("stdin");
@@ -60,7 +63,7 @@ impl TryCmd {
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                let raw = crate::Data::read_from(path, Some(false))?
+                let raw = crate::Data::read_from(path, Some(snapbox::DataFormat::Text))?
                     .map_text(snapbox::utils::normalize_lines)
                     .into_string()
                     .unwrap();
@@ -147,7 +150,7 @@ impl TryCmd {
                         .to_owned();
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
-                    let mut raw = crate::Data::read_from(path, Some(false))?
+                    let mut raw = crate::Data::read_from(path, Some(snapbox::DataFormat::Text))?
                         .map_text(snapbox::utils::normalize_lines);
                     replace_lines(&mut raw, line_nums, &stdout)?;
                     raw.write_to(path)?;

@@ -1,3 +1,4 @@
+use crate::data::DataFormat;
 use crate::Action;
 
 /// Snapshot assertion against a file's contents
@@ -18,7 +19,7 @@ pub struct Assert {
     action_var: Option<String>,
     substitutions: crate::Substitutions,
     pub(crate) palette: crate::report::Palette,
-    pub(crate) binary: Option<bool>,
+    pub(crate) data_format: Option<DataFormat>,
 }
 
 /// # Assertions
@@ -111,7 +112,7 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let expected = crate::Data::read_from(pattern_path, self.binary);
+        let expected = crate::Data::read_from(pattern_path, self.data_format());
         let (expected, actual) = self.normalize_eq(expected, actual);
 
         self.do_action(
@@ -159,7 +160,7 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let expected = crate::Data::read_from(pattern_path, self.binary);
+        let expected = crate::Data::read_from(pattern_path, self.data_format());
         let (expected, actual) = self.normalize_match(expected, actual);
 
         self.do_action(
@@ -483,8 +484,16 @@ impl Assert {
     ///
     /// The default is to auto-detect
     pub fn binary(mut self, yes: bool) -> Self {
-        self.binary = Some(yes);
+        self.data_format = if yes {
+            Some(DataFormat::Binary)
+        } else {
+            Some(DataFormat::Text)
+        };
         self
+    }
+
+    pub(crate) fn data_format(&self) -> Option<DataFormat> {
+        self.data_format
     }
 }
 
@@ -495,7 +504,7 @@ impl Default for Assert {
             action_var: Default::default(),
             substitutions: Default::default(),
             palette: crate::report::Palette::auto(),
-            binary: Default::default(),
+            data_format: Default::default(),
         }
         .substitutions(crate::Substitutions::with_exe())
     }
