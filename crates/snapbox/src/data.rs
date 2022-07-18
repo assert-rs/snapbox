@@ -72,7 +72,7 @@ impl Data {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
             })?;
         }
-        std::fs::write(path, self.as_bytes())
+        std::fs::write(path, self.to_bytes())
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
@@ -139,10 +139,10 @@ impl Data {
         }
     }
 
-    pub fn as_bytes(&self) -> &[u8] {
+    pub fn to_bytes(&self) -> Vec<u8> {
         match &self.inner {
-            DataInner::Binary(data) => data,
-            DataInner::Text(data) => data.as_bytes(),
+            DataInner::Binary(data) => data.clone(),
+            DataInner::Text(data) => data.clone().into_bytes(),
         }
     }
 }
