@@ -325,7 +325,7 @@ impl Command {
         // before we read. Here we do this by dropping the Command object.
         drop(self.cmd);
 
-        let (stdout, stderr) = process_io(&mut child, self.stdin.as_ref().map(|d| d.as_bytes()))?;
+        let (stdout, stderr) = process_io(&mut child, self.stdin.as_ref().map(|d| d.to_bytes()))?;
 
         let status = wait(child, self.timeout)?;
         let _stdout = stdout
@@ -350,7 +350,7 @@ impl Command {
         self.cmd.stderr(std::process::Stdio::piped());
         let mut child = self.cmd.spawn()?;
 
-        let (stdout, stderr) = process_io(&mut child, self.stdin.as_ref().map(|d| d.as_bytes()))?;
+        let (stdout, stderr) = process_io(&mut child, self.stdin.as_ref().map(|d| d.to_bytes()))?;
 
         let status = wait(child, self.timeout)?;
         let stdout = stdout
@@ -370,11 +370,10 @@ impl Command {
 
 fn process_io(
     child: &mut std::process::Child,
-    input: Option<&[u8]>,
+    input: Option<Vec<u8>>,
 ) -> std::io::Result<(Stream, Stream)> {
     use std::io::Write;
 
-    let input = input.map(|b| b.to_owned());
     let stdin = input.and_then(|i| {
         child
             .stdin
