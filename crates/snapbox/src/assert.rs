@@ -179,13 +179,14 @@ impl Assert {
     ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
         // On `expected` being an error, make a best guess
-        if expected
+        let format = expected
             .as_ref()
-            .map(|d| d.as_str().is_some())
-            .unwrap_or(true)
-        {
-            actual = actual.try_text().map_text(crate::utils::normalize_lines);
-        }
+            .map(|d| d.format())
+            .unwrap_or(DataFormat::Text);
+
+        actual = actual
+            .try_coerce(format)
+            .map_text(crate::utils::normalize_text);
 
         (expected, actual)
     }
@@ -197,9 +198,13 @@ impl Assert {
     ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
         // On `expected` being an error, make a best guess
-        if let Some(expected) = expected.as_ref().map(|d| d.as_str()).unwrap_or(Some("")) {
+        if let (Some(expected), format) = expected
+            .as_ref()
+            .map(|d| (d.as_str(), d.format()))
+            .unwrap_or((Some(""), DataFormat::Text))
+        {
             actual = actual
-                .try_text()
+                .try_coerce(format)
                 .map_text(crate::utils::normalize_text)
                 .map_text(|t| self.substitutions.normalize(t, expected));
         }
