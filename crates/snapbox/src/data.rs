@@ -59,7 +59,7 @@ impl Data {
             None => {
                 let data = std::fs::read(&path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                Self::binary(data).try_text()
+                Self::binary(data).try_coerce(DataFormat::Text)
             }
         };
         Ok(data)
@@ -83,28 +83,6 @@ impl Data {
         match self.inner {
             DataInner::Binary(data) => Self::binary(data),
             DataInner::Text(data) => Self::text(op(&data)),
-        }
-    }
-
-    /// Convert from binary to text, if possible
-    ///
-    /// This will do extra binary file detection if `detect-encoding` feature flag is set
-    pub fn try_text(self) -> Self {
-        match self.inner {
-            DataInner::Binary(data) => {
-                if is_binary(&data) {
-                    Self::binary(data)
-                } else {
-                    match String::from_utf8(data) {
-                        Ok(data) => Self::text(data),
-                        Err(err) => {
-                            let data = err.into_bytes();
-                            Self::binary(data)
-                        }
-                    }
-                }
-            }
-            DataInner::Text(data) => Self::text(data),
         }
     }
 
@@ -143,6 +121,36 @@ impl Data {
         match &self.inner {
             DataInner::Binary(data) => data.clone(),
             DataInner::Text(data) => data.clone().into_bytes(),
+        }
+    }
+
+    pub fn try_coerce(self, format: DataFormat) -> Self {
+        match format {
+            DataFormat::Binary => Self::binary(self.to_bytes()),
+            DataFormat::Text => match self.inner {
+                DataInner::Binary(data) => {
+                    if is_binary(&data) {
+                        Self::binary(data)
+                    } else {
+                        match String::from_utf8(data) {
+                            Ok(data) => Self::text(data),
+                            Err(err) => {
+                                let data = err.into_bytes();
+                                Self::binary(data)
+                            }
+                        }
+                    }
+                }
+                DataInner::Text(data) => Self::text(data),
+            },
+        }
+    }
+
+    /// Outputs the current `DataFormat` of the underlying data
+    pub fn format(&self) -> DataFormat {
+        match &self.inner {
+            DataInner::Binary(_) => DataFormat::Binary,
+            DataInner::Text(_) => DataFormat::Text,
         }
     }
 }

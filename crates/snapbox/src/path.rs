@@ -181,9 +181,10 @@ impl PathDiff {
                     let expected = crate::Data::read_from(&expected_path, None)
                         .map(|d| d.map_text(crate::utils::normalize_lines))
                         .map_err(Self::Failure)?;
-                    if expected.as_str().is_some() {
-                        actual = actual.try_text().map_text(crate::utils::normalize_lines);
-                    }
+
+                    actual = actual
+                        .try_coerce(expected.format())
+                        .map_text(crate::utils::normalize_lines);
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {
@@ -258,9 +259,10 @@ impl PathDiff {
                     let expected = crate::Data::read_from(&expected_path, None)
                         .map(|d| d.map_text(crate::utils::normalize_lines))
                         .map_err(Self::Failure)?;
-                    if let Some(expected) = expected.as_str() {
+
+                    if let (Some(expected), format) = (expected.as_str(), expected.format()) {
                         actual = actual
-                            .try_text()
+                            .try_coerce(format)
                             .map_text(crate::utils::normalize_text)
                             .map_text(|t| substitutions.normalize(t, expected));
                     }
