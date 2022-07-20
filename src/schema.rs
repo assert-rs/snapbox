@@ -178,7 +178,7 @@ impl TryCmd {
                 let tick_end = line
                     .char_indices()
                     .find_map(|(i, c)| (c != '`').then(|| i))
-                    .unwrap_or_else(|| line.len());
+                    .unwrap_or(line.len());
                 if 3 <= tick_end {
                     fence_pattern = line[..tick_end].to_owned();
                     let raw = line[tick_end..].trim();
