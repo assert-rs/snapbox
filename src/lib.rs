@@ -86,7 +86,7 @@
 //! - Markdown-compatible syntax for directly rendering them
 //! - Terminal-like appearance for extracting subsections into documentation
 //! - Reducing the proliferation of files
-//! - Running multiple commands within the same temp dir
+//! - Running multiple commands within the same temp dir (if a `*.out/` directory is present)
 //!
 //! The syntax is:
 //! - Test cases live inside of ` ``` ` fenced code blocks
@@ -166,6 +166,9 @@
 //!
 //! `.keep` files will be ignored but their parent directories will be created.
 //!
+//! Tests are assumed to not modify files in `*.in/` unless an `*.out/` is provided or
+//! `fs.sandbox = true` is set in the `.toml` file.
+//!
 //! ### `*.out/`
 //!
 //! When present, each file in this directory will be compared to generated or modified files.
@@ -173,6 +176,8 @@
 //! See also "Eliding Content" for `.stdout`
 //!
 //! `.keep` files will be ignored.
+//!
+//! Note: This implies `fs.sandbox = true`.
 //!
 //! ## Examples
 //!
