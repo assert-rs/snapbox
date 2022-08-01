@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.3.0] - 2022-08-01
+
 ### Breaking Changes
 
 - `Data::read_from` now takes a desired data format rather than a bool between text/binary
@@ -102,7 +104,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.10...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.0...HEAD
+[0.3.0]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.10...snapbox-v0.3.0
 [0.2.10]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.9...snapbox-v0.2.10
 [0.2.9]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.8...snapbox-v0.2.9
 [0.2.8]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.7...snapbox-v0.2.8
