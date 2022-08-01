@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.13.5] - 2022-08-01
+
 ### Fixes
 
 - Make diffs viewable with large output by eliding large sections of unchanged content
@@ -269,7 +271,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.13.4...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.13.5...HEAD
+[0.13.5]: https://github.com/assert-rs/trycmd/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/assert-rs/trycmd/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/assert-rs/trycmd/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/assert-rs/trycmd/compare/v0.13.1...v0.13.2
