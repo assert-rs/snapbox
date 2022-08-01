@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Make diffs viewable with large output by eliding large sections of unchanged content
+
 ## [0.13.4] - 2022-05-02
 
 ### Fixes

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+- `Data::read_from` now takes a desired data format rather than a bool between text/binary
+- `Data::try_text` was replaced with `Data::try_coerce`
+- `Data::as_bytes` was replaced with `Data::to_bytes`
+
+### Fixes
+
+- Make diffs viewable with large output by eliding large sections of unchanged content
+
 ## [0.2.10] - 2022-05-02
 
 ### Fixes
