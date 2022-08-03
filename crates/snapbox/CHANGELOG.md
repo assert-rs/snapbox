@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Added `Assert::normalize_paths` to allow disabling path normalization
+
 ## [0.3.0] - 2022-08-01
 
 ### Breaking Changes
