@@ -17,6 +17,7 @@ use crate::Action;
 pub struct Assert {
     action: Action,
     action_var: Option<String>,
+    normalize_paths: bool,
     substitutions: crate::Substitutions,
     pub(crate) palette: crate::report::Palette,
     pub(crate) data_format: Option<DataFormat>,
@@ -186,7 +187,7 @@ impl Assert {
 
         actual = actual
             .try_coerce(format)
-            .map_text(crate::utils::normalize_text);
+            .map_text(|s| self.normalize_text(s));
 
         (expected, actual)
     }
@@ -205,7 +206,7 @@ impl Assert {
         {
             actual = actual
                 .try_coerce(format)
-                .map_text(crate::utils::normalize_text)
+                .map_text(|s| self.normalize_text(s))
                 .map_text(|t| self.substitutions.normalize(t, expected));
         }
 
@@ -288,6 +289,14 @@ impl Assert {
         } else {
             Ok(())
         }
+    }
+
+    fn normalize_text(&self, data: &str) -> String {
+        let mut data = crate::utils::normalize_lines(data);
+        if self.normalize_paths {
+            data = crate::utils::normalize_paths(&data);
+        }
+        data
     }
 }
 
@@ -485,6 +494,14 @@ impl Assert {
         self
     }
 
+    /// Specify whether text should have path separators normalized
+    ///
+    /// The default is normalized
+    pub fn normalize_paths(mut self, yes: bool) -> Self {
+        self.normalize_paths = yes;
+        self
+    }
+
     /// Specify whether the content should be treated as binary or not
     ///
     /// The default is to auto-detect
@@ -507,6 +524,7 @@ impl Default for Assert {
         Self {
             action: Default::default(),
             action_var: Default::default(),
+            normalize_paths: true,
             substitutions: Default::default(),
             palette: crate::report::Palette::auto(),
             data_format: Default::default(),
