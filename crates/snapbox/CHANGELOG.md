@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.3.2] - 2022-08-15
+
 ### Breaking Changes
 
 - `Assert::eq` and `PathDiff::subset_eq_iter` normalize newlines but not paths (broken in 0.3.0) 
@@ -115,7 +117,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.1...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.2...HEAD
+[0.3.2]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.1...snapbox-v0.3.2
 [0.3.1]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.0...snapbox-v0.3.1
 [0.3.0]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.10...snapbox-v0.3.0
 [0.2.10]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.2.9...snapbox-v0.2.10
