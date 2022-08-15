@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.13.6] - 2022-08-15
+
 ### Fixes
 
 - Don't hang when merging stderr with stdout on large output, like with markdown (#121)
@@ -275,7 +277,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.13.5...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.13.6...HEAD
+[0.13.6]: https://github.com/assert-rs/trycmd/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/assert-rs/trycmd/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/assert-rs/trycmd/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/assert-rs/trycmd/compare/v0.13.2...v0.13.3

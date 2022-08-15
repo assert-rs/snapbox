@@ -702,7 +702,7 @@ checksum = "2e24979f63a11545f5f2c60141afe249d4f19f84581ea2138065e400941d83d3"
 
 [[package]]
 name = "snapbox"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "backtrace",
  "concolor",
@@ -795,7 +795,7 @@ dependencies = [
 
 [[package]]
 name = "trycmd"
-version = "0.13.5"
+version = "0.13.6"
 dependencies = [
  "escargot",
  "glob",
