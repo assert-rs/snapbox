@@ -213,9 +213,9 @@ dependencies = [
 
 [[package]]
 name = "document-features"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b01c09fd63b5136fba41aa625c7b3254f0aa0a435ff6ec4b2c9a28d496c83c88"
+checksum = "d99bbe945402eb228b85cdfc7020cf7422574976861c642b28255d0a49606d79"
 
 [[package]]
 name = "dunce"

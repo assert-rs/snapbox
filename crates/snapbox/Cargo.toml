@@ -88,4 +88,4 @@ similar = { version = "2.1.0", features = ["inline"], optional = true }
 yansi = { version = "0.5.0", optional = true }
 concolor = { version = "0.0.8", optional = true }
 
-document-features = { version = "0.2", optional = true }
+document-features = { version = "0.2.3", optional = true }
