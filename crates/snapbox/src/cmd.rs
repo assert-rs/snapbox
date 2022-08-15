@@ -371,7 +371,7 @@ impl Command {
 fn process_io(
     child: &mut std::process::Child,
     input: Option<Vec<u8>>,
-) -> std::io::Result<(Stream, Stream)> {
+) -> std::io::Result<(Option<Stream>, Option<Stream>)> {
     use std::io::Write;
 
     let stdin = input.and_then(|i| {
@@ -397,6 +397,8 @@ fn process_io(
 
     Ok((stdout, stderr))
 }
+
+type Stream = std::thread::JoinHandle<Result<Vec<u8>, std::io::Error>>;
 
 impl From<std::process::Command> for Command {
     fn from(cmd: std::process::Command) -> Self {
@@ -860,8 +862,6 @@ fn display_code(output: &std::process::Output) -> String {
         "interrupted".to_owned()
     }
 }
-
-type Stream = Option<std::thread::JoinHandle<Result<Vec<u8>, std::io::Error>>>;
 
 #[cfg(feature = "cmd")]
 fn wait(
