@@ -312,10 +312,8 @@ impl Command {
 
     #[cfg(feature = "cmd")]
     fn single_output(mut self) -> Result<std::process::Output, std::io::Error> {
-        use std::io::Read;
-
         self.cmd.stdin(std::process::Stdio::piped());
-        let (mut reader, writer) = os_pipe::pipe()?;
+        let (reader, writer) = os_pipe::pipe()?;
         let writer_clone = writer.try_clone()?;
         self.cmd.stdout(writer);
         self.cmd.stderr(writer_clone);
@@ -325,15 +323,15 @@ impl Command {
         // before we read. Here we do this by dropping the Command object.
         drop(self.cmd);
 
-        let stdout = process_single_io(&mut child, self.stdin.as_ref().map(|d| d.to_bytes()))?;
+        let stdout = process_single_io(
+            &mut child,
+            reader,
+            self.stdin.as_ref().map(|d| d.to_bytes()),
+        )?;
 
         let status = wait(child, self.timeout)?;
-        let _stdout = stdout
-            .and_then(|t| t.join().unwrap().ok())
-            .unwrap_or_default();
+        let stdout = stdout.join().unwrap().ok().unwrap_or_default();
 
-        let mut stdout = Vec::new();
-        reader.read_to_end(&mut stdout)?;
         Ok(std::process::Output {
             status,
             stdout,
@@ -390,8 +388,9 @@ fn process_split_io(
 #[cfg(feature = "cmd")]
 fn process_single_io(
     child: &mut std::process::Child,
+    stdout: os_pipe::PipeReader,
     input: Option<Vec<u8>>,
-) -> std::io::Result<Option<Stream>> {
+) -> std::io::Result<Stream> {
     use std::io::Write;
 
     let stdin = input.and_then(|i| {
@@ -400,7 +399,8 @@ fn process_single_io(
             .take()
             .map(|mut stdin| std::thread::spawn(move || stdin.write_all(&i)))
     });
-    let stdout = child.stdout.take().map(threaded_read);
+    let stdout = threaded_read(stdout);
+    debug_assert!(child.stdout.is_none());
     debug_assert!(child.stderr.is_none());
 
     // Finish writing stdin before waiting, because waiting drops stdin.
