@@ -187,7 +187,7 @@ impl Assert {
 
         actual = actual
             .try_coerce(format)
-            .map_text(|s| self.normalize_text(s));
+            .map_text(|s| crate::utils::normalize_lines(s));
 
         (expected, actual)
     }
