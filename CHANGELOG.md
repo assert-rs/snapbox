@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Don't hang when merging stderr with stdout on large output, like with markdown (#121)
+
 ## [0.13.5] - 2022-08-01
 
 ### Fixes
