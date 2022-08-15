@@ -12,6 +12,12 @@ fn run() -> Result<(), Box<dyn Error>> {
         eprintln!("{}", text);
     }
 
+    if env::var("echo_large").as_deref() == Ok("1") {
+        for i in 0..(128 * 1024) {
+            println!("{}", i);
+        }
+    }
+
     if env::var("echo_cwd").as_deref() == Ok("1") {
         if let Ok(cwd) = std::env::current_dir() {
             eprintln!("{}", cwd.display());
