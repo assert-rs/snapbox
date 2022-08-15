@@ -251,7 +251,7 @@ impl Command {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .timeout(std::time::Duration::from_secs(1))
     ///     .env("sleep", "100")
     ///     .assert()
@@ -444,7 +444,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .assert()
     ///     .success();
     /// ```
@@ -473,7 +473,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("exit", "1")
     ///     .assert()
     ///     .failure();
@@ -523,7 +523,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("exit", "42")
     ///     .assert()
     ///     .code(42);
@@ -553,7 +553,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -589,7 +589,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -623,7 +623,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -659,7 +659,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -693,7 +693,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -729,7 +729,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -763,7 +763,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
@@ -799,7 +799,7 @@ impl OutputAssert {
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
     ///
-    /// let assert = Command::new(cargo_bin("snap_fixture"))
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
