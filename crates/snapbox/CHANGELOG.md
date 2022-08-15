@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+- `Assert::eq` and `PathDiff::subset_eq_iter` normalize newlines but not paths (broken in 0.3.0) 
+
 ## [0.3.1] - 2022-08-03
 
 ### Features
@@ -20,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `Data::read_from` now takes a desired data format rather than a bool between text/binary
 - `Data::try_text` was replaced with `Data::try_coerce`
 - `Data::as_bytes` was replaced with `Data::to_bytes`
+- `Assert::eq` (and everything built on it) normalizes paths but not `PathDiff::subset_eq_iter` (bug)
 
 ### Fixes
 
