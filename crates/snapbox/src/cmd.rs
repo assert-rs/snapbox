@@ -380,17 +380,8 @@ fn process_io(
             .take()
             .map(|mut stdin| std::thread::spawn(move || stdin.write_all(&i)))
     });
-    fn read<R>(mut input: R) -> std::thread::JoinHandle<std::io::Result<Vec<u8>>>
-    where
-        R: std::io::Read + Send + 'static,
-    {
-        std::thread::spawn(move || {
-            let mut ret = Vec::new();
-            input.read_to_end(&mut ret).map(|_| ret)
-        })
-    }
-    let stdout = child.stdout.take().map(read);
-    let stderr = child.stderr.take().map(read);
+    let stdout = child.stdout.take().map(threaded_read);
+    let stderr = child.stderr.take().map(threaded_read);
 
     // Finish writing stdin before waiting, because waiting drops stdin.
     stdin.and_then(|t| t.join().unwrap().ok());
@@ -399,6 +390,16 @@ fn process_io(
 }
 
 type Stream = std::thread::JoinHandle<Result<Vec<u8>, std::io::Error>>;
+
+fn threaded_read<R>(mut input: R) -> Stream
+where
+    R: std::io::Read + Send + 'static,
+{
+    std::thread::spawn(move || {
+        let mut ret = Vec::new();
+        input.read_to_end(&mut ret).map(|_| ret)
+    })
+}
 
 impl From<std::process::Command> for Command {
     fn from(cmd: std::process::Command) -> Self {
