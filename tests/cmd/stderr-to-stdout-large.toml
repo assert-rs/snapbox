@@ -1,0 +1,5 @@
+bin.name = "bin-fixture"
+stderr-to-stdout = true
+
+[env.add]
+echo_large = "1"
