@@ -63,11 +63,10 @@ impl TryCmd {
 
                 sequence
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                let raw = crate::Data::read_from(path, Some(snapbox::DataFormat::Text))?
-                    .map_text(snapbox::utils::normalize_lines)
-                    .into_string()
-                    .unwrap();
-                Self::parse_trycmd(&raw)?
+                let raw = std::fs::read_to_string(path)
+                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                let normalized = snapbox::utils::normalize_lines(&raw);
+                Self::parse_trycmd(&normalized)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
             }
@@ -150,10 +149,12 @@ impl TryCmd {
                         .to_owned();
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
-                    let mut raw = crate::Data::read_from(path, Some(snapbox::DataFormat::Text))?
-                        .map_text(snapbox::utils::normalize_lines);
-                    replace_lines(&mut raw, line_nums, &stdout)?;
-                    raw.write_to(path)?;
+                    let raw = std::fs::read_to_string(path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    let mut normalized = snapbox::utils::normalize_lines(&raw);
+                    replace_lines(&mut normalized, line_nums, &stdout)?;
+                    std::fs::write(path, normalized.into_bytes())
+                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
                 }
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
@@ -353,16 +354,13 @@ fn overwrite_toml_output(
 
 /// Update an inline snapshot
 fn replace_lines(
-    data: &mut crate::Data,
+    data: &mut String,
     line_nums: std::ops::Range<usize>,
     text: &str,
 ) -> Result<(), crate::Error> {
     let mut output_lines = String::new();
 
-    let s = data
-        .as_str()
-        .ok_or("Binary file can't have lines replaced")?;
-    for (line_num, line) in snapbox::utils::LinesWithTerminator::new(s)
+    for (line_num, line) in snapbox::utils::LinesWithTerminator::new(data)
         .enumerate()
         .map(|(i, l)| (i + 1, l))
     {
@@ -377,7 +375,7 @@ fn replace_lines(
         }
     }
 
-    *data = crate::Data::text(output_lines);
+    *data = output_lines;
     Ok(())
 }
 
@@ -761,7 +759,6 @@ impl std::str::FromStr for CommandStatus {
 #[cfg(test)]
 mod test {
     use super::*;
-    use snapbox::Data;
 
     #[test]
     fn parse_trycmd_empty() {
@@ -1202,9 +1199,9 @@ $ rust-cmd1
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World\n";
-        let expected = Data::text("One\nWorld\nThree");
+        let expected = "One\nWorld\nThree";
 
-        let mut actual = Data::text(input);
+        let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -1214,9 +1211,9 @@ $ rust-cmd1
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World\nTrees\n";
-        let expected = Data::text("One\nWorld\nTrees\nThree");
+        let expected = "One\nWorld\nTrees\nThree";
 
-        let mut actual = Data::text(input);
+        let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -1226,9 +1223,9 @@ $ rust-cmd1
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "";
-        let expected = Data::text("One\nThree");
+        let expected = "One\nThree";
 
-        let mut actual = Data::text(input);
+        let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -1238,9 +1235,9 @@ $ rust-cmd1
         let input = "One\nTwo\nThree";
         let line_nums = 2..3;
         let replacement = "World";
-        let expected = Data::text("One\nWorld\nThree");
+        let expected = "One\nWorld\nThree";
 
-        let mut actual = Data::text(input);
+        let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
@@ -1250,9 +1247,9 @@ $ rust-cmd1
         let input = "One\nTwo\nThree";
         let line_nums = 2..2;
         let replacement = "World\n";
-        let expected = Data::text("One\nWorld\nTwo\nThree");
+        let expected = "One\nWorld\nTwo\nThree";
 
-        let mut actual = Data::text(input);
+        let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
     }
