@@ -32,7 +32,7 @@
 //! }
 //! ```
 
-use crate::data::DataFormat;
+use crate::data::{DataFormat, NormalizeNewlines};
 use crate::Action;
 
 pub struct Harness<S, T> {
@@ -122,7 +122,7 @@ where
             match (self.test)(&test.data.fixture) {
                 Ok(actual) => {
                     let actual = actual.to_string();
-                    let actual = crate::Data::text(actual).map_text(crate::utils::normalize_lines);
+                    let actual = crate::Data::text(actual).normalize(NormalizeNewlines);
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
@@ -214,7 +214,7 @@ impl Verifier {
         actual: crate::Data,
     ) -> crate::Result<()> {
         let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))?
-            .map_text(crate::utils::normalize_lines);
+            .normalize(NormalizeNewlines);
 
         if expected != actual {
             let mut buf = String::new();

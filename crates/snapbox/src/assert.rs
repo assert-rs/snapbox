@@ -1,4 +1,4 @@
-use crate::data::DataFormat;
+use crate::data::{DataFormat, NormalizeMatches, NormalizeNewlines, NormalizePaths};
 use crate::Action;
 
 /// Snapshot assertion against a file's contents
@@ -178,16 +178,14 @@ impl Assert {
         expected: crate::Result<crate::Data>,
         mut actual: crate::Data,
     ) -> (crate::Result<crate::Data>, crate::Data) {
-        let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
+        let expected = expected.map(|d| d.normalize(NormalizeNewlines));
         // On `expected` being an error, make a best guess
         let format = expected
             .as_ref()
             .map(|d| d.format())
             .unwrap_or(DataFormat::Text);
 
-        actual = actual
-            .try_coerce(format)
-            .map_text(|s| crate::utils::normalize_lines(s));
+        actual = actual.try_coerce(format).normalize(NormalizeNewlines);
 
         (expected, actual)
     }
@@ -197,17 +195,20 @@ impl Assert {
         expected: crate::Result<crate::Data>,
         mut actual: crate::Data,
     ) -> (crate::Result<crate::Data>, crate::Data) {
-        let expected = expected.map(|d| d.map_text(crate::utils::normalize_lines));
+        let expected = expected.map(|d| d.normalize(NormalizeNewlines));
         // On `expected` being an error, make a best guess
-        if let (Some(expected), format) = expected
-            .as_ref()
-            .map(|d| (d.as_str(), d.format()))
-            .unwrap_or((Some(""), DataFormat::Text))
-        {
-            actual = actual
-                .try_coerce(format)
-                .map_text(|s| self.normalize_text(s))
-                .map_text(|t| self.substitutions.normalize(t, expected));
+        let format = expected.as_ref().map(|e| e.format()).unwrap_or_default();
+        actual = actual.try_coerce(format);
+
+        if self.normalize_paths {
+            actual = actual.normalize(NormalizePaths);
+        }
+        // Always normalize new lines
+        actual = actual.normalize(NormalizeNewlines);
+
+        // If expected is not an error normalize matches
+        if let Ok(expected) = expected.as_ref() {
+            actual = actual.normalize(NormalizeMatches::new(&self.substitutions, expected));
         }
 
         (expected, actual)
@@ -289,14 +290,6 @@ impl Assert {
         } else {
             Ok(())
         }
-    }
-
-    fn normalize_text(&self, data: &str) -> String {
-        let mut data = crate::utils::normalize_lines(data);
-        if self.normalize_paths {
-            data = crate::utils::normalize_paths(&data);
-        }
-        data
     }
 }
 

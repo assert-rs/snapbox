@@ -1,5 +1,6 @@
 //! Initialize working directories and assert on how they've changed
 
+use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
 /// Working directory for tests
 #[derive(Debug)]
 pub struct PathFixture(PathFixtureInner);
@@ -179,12 +180,12 @@ impl PathDiff {
                         crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.map_text(crate::utils::normalize_lines))
+                        .map(|d| d.normalize(NormalizeNewlines))
                         .map_err(Self::Failure)?;
 
                     actual = actual
                         .try_coerce(expected.format())
-                        .map_text(crate::utils::normalize_lines);
+                        .normalize(NormalizeNewlines);
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {
@@ -257,15 +258,14 @@ impl PathDiff {
                         crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.map_text(crate::utils::normalize_lines))
+                        .map(|d| d.normalize(NormalizeNewlines))
                         .map_err(Self::Failure)?;
 
-                    if let (Some(expected), format) = (expected.as_str(), expected.format()) {
-                        actual = actual
-                            .try_coerce(format)
-                            .map_text(crate::utils::normalize_text)
-                            .map_text(|t| substitutions.normalize(t, expected));
-                    }
+                    actual = actual
+                        .try_coerce(expected.format())
+                        .normalize(NormalizePaths)
+                        .normalize(NormalizeNewlines)
+                        .normalize(NormalizeMatches::new(substitutions, &expected));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {

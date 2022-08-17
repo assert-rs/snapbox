@@ -9,11 +9,11 @@ pub fn write_diff(
     #[allow(unused_mut)]
     let mut rendered = false;
     #[cfg(feature = "diff")]
-    if let (Some(expected), Some(actual)) = (expected.as_str(), actual.as_str()) {
+    if let (Some(expected), Some(actual)) = (expected.render(), actual.render()) {
         write_diff_inner(
             writer,
-            expected,
-            actual,
+            &expected,
+            &actual,
             expected_name,
             actual_name,
             palette,
