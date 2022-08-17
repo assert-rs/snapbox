@@ -197,21 +197,18 @@ impl Assert {
     ) -> (crate::Result<crate::Data>, crate::Data) {
         let expected = expected.map(|d| d.normalize(NormalizeNewlines));
         // On `expected` being an error, make a best guess
-        if let (Some(expected), format) = expected
-            .as_ref()
-            .map(|d| (d.as_str(), d.format()))
-            .unwrap_or((Some(""), DataFormat::Text))
-        {
-            actual = actual.try_coerce(format);
-            if self.normalize_paths {
-                actual = actual.normalize(NormalizePaths);
-            }
-            actual = actual
-                .normalize(NormalizeNewlines)
-                .normalize(NormalizeMatches::new(
-                    &self.substitutions,
-                    &crate::Data::text(expected),
-                ));
+        let format = expected.as_ref().map(|e| e.format()).unwrap_or_default();
+        actual = actual.try_coerce(format);
+
+        if self.normalize_paths {
+            actual = actual.normalize(NormalizePaths);
+        }
+        // Always normalize new lines
+        actual = actual.normalize(NormalizeNewlines);
+
+        // If expected is not an error normalize matches
+        if let Ok(expected) = expected.as_ref() {
+            actual = actual.normalize(NormalizeMatches::new(&self.substitutions, expected));
         }
 
         (expected, actual)

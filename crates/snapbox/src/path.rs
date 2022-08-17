@@ -261,16 +261,11 @@ impl PathDiff {
                         .map(|d| d.normalize(NormalizeNewlines))
                         .map_err(Self::Failure)?;
 
-                    if let (Some(expected), format) = (expected.as_str(), expected.format()) {
-                        actual = actual
-                            .try_coerce(format)
-                            .normalize(NormalizePaths)
-                            .normalize(NormalizeNewlines)
-                            .normalize(NormalizeMatches::new(
-                                substitutions,
-                                &crate::Data::text(expected),
-                            ));
-                    }
+                    actual = actual
+                        .try_coerce(expected.format())
+                        .normalize(NormalizePaths)
+                        .normalize(NormalizeNewlines)
+                        .normalize(NormalizeMatches::new(substitutions, &expected));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {

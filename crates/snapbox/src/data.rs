@@ -18,6 +18,12 @@ pub enum DataFormat {
     Text,
 }
 
+impl Default for DataFormat {
+    fn default() -> Self {
+        DataFormat::Text
+    }
+}
+
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
