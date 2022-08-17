@@ -2,6 +2,7 @@
 //!
 //! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
+use snapbox::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
@@ -40,7 +41,8 @@ impl TryCmd {
                     let stdout = if stdout_path.exists() {
                         Some(
                             crate::Data::read_from(&stdout_path, Some(is_binary))?
-                                .map_text(snapbox::utils::normalize_text),
+                                .normalize(NormalizePaths)
+                                .normalize(NormalizeNewlines),
                         )
                     } else {
                         None
@@ -53,7 +55,8 @@ impl TryCmd {
                     let stderr = if stderr_path.exists() {
                         Some(
                             crate::Data::read_from(&stderr_path, Some(is_binary))?
-                                .map_text(snapbox::utils::normalize_text),
+                                .normalize(NormalizePaths)
+                                .normalize(NormalizeNewlines),
                         )
                     } else {
                         None

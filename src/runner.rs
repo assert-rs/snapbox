@@ -2,6 +2,7 @@ use std::io::prelude::*;
 
 use rayon::prelude::*;
 use snapbox::path::FileType;
+use snapbox::{NormalizeNewlines, NormalizePaths};
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -419,8 +420,11 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            if let Some(e) = expected_content.as_str() {
-                stream.content = stream.content.map_text(|t| substitutions.normalize(t, e));
+            if expected_content.as_str().is_some() {
+                stream.content = stream.content.normalize(snapbox::NormalizeMatches::new(
+                    substitutions,
+                    expected_content,
+                ));
             }
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -720,7 +724,10 @@ impl Stream {
         if self.content.make_text().is_err() {
             self.status = StreamStatus::Failure("invalid UTF-8".into());
         }
-        self.content = self.content.map_text(snapbox::utils::normalize_text);
+        self.content = self
+            .content
+            .normalize(NormalizePaths)
+            .normalize(NormalizeNewlines);
         self
     }
 

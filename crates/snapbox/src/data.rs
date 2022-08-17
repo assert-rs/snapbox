@@ -79,11 +79,8 @@ impl Data {
     /// Post-process text
     ///
     /// See [utils][crate::utils]
-    pub fn map_text(self, op: impl FnOnce(&str) -> String) -> Self {
-        match self.inner {
-            DataInner::Binary(data) => Self::binary(data),
-            DataInner::Text(data) => Self::text(op(&data)),
-        }
+    pub fn normalize(self, op: impl Normalize) -> Self {
+        op.normalize(self)
     }
 
     /// Coerce to a string
@@ -203,6 +200,64 @@ impl<'s> From<&'s String> for Data {
 impl<'s> From<&'s str> for Data {
     fn from(other: &'s str) -> Self {
         other.to_owned().into()
+    }
+}
+
+pub trait Normalize {
+    fn normalize(&self, data: Data) -> Data;
+}
+
+pub struct NormalizeNewlines;
+impl Normalize for NormalizeNewlines {
+    fn normalize(&self, data: Data) -> Data {
+        match data.inner {
+            DataInner::Binary(bin) => Data::binary(bin),
+            DataInner::Text(text) => {
+                let lines = crate::utils::normalize_lines(&text);
+                Data::text(lines)
+            }
+        }
+    }
+}
+
+pub struct NormalizePaths;
+impl Normalize for NormalizePaths {
+    fn normalize(&self, data: Data) -> Data {
+        match data.inner {
+            DataInner::Binary(bin) => Data::binary(bin),
+            DataInner::Text(text) => {
+                let lines = crate::utils::normalize_paths(&text);
+                Data::text(lines)
+            }
+        }
+    }
+}
+
+pub struct NormalizeMatches<'a> {
+    substitutions: &'a crate::Substitutions,
+    pattern: &'a Data,
+}
+
+impl<'a> NormalizeMatches<'a> {
+    pub fn new(substitutions: &'a crate::Substitutions, pattern: &'a Data) -> Self {
+        NormalizeMatches {
+            substitutions,
+            pattern,
+        }
+    }
+}
+
+impl Normalize for NormalizeMatches<'_> {
+    fn normalize(&self, data: Data) -> Data {
+        match data.inner {
+            DataInner::Binary(bin) => Data::binary(bin),
+            DataInner::Text(text) => {
+                let lines = self
+                    .substitutions
+                    .normalize(&text, self.pattern.as_str().unwrap());
+                Data::text(lines)
+            }
+        }
     }
 }
 
