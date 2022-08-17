@@ -110,13 +110,13 @@ impl Data {
         }
     }
 
-    /// Return the underlying `str`
+    /// Return the underlying `String`
     ///
-    /// Note: this will not inspect binary data for being a valid `str`.
-    pub fn as_str(&self) -> Option<&str> {
+    /// Note: this will not inspect binary data for being a valid `String`.
+    pub fn render(&self) -> Option<String> {
         match &self.inner {
             DataInner::Binary(_) => None,
-            DataInner::Text(data) => Some(data.as_str()),
+            DataInner::Text(data) => Some(data.to_owned()),
         }
     }
 
@@ -260,7 +260,7 @@ impl Normalize for NormalizeMatches<'_> {
             DataInner::Text(text) => {
                 let lines = self
                     .substitutions
-                    .normalize(&text, self.pattern.as_str().unwrap());
+                    .normalize(&text, &self.pattern.render().unwrap());
                 Data::text(lines)
             }
         }

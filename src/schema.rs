@@ -146,10 +146,7 @@ impl TryCmd {
                         .expected_stdout_source
                         .clone()
                         .expect("always present for .trycmd");
-                    let mut stdout = stdout
-                        .as_str()
-                        .expect("already converted to Text")
-                        .to_owned();
+                    let mut stdout = stdout.render().expect("at least Text");
                     // Add back trailing newline removed when parsing
                     stdout.push('\n');
                     let raw = std::fs::read_to_string(path)
@@ -327,7 +324,7 @@ fn overwrite_toml_output(
         let output_path = path.with_extension(output_ext);
         if output_path.exists() {
             output.write_to(&output_path)?;
-        } else if let Some(output) = output.as_str() {
+        } else if let Some(output) = output.render() {
             let raw = std::fs::read_to_string(path)
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             let mut doc = raw
