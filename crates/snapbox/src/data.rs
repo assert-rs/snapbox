@@ -89,27 +89,6 @@ impl Data {
         op.normalize(self)
     }
 
-    /// Coerce to a string
-    ///
-    /// Note: this will **not** do a binary-content check
-    pub fn make_text(&mut self) -> Result<(), std::str::Utf8Error> {
-        *self = Self::text(std::mem::take(self).into_string()?);
-        Ok(())
-    }
-
-    /// Coerce to a string
-    ///
-    /// Note: this will **not** do a binary-content check
-    pub fn into_string(self) -> Result<String, std::str::Utf8Error> {
-        match self.inner {
-            DataInner::Binary(data) => {
-                let data = String::from_utf8(data).map_err(|e| e.utf8_error())?;
-                Ok(data)
-            }
-            DataInner::Text(data) => Ok(data),
-        }
-    }
-
     /// Return the underlying `String`
     ///
     /// Note: this will not inspect binary data for being a valid `String`.

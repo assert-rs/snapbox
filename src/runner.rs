@@ -2,7 +2,7 @@ use std::io::prelude::*;
 
 use rayon::prelude::*;
 use snapbox::path::FileType;
-use snapbox::{NormalizeNewlines, NormalizePaths};
+use snapbox::{DataFormat, NormalizeNewlines, NormalizePaths};
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -720,11 +720,11 @@ struct Stream {
 
 impl Stream {
     fn make_text(mut self) -> Self {
-        if self.content.make_text().is_err() {
-            self.status = StreamStatus::Failure("invalid UTF-8".into());
+        let content = self.content.try_coerce(DataFormat::Text);
+        if content.format() != DataFormat::Text {
+            self.status = StreamStatus::Failure("Unable to convert underlying Data to Text".into());
         }
-        self.content = self
-            .content
+        self.content = content
             .normalize(NormalizePaths)
             .normalize(NormalizeNewlines);
         self
