@@ -41,23 +41,23 @@ default = ["color-auto", "diff"]
 #! Feature Flags
 
 ## Simple input/output test harness
-harness = ["libtest-mimic", "ignore"]
+harness = ["dep:libtest-mimic", "dep:ignore"]
 ## Smarter binary file detection
-detect-encoding = ["content_inspector"]
+detect-encoding = ["dep:content_inspector"]
 ## Snapshotting of paths
-path = ["tempfile", "walkdir", "dunce", "detect-encoding", "filetime"]
+path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
 ## Snapshotting of commands
-cmd = ["os_pipe", "wait-timeout"]
+cmd = ["dep:os_pipe", "dep:wait-timeout"]
 
 ## Extra debugging information
-debug = ["snapbox-macros/debug", "backtrace"]
+debug = ["snapbox-macros/debug", "dep:backtrace"]
 
 #! Default Feature Flags
 
 ## Fancy diffs on failure
-diff = ["similar"]
+diff = ["dep:similar"]
 ## Colored output support
-color = ["yansi", "concolor/std"]
+color = ["dep:yansi", "concolor"]
 ## Auto-detect whether to use colors
 color-auto = ["color", "concolor/auto"]
 
@@ -86,6 +86,6 @@ backtrace = { version = "0.3", optional = true }
 similar = { version = "2.1.0", features = ["inline"], optional = true }
 
 yansi = { version = "0.5.0", optional = true }
-concolor = { version = "0.0.8", optional = true }
+concolor = { version = "0.0.8", features = ["std"], optional = true }
 
 document-features = { version = "0.2.3", optional = true }

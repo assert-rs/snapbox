@@ -44,8 +44,8 @@ color-auto = ["snapbox/color-auto"]
 diff = ["snapbox/diff"]
 filesystem = ["snapbox/path"]
 
-schema = ["schemars", "serde_json"]
-examples = ["escargot"]
+schema = ["dep:schemars", "dep:serde_json"]
+examples = ["dep:escargot"]
 debug = ["snapbox/debug"]
 
 [[bin]]
