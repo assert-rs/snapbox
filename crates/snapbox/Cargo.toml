@@ -83,7 +83,7 @@ wait-timeout = { version = "0.2.0", optional = true }
 
 backtrace = { version = "0.3", optional = true }
 
-similar = { version = "2.1.0", features = ["inline"], optional = true }
+similar = { version = "2.2.0", features = ["inline"], optional = true }
 
 yansi = { version = "0.5.0", optional = true }
 concolor = { version = "0.0.8", features = ["std"], optional = true }
