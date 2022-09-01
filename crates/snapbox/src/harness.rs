@@ -35,6 +35,8 @@
 use crate::data::{DataFormat, NormalizeNewlines};
 use crate::Action;
 
+use libtest_mimic::Trial;
+
 pub struct Harness<S, T> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
@@ -48,7 +50,7 @@ where
     I: std::fmt::Display,
     E: std::fmt::Display,
     S: Fn(std::path::PathBuf) -> Case + Send + Sync + 'static,
-    T: Fn(&std::path::Path) -> Result<I, E> + Send + Sync + 'static,
+    T: Fn(&std::path::Path) -> Result<I, E> + Send + Sync + 'static + Clone,
 {
     pub fn new(root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
         Self {
@@ -107,33 +109,22 @@ where
             .into_iter()
             .map(|path| {
                 let case = (self.setup)(path);
-                Test {
-                    name: case.name.clone(),
-                    kind: "".into(),
-                    is_ignored: false,
-                    is_bench: false,
-                    data: case,
-                }
-            })
-            .collect();
-
-        let args = libtest_mimic::Arguments::from_args();
-        libtest_mimic::run_tests(&args, tests, move |test| {
-            match (self.test)(&test.data.fixture) {
-                Ok(actual) => {
+                let test = self.test.clone();
+                Trial::test(case.name.clone(), move || {
+                    let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
                     let actual = crate::Data::text(actual).normalize(NormalizeNewlines);
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
-                    verify.verify(&test.data.expected, actual)
-                }
-                Err(err) => libtest_mimic::Outcome::Failed {
-                    msg: Some(err.to_string()),
-                },
-            }
-        })
-        .exit()
+                    verify.verify(&case.expected, actual)?;
+                    Ok(())
+                })
+            })
+            .collect();
+
+        let args = libtest_mimic::Arguments::from_args();
+        libtest_mimic::run(&args, tests).exit()
     }
 }
 
@@ -157,32 +148,15 @@ impl Verifier {
         self
     }
 
-    fn verify(
-        &self,
-        expected_path: &std::path::Path,
-        actual: crate::Data,
-    ) -> libtest_mimic::Outcome {
+    fn verify(&self, expected_path: &std::path::Path, actual: crate::Data) -> crate::Result<()> {
         match self.action {
-            Action::Skip => libtest_mimic::Outcome::Ignored,
+            Action::Skip => Ok(()),
             Action::Ignore => {
-                let _ = self.do_verify(expected_path, actual);
-                libtest_mimic::Outcome::Ignored
+                let _ = self.try_verify(expected_path, actual);
+                Ok(())
             }
-            Action::Verify => self.do_verify(expected_path, actual),
-            Action::Overwrite => self.do_overwrite(expected_path, actual),
-        }
-    }
-
-    fn do_overwrite(
-        &self,
-        expected_path: &std::path::Path,
-        actual: crate::Data,
-    ) -> libtest_mimic::Outcome {
-        match self.try_overwrite(expected_path, actual) {
-            Ok(()) => libtest_mimic::Outcome::Passed,
-            Err(err) => libtest_mimic::Outcome::Failed {
-                msg: Some(err.to_string()),
-            },
+            Action::Verify => self.try_verify(expected_path, actual),
+            Action::Overwrite => self.try_overwrite(expected_path, actual),
         }
     }
 
@@ -193,19 +167,6 @@ impl Verifier {
     ) -> crate::Result<()> {
         actual.write_to(expected_path)?;
         Ok(())
-    }
-
-    fn do_verify(
-        &self,
-        expected_path: &std::path::Path,
-        actual: crate::Data,
-    ) -> libtest_mimic::Outcome {
-        match self.try_verify(expected_path, actual) {
-            Ok(()) => libtest_mimic::Outcome::Passed,
-            Err(err) => libtest_mimic::Outcome::Failed {
-                msg: Some(err.to_string()),
-            },
-        }
     }
 
     fn try_verify(
@@ -248,5 +209,3 @@ pub struct Case {
     pub fixture: std::path::PathBuf,
     pub expected: std::path::PathBuf,
 }
-
-type Test = libtest_mimic::Test<Case>;
