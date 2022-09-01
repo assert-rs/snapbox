@@ -120,6 +120,7 @@ where
                     verify.verify(&case.expected, actual)?;
                     Ok(())
                 })
+                .with_ignored_flag(self.action == Action::Ignore)
             })
             .collect();
 
