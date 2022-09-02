@@ -49,6 +49,11 @@ path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:file
 ## Snapshotting of commands
 cmd = ["dep:os_pipe", "dep:wait-timeout"]
 
+## Snapshotting of json
+json = ["structured-data"]
+## Snapshotting of structured data
+structured-data = ["dep:serde_json"]
+
 ## Extra debugging information
 debug = ["snapbox-macros/debug", "dep:backtrace"]
 
@@ -89,3 +94,5 @@ yansi = { version = "0.5.0", optional = true }
 concolor = { version = "0.0.8", features = ["std"], optional = true }
 
 document-features = { version = "0.2.3", optional = true }
+
+serde_json = { version = "1.0.85", optional = true}
