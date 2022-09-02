@@ -713,6 +713,7 @@ dependencies = [
  "libtest-mimic",
  "normalize-line-endings",
  "os_pipe",
+ "serde_json",
  "similar",
  "snapbox-macros",
  "tempfile",
