@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Initial json support
+
+### Fixes
+
+- Hide optional depenendencies
+
 ## [0.3.3] - 2022-08-15
 
 ### Fixes
