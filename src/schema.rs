@@ -205,7 +205,7 @@ impl TryCmd {
                         } else if accept {
                             break;
                         } else {
-                            snapbox::debug!("ignore from lang: {:?}", lang);
+                            snapbox::debug!("ignore from lang: {:?}", raw);
                         }
                     }
 
