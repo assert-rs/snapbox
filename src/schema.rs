@@ -187,19 +187,25 @@ impl TryCmd {
                         // Assuming a trycmd block
                         break;
                     } else {
-                        let mut info = raw.split(',');
-                        let lang = info.next().unwrap();
-                        match lang {
-                            "trycmd" | "console" => {
-                                if info.any(|i| i == "ignore") {
-                                    snapbox::debug!("ignore from infostring: {:?}", info);
-                                } else {
-                                    break;
-                                }
+                        let info = raw.split(',').map(|lang| lang.trim());
+                        let mut ignore = false;
+                        let mut accept = false;
+
+                        for lang in info {
+                            if lang == "ignore" {
+                                ignore = true;
+                                break;
+                            } else if lang == "trycmd" || lang == "console" {
+                                accept = true;
                             }
-                            _ => {
-                                snapbox::debug!("ignore from lang: {:?}", lang);
-                            }
+                        }
+
+                        if ignore {
+                            snapbox::debug!("ignore from info header: {:?}", info);
+                        } else if accept {
+                            break;
+                        } else {
+                            snapbox::debug!("ignore from lang: {:?}", lang);
                         }
                     }
 
