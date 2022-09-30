@@ -105,16 +105,17 @@
 //! `.toml` file.
 //!
 //! Example:
-//! ~~~md
 //! With the following code:
 //! ```rust
 //! println!("{}", message);
 //! ```
 //!
 //! You get the following:
-//! ```
+//! ~~~md
+//! ```console
 //! $ my-cmd --print 'Hello World'
 //! Hello
+//!
 //! ```
 //! ~~~
 //!
