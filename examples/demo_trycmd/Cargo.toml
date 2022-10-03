@@ -1,0 +1,14 @@
+[package]
+name = "demo_trycmd"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[[bin]]
+name = "simple"
+path = "src/main.rs"
+
+[dependencies]
+trycmd = { path = "../.." }

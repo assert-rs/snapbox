@@ -125,6 +125,9 @@
 //! ```
 //! ~~~
 //!
+//! For a more complete example, see:
+//! <https://github.com/assert-rs/trycmd/tree/main/examples/demo_trycmd>.
+//!
 //! ### `*.toml`
 //!
 //! As an alternative to `.trycmd`, the `toml` are good for:
