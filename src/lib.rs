@@ -106,7 +106,7 @@
 //!
 //! Example:
 //! With the following code:
-//! ```rust
+//! ```rust,ignore
 //! println!("{}", message);
 //! ```
 //!
