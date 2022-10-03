@@ -12,14 +12,19 @@ results, taking inspiration from
 
 ## Example
 
-Here's a trivial example:
-
 ```rust,no_run
 #[test]
-fn cli_tests() {
-    trycmd::TestCases::new()
-        .case("tests/cmd/*.trycmd");
+fn readme() {
+    trycmd::TestCases::new().case("README.md");
 }
+```
+
+The README is then executed as a trycmd test:
+
+```console,ignore
+$ my-echo-binary World
+Hello World!
+
 ```
 
 See the [docs](http://docs.rs/trycmd) for more.

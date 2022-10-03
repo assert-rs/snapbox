@@ -26,7 +26,10 @@
 //! #[test]
 //! fn cli_tests() {
 //!     trycmd::TestCases::new()
-//!         .case("tests/cmd/*.trycmd");
+//!         // Write your .trycmd files in the tests/cmd/ directory
+//!         .case("tests/cmd/*.trycmd")
+//!         // OR: test the commands in your README file
+//!         .case("README.md");
 //! }
 //! ```
 //!
@@ -104,20 +107,15 @@
 //! to allow spaces.  The first argument is the program to run which maps to `bin.name` in the
 //! `.toml` file.
 //!
-//! Example:
-//! With the following code:
-//! ```rust,ignore
-//! println!("{}", message);
+//! #### Example
+//!
+//! Let's say you have the following Rust binary called `simple`:
+//!
+//! ```rust,no_run
+#![doc = include_str!("../examples/simple.rs")]
 //! ```
 //!
-//! You get the following:
-//! ~~~md
-//! ```console
-//! $ my-cmd --print 'Hello World'
-//! Hello
-//!
-//! ```
-//! ~~~
+#![doc = include_str!("../examples/simple.md")]
 //!
 //! ### `*.toml`
 //!
