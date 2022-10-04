@@ -105,12 +105,15 @@
 //! `.toml` file.
 //!
 //! Example:
-//! With the following code:
+//!
+//! With a `[[bin]]` like:
 //! ```rust,ignore
-//! println!("{}", message);
+//! fn main() {
+//!     println!("{}", message);
+//! }
 //! ```
 //!
-//! You get the following:
+//! You can verify a code block like:
 //! ~~~md
 //! ```console
 //! $ my-cmd --print 'Hello World'
