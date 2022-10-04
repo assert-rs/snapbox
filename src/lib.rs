@@ -30,9 +30,10 @@
 //!         .case("README.md");
 //! }
 //! ```
+//! and write out your test cases in your `.trycmd` files along with examples in your `README.md`.
 //!
-//! The test can be run with `cargo test`.  This will enumerate all `.trycmd` files and run
-//! them as test cases, failing if they do not pass.
+//! Run this with `cargo test` like normal.  [`TestCases`] will enumerate all `.trycmd` files and
+//! run them as test cases, failing if they do not pass.
 //!
 //! To temporarily override the results, you can do:
 //! ```rust,no_run
