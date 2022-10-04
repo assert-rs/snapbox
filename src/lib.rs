@@ -112,15 +112,15 @@
 //! With a `[[bin]]` like:
 //! ```rust,ignore
 //! fn main() {
-//!     println!("{}", message);
+//!     println!("Hello world");
 //! }
 //! ```
 //!
 //! You can verify a code block like:
 //! ~~~md
 //! ```console
-//! $ my-cmd --print 'Hello World'
-//! Hello
+//! $ my-cmd
+//! Hello world
 //!
 //! ```
 //! ~~~
