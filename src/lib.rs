@@ -26,7 +26,8 @@
 //! #[test]
 //! fn cli_tests() {
 //!     trycmd::TestCases::new()
-//!         .case("tests/cmd/*.trycmd");
+//!         .case("tests/cmd/*.trycmd")
+//!         .case("README.md");
 //! }
 //! ```
 //!
@@ -39,6 +40,7 @@
 //! fn cli_tests() {
 //!     trycmd::TestCases::new()
 //!         .case("tests/cmd/*.trycmd")
+//!         .case("README.md")
 //!         // See Issue #314
 //!         .fail("tests/cmd/buggy-case.trycmd");
 //! }
