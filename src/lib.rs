@@ -26,24 +26,24 @@
 //! #[test]
 //! fn cli_tests() {
 //!     trycmd::TestCases::new()
-//!         .case("tests/cmd/*.trycmd")
+//!         .case("tests/cmd/*.toml")
 //!         .case("README.md");
 //! }
 //! ```
-//! and write out your test cases in your `.trycmd` files along with examples in your `README.md`.
+//! and write out your test cases in your `.toml` files along with examples in your `README.md`.
 //!
-//! Run this with `cargo test` like normal.  [`TestCases`] will enumerate all `.trycmd` files and
-//! run them as test cases, failing if they do not pass.
+//! Run this with `cargo test` like normal.  [`TestCases`] will enumerate all test case files and
+//! run the contained commands, verifying they run as expected.
 //!
 //! To temporarily override the results, you can do:
 //! ```rust,no_run
 //! #[test]
 //! fn cli_tests() {
 //!     trycmd::TestCases::new()
-//!         .case("tests/cmd/*.trycmd")
+//!         .case("tests/cmd/*.toml")
 //!         .case("README.md")
 //!         // See Issue #314
-//!         .fail("tests/cmd/buggy-case.trycmd");
+//!         .fail("tests/cmd/buggy-case.toml");
 //! }
 //! ```
 //!
@@ -68,15 +68,15 @@
 //! cargo test --test cli_tests -- cli_tests trycmd=name1 trycmd=name2...
 //! ```
 //!
-//! To debug what `trycmd` is doing, add the feature flag `debug`.
+//! To debug what `trycmd` is doing, run `cargo test -F trycmd/debug`.
 //!
 //! ## File Formats
 //!
-//! Say you have `tests/cmd/help.trycmd`, `trycmd` will look for:
+//! For `tests/cmd/help.trycmd`, `trycmd` will look for:
 //! - `tests/cmd/help.in/`
 //! - `tests/cmd/help.out/`
 //!
-//! For `tests/cmd/help.toml`, `trycmd` will look for:
+//! Say you have `tests/cmd/help.toml`, `trycmd` will look for:
 //! - `tests/cmd/help.stdin`
 //! - `tests/cmd/help.stdout`
 //! - `tests/cmd/help.stderr`
@@ -85,7 +85,7 @@
 //!
 //! ### `*.trycmd`
 //!
-//! `*.trycmd` files are literate test cases good for:
+//! `*.trycmd` / `*.md` files are literate test cases good for:
 //! - Markdown-compatible syntax for directly rendering them
 //! - Terminal-like appearance for extracting subsections into documentation
 //! - Reducing the proliferation of files

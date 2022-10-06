@@ -12,15 +12,19 @@ results, taking inspiration from
 
 ## Example
 
-Here's a trivial example:
-
+To create a minimal setup, create a `tests/cli_tests.rs` with
 ```rust,no_run
 #[test]
 fn cli_tests() {
     trycmd::TestCases::new()
-        .case("tests/cmd/*.trycmd");
+        .case("tests/cmd/*.toml")
+        .case("README.md");
 }
 ```
+and write out your test cases in `.toml` files along with examples in your `README.md`.
+
+Run this with `cargo test` like normal.  `TestCases` will enumerate all test case files and
+run the contained commands, verifying they run as expected.
 
 See the [docs](http://docs.rs/trycmd) for more.
 
