@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- Unknown bins now fail, rather than being ignored.  This can be worked around by either ignoring the code block, setting the status to skipped, or ignoring the specific bin in question
+
 ## [0.13.7] - 2022-09-23
 
 ## [0.13.6] - 2022-08-15
