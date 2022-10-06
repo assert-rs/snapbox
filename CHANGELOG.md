@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.14.0] - 2022-10-06
+
 ### Breaking Change
 
 - Unknown bins now fail, rather than being ignored.  This can be worked around by either ignoring the code block, setting the status to skipped, or ignoring the specific bin in question
@@ -283,7 +285,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.13.7...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/assert-rs/trycmd/compare/v0.13.7...v0.14.0
 [0.13.7]: https://github.com/assert-rs/trycmd/compare/v0.13.6...v0.13.7
 [0.13.6]: https://github.com/assert-rs/trycmd/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/assert-rs/trycmd/compare/v0.13.4...v0.13.5
