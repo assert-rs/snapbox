@@ -102,6 +102,12 @@
       "description": "Target under test",
       "oneOf": [
         {
+          "type": "string",
+          "enum": [
+            "ignore"
+          ]
+        },
+        {
           "type": "object",
           "required": [
             "path"

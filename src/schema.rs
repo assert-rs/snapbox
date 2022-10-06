@@ -448,6 +448,7 @@ impl Step {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
             Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name).into()),
+            Some(Bin::Ignore) => Err("Internal error: tried to run an ignored bin".into()),
             Some(Bin::Error(err)) => Err(err.clone()),
             None => Err("No bin specified".into()),
         }?;
@@ -683,6 +684,7 @@ impl Env {
 pub enum Bin {
     Path(std::path::PathBuf),
     Name(String),
+    Ignore,
     #[serde(skip)]
     Error(crate::Error),
 }

@@ -36,6 +36,7 @@ impl BinRegistry {
                 let bin = self.resolve_name(&name);
                 Ok(bin)
             }
+            crate::schema::Bin::Ignore => Ok(crate::schema::Bin::Ignore),
             crate::schema::Bin::Error(err) => Err(err),
         }
     }
