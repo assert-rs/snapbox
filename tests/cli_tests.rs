@@ -21,4 +21,5 @@ fn cli_tests() {
         t.skip("tests/cmd/timeout.toml");
     }
     t.extend_vars([("[EXAMPLE]", "example")]).unwrap();
+    t.register_bin("ignored-bin", trycmd::schema::Bin::Ignore);
 }
