@@ -607,7 +607,7 @@ impl serde::ser::Serialize for JoinedArgs {
     }
 }
 
-/// Describe command's the filesystem context
+/// Describe the command's filesystem context
 #[derive(Clone, Default, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
