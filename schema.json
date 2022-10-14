@@ -234,7 +234,7 @@
       }
     },
     "Filesystem": {
-      "description": "Describe command's the filesystem context",
+      "description": "Describe the command's filesystem context",
       "type": "object",
       "properties": {
         "cwd": {
