@@ -68,5 +68,5 @@ humantime-serde = "1"
 toml_edit = { version = "0.15", features = ["serde"] }
 escargot = { version = "0.5.7", optional = true }
 
-schemars = { version = "0.8.3", features = ["preserve_order"], optional = true }
+schemars = { version = "0.8.11", features = ["preserve_order"], optional = true }
 serde_json = { version = "1.0", optional = true }
