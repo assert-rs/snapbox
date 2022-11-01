@@ -95,4 +95,4 @@ concolor = { version = "0.0.8", features = ["std"], optional = true }
 
 document-features = { version = "0.2.6", optional = true }
 
-serde_json = { version = "1.0.85", optional = true}
+serde_json = { version = "1.0.87", optional = true}
