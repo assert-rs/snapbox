@@ -38,8 +38,12 @@ fn run() -> Result<(), Box<dyn Error>> {
         std::thread::sleep(std::time::Duration::from_secs(timeout));
     }
 
-    let code = env::var("exit")
-        .ok()
+    let exit = env::var("exit").ok();
+    if exit.as_deref() == Some("panic") {
+        panic!("Panic requested");
+    }
+
+    let code = exit
         .map(|v| v.parse::<i32>())
         .map_or(Ok(None), |r| r.map(Some))?
         .unwrap_or(0);

@@ -477,7 +477,9 @@ impl OutputAssert {
             let desc = format!(
                 "Expected {}, was {}",
                 self.config.palette.info("success"),
-                self.config.palette.error(display_code(&self.output))
+                self.config
+                    .palette
+                    .error(display_exit_status(self.output.status))
             );
 
             use std::fmt::Write;
@@ -527,7 +529,9 @@ impl OutputAssert {
             let desc = format!(
                 "Expected {}, was {}",
                 self.config.palette.info("interrupted"),
-                self.config.palette.error(display_code(&self.output))
+                self.config
+                    .palette
+                    .error(display_exit_status(self.output.status))
             );
 
             use std::fmt::Write;
@@ -557,7 +561,9 @@ impl OutputAssert {
             let desc = format!(
                 "Expected {}, was {}",
                 self.config.palette.info(expected),
-                self.config.palette.error(display_code(&self.output))
+                self.config
+                    .palette
+                    .error(display_exit_status(self.output.status))
             );
 
             use std::fmt::Write;
@@ -851,7 +857,11 @@ impl OutputAssert {
     }
 
     fn write_status(&self, writer: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        writeln!(writer, "Exit status: {}", display_code(&self.output))?;
+        writeln!(
+            writer,
+            "Exit status: {}",
+            display_exit_status(self.output.status)
+        )?;
         Ok(())
     }
 
@@ -876,8 +886,92 @@ impl OutputAssert {
     }
 }
 
-fn display_code(output: &std::process::Output) -> String {
-    if let Some(code) = output.status.code() {
+/// Converts an [`std::process::ExitStatus`]  to a human-readable value
+#[cfg(not(feature = "cmd"))]
+pub fn display_exit_status(status: std::process::ExitStatus) -> String {
+    basic_exit_status(status)
+}
+
+/// Converts an [`std::process::ExitStatus`]  to a human-readable value
+#[cfg(feature = "cmd")]
+pub fn display_exit_status(status: std::process::ExitStatus) -> String {
+    #[cfg(unix)]
+    fn detailed_exit_status(status: std::process::ExitStatus) -> Option<String> {
+        use std::os::unix::process::*;
+
+        let signal = status.signal()?;
+        let name = match signal as libc::c_int {
+            libc::SIGABRT => ", SIGABRT: process abort signal",
+            libc::SIGALRM => ", SIGALRM: alarm clock",
+            libc::SIGFPE => ", SIGFPE: erroneous arithmetic operation",
+            libc::SIGHUP => ", SIGHUP: hangup",
+            libc::SIGILL => ", SIGILL: illegal instruction",
+            libc::SIGINT => ", SIGINT: terminal interrupt signal",
+            libc::SIGKILL => ", SIGKILL: kill",
+            libc::SIGPIPE => ", SIGPIPE: write on a pipe with no one to read",
+            libc::SIGQUIT => ", SIGQUIT: terminal quit signal",
+            libc::SIGSEGV => ", SIGSEGV: invalid memory reference",
+            libc::SIGTERM => ", SIGTERM: termination signal",
+            libc::SIGBUS => ", SIGBUS: access to undefined memory",
+            #[cfg(not(target_os = "haiku"))]
+            libc::SIGSYS => ", SIGSYS: bad system call",
+            libc::SIGTRAP => ", SIGTRAP: trace/breakpoint trap",
+            _ => "",
+        };
+        Some(format!("signal: {}{}", signal, name))
+    }
+
+    #[cfg(windows)]
+    fn detailed_exit_status(status: std::process::ExitStatus) -> Option<String> {
+        use winapi::shared::minwindef::DWORD;
+        use winapi::um::winnt::*;
+
+        let extra = match status.code().unwrap() as DWORD {
+            STATUS_ACCESS_VIOLATION => "STATUS_ACCESS_VIOLATION",
+            STATUS_IN_PAGE_ERROR => "STATUS_IN_PAGE_ERROR",
+            STATUS_INVALID_HANDLE => "STATUS_INVALID_HANDLE",
+            STATUS_INVALID_PARAMETER => "STATUS_INVALID_PARAMETER",
+            STATUS_NO_MEMORY => "STATUS_NO_MEMORY",
+            STATUS_ILLEGAL_INSTRUCTION => "STATUS_ILLEGAL_INSTRUCTION",
+            STATUS_NONCONTINUABLE_EXCEPTION => "STATUS_NONCONTINUABLE_EXCEPTION",
+            STATUS_INVALID_DISPOSITION => "STATUS_INVALID_DISPOSITION",
+            STATUS_ARRAY_BOUNDS_EXCEEDED => "STATUS_ARRAY_BOUNDS_EXCEEDED",
+            STATUS_FLOAT_DENORMAL_OPERAND => "STATUS_FLOAT_DENORMAL_OPERAND",
+            STATUS_FLOAT_DIVIDE_BY_ZERO => "STATUS_FLOAT_DIVIDE_BY_ZERO",
+            STATUS_FLOAT_INEXACT_RESULT => "STATUS_FLOAT_INEXACT_RESULT",
+            STATUS_FLOAT_INVALID_OPERATION => "STATUS_FLOAT_INVALID_OPERATION",
+            STATUS_FLOAT_OVERFLOW => "STATUS_FLOAT_OVERFLOW",
+            STATUS_FLOAT_STACK_CHECK => "STATUS_FLOAT_STACK_CHECK",
+            STATUS_FLOAT_UNDERFLOW => "STATUS_FLOAT_UNDERFLOW",
+            STATUS_INTEGER_DIVIDE_BY_ZERO => "STATUS_INTEGER_DIVIDE_BY_ZERO",
+            STATUS_INTEGER_OVERFLOW => "STATUS_INTEGER_OVERFLOW",
+            STATUS_PRIVILEGED_INSTRUCTION => "STATUS_PRIVILEGED_INSTRUCTION",
+            STATUS_STACK_OVERFLOW => "STATUS_STACK_OVERFLOW",
+            STATUS_DLL_NOT_FOUND => "STATUS_DLL_NOT_FOUND",
+            STATUS_ORDINAL_NOT_FOUND => "STATUS_ORDINAL_NOT_FOUND",
+            STATUS_ENTRYPOINT_NOT_FOUND => "STATUS_ENTRYPOINT_NOT_FOUND",
+            STATUS_CONTROL_C_EXIT => "STATUS_CONTROL_C_EXIT",
+            STATUS_DLL_INIT_FAILED => "STATUS_DLL_INIT_FAILED",
+            STATUS_FLOAT_MULTIPLE_FAULTS => "STATUS_FLOAT_MULTIPLE_FAULTS",
+            STATUS_FLOAT_MULTIPLE_TRAPS => "STATUS_FLOAT_MULTIPLE_TRAPS",
+            STATUS_REG_NAT_CONSUMPTION => "STATUS_REG_NAT_CONSUMPTION",
+            STATUS_HEAP_CORRUPTION => "STATUS_HEAP_CORRUPTION",
+            STATUS_STACK_BUFFER_OVERRUN => "STATUS_STACK_BUFFER_OVERRUN",
+            STATUS_ASSERTION_FAILURE => "STATUS_ASSERTION_FAILURE",
+            _ => return None,
+        };
+        Some(extra.to_owned())
+    }
+
+    if let Some(extra) = detailed_exit_status(status) {
+        format!("{} ({})", basic_exit_status(status), extra)
+    } else {
+        basic_exit_status(status)
+    }
+}
+
+fn basic_exit_status(status: std::process::ExitStatus) -> String {
+    if let Some(code) = status.code() {
         code.to_string()
     } else {
         "interrupted".to_owned()

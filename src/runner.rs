@@ -661,19 +661,12 @@ impl std::fmt::Display for Spawn {
                             palette.info(expected),
                             palette.error("success")
                         )?;
-                    } else if let Some(code) = exit.code() {
-                        writeln!(
-                            f,
-                            "Expected {}, was {}",
-                            palette.info(expected),
-                            palette.error(code)
-                        )?;
                     } else {
                         writeln!(
                             f,
                             "Expected {}, was {}",
                             palette.info(expected),
-                            palette.error("interrupted")
+                            palette.error(snapbox::cmd::display_exit_status(exit))
                         )?;
                     }
                 }
