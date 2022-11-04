@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.14.3] - 2022-11-04
+
 ### Fixes
 
 - Ignore, rather than error, on unknown bins again.  This is important for examples that are conditioned on features.
@@ -297,7 +299,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.2...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.3...HEAD
+[0.14.3]: https://github.com/assert-rs/trycmd/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/assert-rs/trycmd/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/assert-rs/trycmd/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/assert-rs/trycmd/compare/v0.13.7...v0.14.0
