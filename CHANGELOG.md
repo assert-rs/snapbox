@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Ignore, rather than error, on unknown bins again.  This is important for examples that are conditioned on features.
+
 ## [0.14.2] - 2022-11-04
 
 ### Fixes
