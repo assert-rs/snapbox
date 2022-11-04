@@ -1,3 +1,5 @@
+//! For `snapbox`s tests only
+
 use std::env;
 use std::error::Error;
 use std::io;

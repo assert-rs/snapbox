@@ -67,7 +67,7 @@ color = ["dep:yansi", "concolor"]
 color-auto = ["color", "concolor/auto"]
 
 [[bin]]
-name = "snap-fixture"
+name = "snap-fixture"  # For `snapbox`s tests only
 
 [dependencies]
 normalize-line-endings = "0.3.0"
