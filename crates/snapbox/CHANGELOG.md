@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.4.1] - 2022-11-04
+
 ### Fixes
 
 - Report signal that terminated a command
@@ -137,7 +139,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.0...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.1...HEAD
+[0.4.1]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.0...snapbox-v0.4.1
 [0.4.0]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.3...snapbox-v0.4.0
 [0.3.3]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.2...snapbox-v0.3.3
 [0.3.2]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.3.1...snapbox-v0.3.2
