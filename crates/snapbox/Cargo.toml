@@ -47,7 +47,7 @@ detect-encoding = ["dep:content_inspector"]
 ## Snapshotting of paths
 path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
 ## Snapshotting of commands
-cmd = ["dep:os_pipe", "dep:wait-timeout"]
+cmd = ["dep:os_pipe", "dep:wait-timeout", "dep:libc", "dep:winapi"]
 
 ## Snapshotting of json
 json = ["structured-data"]
@@ -85,6 +85,8 @@ filetime = { version = "0.2", optional = true }
 
 os_pipe = { version = "1.0", optional = true }
 wait-timeout = { version = "0.2.0", optional = true }
+libc = { version = "0.2.137", optional = true }
+winapi = { version = "0.3.9", features = ["consoleapi", "minwindef"], optional = true }
 
 backtrace = { version = "0.3", optional = true }
 
