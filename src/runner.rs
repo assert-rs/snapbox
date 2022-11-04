@@ -322,11 +322,16 @@ impl Case {
         }
 
         match &step.bin {
-            // Will be handled by `Step::to_command`
-            Some(crate::schema::Bin::Path(_))
-            | Some(crate::schema::Bin::Name(_))
-            | Some(crate::schema::Bin::Error(_))
-            | None => {}
+            Some(crate::schema::Bin::Path(_)) => {}
+            Some(crate::schema::Bin::Name(_name)) => {
+                // Unhandled by resolve
+                snapbox::debug!("bin={:?} not found", _name);
+                assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+                return Ok(output);
+            }
+            Some(crate::schema::Bin::Error(_)) => {}
+            // Unlike `Name`, this always represents a bug
+            None => {}
             Some(crate::schema::Bin::Ignore) => {
                 // Unhandled by resolve
                 assert_eq!(output.spawn.status, SpawnStatus::Skipped);
