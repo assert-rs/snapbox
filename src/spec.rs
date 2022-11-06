@@ -23,11 +23,14 @@ impl RunnerSpec {
     pub(crate) fn case(
         &mut self,
         glob: &std::path::Path,
-        expected: Option<crate::schema::CommandStatus>,
+        #[cfg_attr(miri, allow(unused_variables))] expected: Option<crate::schema::CommandStatus>,
     ) {
         self.cases.push(CaseSpec {
             glob: glob.into(),
+            #[cfg(not(miri))]
             expected,
+            #[cfg(miri)]
+            expected: Some(crate::schema::CommandStatus::Skipped),
         });
     }
 
