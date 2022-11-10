@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Automatically ignore tests under miri (already doesn't work)
+
 ## [0.14.3] - 2022-11-04
 
 ### Fixes
