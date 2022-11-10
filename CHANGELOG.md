@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.14.4] - 2022-11-10
+
 ### Fixes
 
 - Automatically ignore tests under miri (already doesn't work)
@@ -303,7 +305,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.3...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.4...HEAD
+[0.14.4]: https://github.com/assert-rs/trycmd/compare/v0.14.3...v0.14.4
 [0.14.3]: https://github.com/assert-rs/trycmd/compare/v0.14.2...v0.14.3
 [0.14.2]: https://github.com/assert-rs/trycmd/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/assert-rs/trycmd/compare/v0.14.0...v0.14.1
