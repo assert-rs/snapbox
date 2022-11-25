@@ -1,5 +1,6 @@
 //! Initialize working directories and assert on how they've changed
 
+#[cfg(feature = "path")]
 use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
 /// Working directory for tests
 #[derive(Debug)]
