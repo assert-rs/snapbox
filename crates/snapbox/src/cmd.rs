@@ -923,10 +923,9 @@ pub fn display_exit_status(status: std::process::ExitStatus) -> String {
 
     #[cfg(windows)]
     fn detailed_exit_status(status: std::process::ExitStatus) -> Option<String> {
-        use winapi::shared::minwindef::DWORD;
-        use winapi::um::winnt::*;
+        use windows_sys::Win32::Foundation::*;
 
-        let extra = match status.code().unwrap() as DWORD {
+        let extra = match status.code().unwrap() as NTSTATUS {
             STATUS_ACCESS_VIOLATION => "STATUS_ACCESS_VIOLATION",
             STATUS_IN_PAGE_ERROR => "STATUS_IN_PAGE_ERROR",
             STATUS_INVALID_HANDLE => "STATUS_INVALID_HANDLE",
