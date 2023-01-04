@@ -5,6 +5,7 @@
 use snapbox::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
+use std::process::ExitStatus;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct TryCmd {
@@ -125,6 +126,7 @@ impl TryCmd {
         id: Option<&str>,
         stdout: Option<&crate::Data>,
         stderr: Option<&crate::Data>,
+        exit: Option<ExitStatus>,
     ) -> Result<(), crate::Error> {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
@@ -132,6 +134,71 @@ impl TryCmd {
 
                 overwrite_toml_output(path, id, stdout, "stdout", "stdout")?;
                 overwrite_toml_output(path, id, stderr, "stderr", "stderr")?;
+
+                if let Some(status) = exit {
+                    let raw = std::fs::read_to_string(path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    let mut doc = raw
+                        .parse::<toml_edit::Document>()
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+
+                    if let Some(code) = status.code() {
+                        if status.success() {
+                            if match doc.get("status") {
+                                Some(toml_edit::Item::Value(toml_edit::Value::String(
+                                    ref expected,
+                                ))) if expected.value() == "success" => false,
+                                Some(
+                                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
+                                    | toml_edit::Item::Table(_),
+                                ) => !matches!(
+                                    doc["status"].get("code"),
+                                    Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                                        if expected.value() == &0),
+                                _ => true,
+                            } {
+                                doc["status"] = toml_edit::Item::None;
+                            }
+                        } else {
+                            let code = code as i64;
+                            match doc.get("status") {
+                                Some(toml_edit::Item::Value(toml_edit::Value::String(
+                                    ref expected,
+                                ))) => {
+                                    if expected.value() != "failed" {
+                                        doc["status"] = toml_edit::value("failed");
+                                    }
+                                }
+                                Some(
+                                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
+                                    | toml_edit::Item::Table(_),
+                                ) => {
+                                    if !matches!(
+                                        doc["status"].get("code"),
+                                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                                            if expected.value() == &code)
+                                    {
+                                        doc["status"]["code"] = toml_edit::value(code);
+                                    }
+                                }
+                                _ => {
+                                    doc["status"] =
+                                        toml_edit::value(toml_edit::InlineTable::default());
+                                    doc["status"]["code"] = toml_edit::value(code);
+                                }
+                            }
+                        }
+                    } else if !matches!(
+                        doc.get("status"),
+                        Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+                            if expected.value() == "interrupted")
+                    {
+                        doc["status"] = toml_edit::value("interrupted");
+                    }
+
+                    std::fs::write(path, doc.to_string())
+                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+                }
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 if stderr.is_some() && stderr != Some(&crate::Data::new()) {
                     panic!("stderr should have been merged: {:?}", stderr);
@@ -142,17 +209,57 @@ impl TryCmd {
                         .iter()
                         .find(|s| s.id.as_deref() == Some(id))
                         .expect("id is valid");
-                    let line_nums = step
+                    let mut line_nums = step
                         .expected_stdout_source
                         .clone()
                         .expect("always present for .trycmd");
-                    let mut stdout = stdout.render().expect("at least Text");
-                    // Add back trailing newline removed when parsing
-                    stdout.push('\n');
+
                     let raw = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     let mut normalized = snapbox::utils::normalize_lines(&raw);
+
+                    if let Some(status) = exit {
+                        if let Some(status) = if let Some(code) = status.code() {
+                            if status.success() {
+                                if let (true, Some(line_num)) = (
+                                    step.expected_status != Some(CommandStatus::Success),
+                                    step.expected_status_source,
+                                ) {
+                                    replace_lines(&mut normalized, line_num..line_num + 1, "")?;
+                                    line_nums = line_nums.start - 1..line_nums.end - 1;
+                                }
+                                None
+                            } else {
+                                match step.expected_status {
+                                    Some(CommandStatus::Success | CommandStatus::Interrupted) => {
+                                        Some(format!("? {code}"))
+                                    }
+                                    Some(CommandStatus::Code(expected)) if expected != code => {
+                                        Some(format!("? {code}"))
+                                    }
+                                    _ => None,
+                                }
+                            }
+                        } else if step.expected_status == Some(CommandStatus::Interrupted) {
+                            None
+                        } else {
+                            Some("? interrupted".into())
+                        } {
+                            if let Some(line_num) = step.expected_status_source {
+                                replace_lines(&mut normalized, line_num..line_num + 1, &status)?;
+                            } else {
+                                let line_num = line_nums.start;
+                                replace_lines(&mut normalized, line_num..line_num, &status)?;
+                                line_nums = line_num + 1..line_nums.end + 1;
+                            }
+                        }
+                    }
+
+                    let mut stdout = stdout.render().expect("at least Text");
+                    // Add back trailing newline removed when parsing
+                    stdout.push('\n');
                     replace_lines(&mut normalized, line_nums, &stdout)?;
+
                     std::fs::write(path, normalized.into_bytes())
                         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
                 }
@@ -214,6 +321,7 @@ impl TryCmd {
 
             'code: loop {
                 let mut cmdline = Vec::new();
+                let mut expected_status_source = None;
                 let mut expected_status = Some(CommandStatus::Success);
                 let mut stdout = String::new();
                 let cmd_start;
@@ -243,6 +351,7 @@ impl TryCmd {
                 }
                 if let Some((line_num, line)) = lines.pop_front() {
                     if let Some(raw) = line.strip_prefix("? ") {
+                        expected_status_source = Some(line_num);
                         expected_status = Some(raw.trim().parse::<CommandStatus>()?);
                         stdout_start = line_num + 1;
                     } else {
@@ -291,6 +400,7 @@ impl TryCmd {
                     env,
                     stdin: None,
                     stderr_to_stdout: true,
+                    expected_status_source,
                     expected_status,
                     expected_stdout_source: Some(stdout_start..post_stdout_start),
                     expected_stdout: Some(crate::Data::text(stdout)),
@@ -410,6 +520,7 @@ impl From<OneShot> for TryCmd {
                 env,
                 stdin: stdin.map(crate::Data::text),
                 stderr_to_stdout,
+                expected_status_source: None,
                 expected_status: status,
                 expected_stdout_source: None,
                 expected_stdout: stdout.map(crate::Data::text),
@@ -431,6 +542,7 @@ pub(crate) struct Step {
     pub(crate) env: Env,
     pub(crate) stdin: Option<crate::Data>,
     pub(crate) stderr_to_stdout: bool,
+    pub(crate) expected_status_source: Option<usize>,
     pub(crate) expected_status: Option<CommandStatus>,
     pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
     pub(crate) expected_stdout: Option<crate::Data>,
@@ -893,6 +1005,7 @@ $ KEY1=VALUE1 KEY2='VALUE2 with space' cmd
             steps: vec![Step {
                 id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
+                expected_status_source: Some(4),
                 expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
@@ -920,6 +1033,7 @@ $ cmd
             steps: vec![Step {
                 id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
+                expected_status_source: Some(4),
                 expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
@@ -1003,6 +1117,7 @@ Hello World
                 Step {
                     id: Some("3".into()),
                     bin: Some(Bin::Name("cmd1".into())),
+                    expected_status_source: Some(4),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
@@ -1043,6 +1158,7 @@ $ cmd2
                 Step {
                     id: Some("3".into()),
                     bin: Some(Bin::Name("bare-cmd".into())),
+                    expected_status_source: Some(4),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
@@ -1053,6 +1169,7 @@ $ cmd2
                 Step {
                     id: Some("8".into()),
                     bin: Some(Bin::Name("trycmd-cmd".into())),
+                    expected_status_source: Some(9),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(10..10),
@@ -1063,6 +1180,7 @@ $ cmd2
                 Step {
                     id: Some("18".into()),
                     bin: Some(Bin::Name("console-cmd".into())),
+                    expected_status_source: Some(19),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(20..20),
