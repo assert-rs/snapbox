@@ -220,7 +220,9 @@ impl TryCmd {
                 let mut stdout_start;
 
                 if let Some((line_num, line)) = lines.pop_front() {
-                    if let Some(raw) = line.strip_prefix("$ ") {
+                    if line.starts_with(&fence_pattern) {
+                        break;
+                    } else if let Some(raw) = line.strip_prefix("$ ") {
                         cmdline.extend(shlex::Shlex::new(raw.trim()));
                         cmd_start = line_num;
                         stdout_start = line_num + 1;
@@ -769,6 +771,22 @@ mod test {
             ..Default::default()
         };
         let actual = TryCmd::parse_trycmd("").unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_trycmd_empty_fence() {
+        let expected = TryCmd {
+            steps: vec![],
+            ..Default::default()
+        };
+        let actual = TryCmd::parse_trycmd(
+            "
+```
+```
+",
+        )
+        .unwrap();
         assert_eq!(expected, actual);
     }
 
