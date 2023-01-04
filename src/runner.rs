@@ -77,7 +77,7 @@ impl Runner {
                 })
                 .collect();
 
-            if !failures.is_empty() {
+            if !failures.is_empty() && mode != &Mode::Overwrite {
                 let stderr = std::io::stderr();
                 let mut stderr = stderr.lock();
                 let _ = writeln!(
