@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Allow empty code fences
+- TOML parsing is now more conformant
+
 ## [0.14.6] - 2022-12-23
 
 ### Fixes
