@@ -382,22 +382,26 @@ fn overwrite_toml_status(status: ExitStatus, raw: String) -> Result<String, toml
     let mut doc = raw.parse::<toml_edit::Document>()?;
     if let Some(code) = status.code() {
         if status.success() {
-            if match doc.get("status") {
+            match doc.get("status") {
                 Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
-                    if expected.value() == "success" =>
-                {
-                    false
-                }
+                    if expected.value() == "success" => {}
                 Some(
                     toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
                     | toml_edit::Item::Table(_),
-                ) => !matches!(
-                    doc["status"].get("code"),
-                    Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
-                        if expected.value() == &0),
-                _ => true,
-            } {
-                doc["status"] = toml_edit::Item::None;
+                ) => {
+                    if !matches!(
+                        doc["status"].get("code"),
+                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                            if expected.value() == &0)
+                    {
+                        // Remove `status` to use the default value (success)
+                        doc["status"] = toml_edit::Item::None;
+                    }
+                }
+                _ => {
+                    // Remove `status` to use the default value (success)
+                    doc["status"] = toml_edit::Item::None;
+                }
             }
         } else {
             let code = code as i64;
