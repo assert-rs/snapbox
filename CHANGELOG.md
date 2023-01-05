@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Do not fail when using `TRYCMD=overwrite`
+
 ## [0.14.7] - 2023-01-04
 
 ### Fixes
