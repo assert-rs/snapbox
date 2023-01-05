@@ -5,6 +5,7 @@
 use snapbox::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
+use std::ops::Range;
 use std::process::ExitStatus;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
@@ -138,65 +139,9 @@ impl TryCmd {
                 if let Some(status) = exit {
                     let raw = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    let mut doc = raw
-                        .parse::<toml_edit::Document>()
+                    let overwritten = overwrite_toml_status(status, raw)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-
-                    if let Some(code) = status.code() {
-                        if status.success() {
-                            if match doc.get("status") {
-                                Some(toml_edit::Item::Value(toml_edit::Value::String(
-                                    ref expected,
-                                ))) if expected.value() == "success" => false,
-                                Some(
-                                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
-                                    | toml_edit::Item::Table(_),
-                                ) => !matches!(
-                                    doc["status"].get("code"),
-                                    Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
-                                        if expected.value() == &0),
-                                _ => true,
-                            } {
-                                doc["status"] = toml_edit::Item::None;
-                            }
-                        } else {
-                            let code = code as i64;
-                            match doc.get("status") {
-                                Some(toml_edit::Item::Value(toml_edit::Value::String(
-                                    ref expected,
-                                ))) => {
-                                    if expected.value() != "failed" {
-                                        doc["status"] = toml_edit::value("failed");
-                                    }
-                                }
-                                Some(
-                                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
-                                    | toml_edit::Item::Table(_),
-                                ) => {
-                                    if !matches!(
-                                        doc["status"].get("code"),
-                                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
-                                            if expected.value() == &code)
-                                    {
-                                        doc["status"]["code"] = toml_edit::value(code);
-                                    }
-                                }
-                                _ => {
-                                    doc["status"] =
-                                        toml_edit::value(toml_edit::InlineTable::default());
-                                    doc["status"]["code"] = toml_edit::value(code);
-                                }
-                            }
-                        }
-                    } else if !matches!(
-                        doc.get("status"),
-                        Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
-                            if expected.value() == "interrupted")
-                    {
-                        doc["status"] = toml_edit::value("interrupted");
-                    }
-
-                    std::fs::write(path, doc.to_string())
+                    std::fs::write(path, overwritten)
                         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
                 }
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
@@ -218,42 +163,13 @@ impl TryCmd {
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     let mut normalized = snapbox::utils::normalize_lines(&raw);
 
-                    if let Some(status) = exit {
-                        if let Some(status) = if let Some(code) = status.code() {
-                            if status.success() {
-                                if let (true, Some(line_num)) = (
-                                    step.expected_status != Some(CommandStatus::Success),
-                                    step.expected_status_source,
-                                ) {
-                                    replace_lines(&mut normalized, line_num..line_num + 1, "")?;
-                                    line_nums = line_nums.start - 1..line_nums.end - 1;
-                                }
-                                None
-                            } else {
-                                match step.expected_status {
-                                    Some(CommandStatus::Success | CommandStatus::Interrupted) => {
-                                        Some(format!("? {code}"))
-                                    }
-                                    Some(CommandStatus::Code(expected)) if expected != code => {
-                                        Some(format!("? {code}"))
-                                    }
-                                    _ => None,
-                                }
-                            }
-                        } else if step.expected_status == Some(CommandStatus::Interrupted) {
-                            None
-                        } else {
-                            Some("? interrupted".into())
-                        } {
-                            if let Some(line_num) = step.expected_status_source {
-                                replace_lines(&mut normalized, line_num..line_num + 1, &status)?;
-                            } else {
-                                let line_num = line_nums.start;
-                                replace_lines(&mut normalized, line_num..line_num, &status)?;
-                                line_nums = line_num + 1..line_nums.end + 1;
-                            }
-                        }
-                    }
+                    overwrite_trycmd_status(
+                        exit,
+                        step.expected_status,
+                        step.expected_status_source,
+                        &mut line_nums,
+                        &mut normalized,
+                    )?;
 
                     let mut stdout = stdout.render().expect("at least Text");
                     // Add back trailing newline removed when parsing
@@ -462,10 +378,115 @@ fn overwrite_toml_output(
     Ok(())
 }
 
+fn overwrite_toml_status(status: ExitStatus, raw: String) -> Result<String, toml_edit::TomlError> {
+    let mut doc = raw.parse::<toml_edit::Document>()?;
+    if let Some(code) = status.code() {
+        if status.success() {
+            if match doc.get("status") {
+                Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+                    if expected.value() == "success" =>
+                {
+                    false
+                }
+                Some(
+                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
+                    | toml_edit::Item::Table(_),
+                ) => !matches!(
+                    doc["status"].get("code"),
+                    Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                        if expected.value() == &0),
+                _ => true,
+            } {
+                doc["status"] = toml_edit::Item::None;
+            }
+        } else {
+            let code = code as i64;
+            match doc.get("status") {
+                Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected))) => {
+                    if expected.value() != "failed" {
+                        doc["status"] = toml_edit::value("failed");
+                    }
+                }
+                Some(
+                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
+                    | toml_edit::Item::Table(_),
+                ) => {
+                    if !matches!(
+                        doc["status"].get("code"),
+                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                            if expected.value() == &code)
+                    {
+                        doc["status"]["code"] = toml_edit::value(code);
+                    }
+                }
+                _ => {
+                    doc["status"] = toml_edit::value(toml_edit::InlineTable::default());
+                    doc["status"]["code"] = toml_edit::value(code);
+                }
+            }
+        }
+    } else if !matches!(
+        doc.get("status"),
+        Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+            if expected.value() == "interrupted")
+    {
+        doc["status"] = toml_edit::value("interrupted");
+    }
+
+    Ok(doc.to_string())
+}
+
+fn overwrite_trycmd_status(
+    exit: Option<ExitStatus>,
+    expected_status: Option<CommandStatus>,
+    expected_status_source: Option<usize>,
+    line_nums: &mut Range<usize>,
+    normalized: &mut String,
+) -> Result<(), snapbox::Error> {
+    if let Some(status) = exit {
+        if let Some(status) = if let Some(code) = status.code() {
+            if status.success() {
+                if let (true, Some(line_num)) = (
+                    expected_status != Some(CommandStatus::Success),
+                    expected_status_source,
+                ) {
+                    replace_lines(normalized, line_num..line_num + 1, "")?;
+                    *line_nums = line_nums.start - 1..line_nums.end - 1;
+                }
+                None
+            } else {
+                match expected_status {
+                    Some(CommandStatus::Success | CommandStatus::Interrupted) => {
+                        Some(format!("? {code}"))
+                    }
+                    Some(CommandStatus::Code(expected)) if expected != code => {
+                        Some(format!("? {code}"))
+                    }
+                    _ => None,
+                }
+            }
+        } else if expected_status == Some(CommandStatus::Interrupted) {
+            None
+        } else {
+            Some("? interrupted".into())
+        } {
+            if let Some(line_num) = expected_status_source {
+                replace_lines(normalized, line_num..line_num + 1, &status)?;
+            } else {
+                let line_num = line_nums.start;
+                replace_lines(normalized, line_num..line_num, &status)?;
+                *line_nums = line_num + 1..line_nums.end + 1;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Update an inline snapshot
 fn replace_lines(
     data: &mut String,
-    line_nums: std::ops::Range<usize>,
+    line_nums: Range<usize>,
     text: &str,
 ) -> Result<(), crate::Error> {
     let mut output_lines = String::new();
@@ -544,9 +565,9 @@ pub(crate) struct Step {
     pub(crate) stderr_to_stdout: bool,
     pub(crate) expected_status_source: Option<usize>,
     pub(crate) expected_status: Option<CommandStatus>,
-    pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
+    pub(crate) expected_stdout_source: Option<Range<usize>>,
     pub(crate) expected_stdout: Option<crate::Data>,
-    pub(crate) expected_stderr_source: Option<std::ops::Range<usize>>,
+    pub(crate) expected_stderr_source: Option<Range<usize>>,
     pub(crate) expected_stderr: Option<crate::Data>,
     pub(crate) binary: bool,
     pub(crate) timeout: Option<std::time::Duration>,
@@ -872,6 +893,8 @@ impl std::str::FromStr for CommandStatus {
 
 #[cfg(test)]
 mod test {
+    use std::process::ExitStatus;
+
     use super::*;
 
     #[test]
@@ -1372,5 +1395,157 @@ $ rust-cmd1
         let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_toml_status_success() {
+        let expected = r#"
+bin.name = "cmd"
+"#;
+        let actual = overwrite_toml_status(
+            exit_code_to_status(0),
+            r#"
+bin.name = "cmd"
+status = "failed"
+"#
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_toml_status_failed() {
+        let expected = r#"
+bin.name = "cmd"
+status = { code = 1 }
+"#;
+        let actual = overwrite_toml_status(
+            exit_code_to_status(1),
+            r#"
+bin.name = "cmd"
+"#
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_toml_status_keeps_style() {
+        let expected = r#"
+bin.name = "cmd"
+status.code= 1
+"#;
+        let actual = overwrite_toml_status(
+            exit_code_to_status(1),
+            r#"
+bin.name = "cmd"
+status.code= 2
+"#
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_trycmd_status_success() {
+        let expected = r#"
+$ cmd arg
+foo
+bar
+"#;
+
+        let mut actual = r"
+$ cmd arg
+? failed
+foo
+bar
+"
+        .into();
+        overwrite_trycmd_status(
+            Some(exit_code_to_status(0)),
+            Some(CommandStatus::Failed),
+            Some(3),
+            &mut (4..6),
+            &mut actual,
+        )
+        .unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_trycmd_status_failed() {
+        let expected = r#"
+$ cmd arg
+? 1
+foo
+bar
+"#;
+
+        let mut actual = r"
+$ cmd arg
+? 2
+foo
+bar
+"
+        .into();
+        overwrite_trycmd_status(
+            Some(exit_code_to_status(1)),
+            Some(CommandStatus::Code(2)),
+            Some(3),
+            &mut (4..6),
+            &mut actual,
+        )
+        .unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_trycmd_status_keeps_style() {
+        let expected = r#"
+$ cmd arg
+? success
+foo
+bar
+"#;
+
+        let mut actual = r"
+$ cmd arg
+? success
+foo
+bar
+"
+        .into();
+        overwrite_trycmd_status(
+            Some(exit_code_to_status(0)),
+            Some(CommandStatus::Success),
+            Some(3),
+            &mut (4..6),
+            &mut actual,
+        )
+        .unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[cfg(unix)]
+    fn exit_code_to_status(code: u8) -> ExitStatus {
+        use std::os::unix::process::ExitStatusExt;
+        ExitStatus::from_raw((code as i32) << 8)
+    }
+
+    #[cfg(windows)]
+    fn exit_code_to_status(code: u8) -> ExitStatus {
+        use std::os::windows::process::ExitStatusExt;
+        ExitStatus::from_raw(code as u32)
+    }
+
+    #[test]
+    fn exit_code_to_status_works() {
+        assert_eq!(exit_code_to_status(42).code(), Some(42));
     }
 }
