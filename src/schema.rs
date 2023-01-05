@@ -5,8 +5,6 @@
 use snapbox::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
-use std::ops::Range;
-use std::process::ExitStatus;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct TryCmd {
@@ -127,7 +125,7 @@ impl TryCmd {
         id: Option<&str>,
         stdout: Option<&crate::Data>,
         stderr: Option<&crate::Data>,
-        exit: Option<ExitStatus>,
+        exit: Option<std::process::ExitStatus>,
     ) -> Result<(), crate::Error> {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
@@ -378,7 +376,10 @@ fn overwrite_toml_output(
     Ok(())
 }
 
-fn overwrite_toml_status(status: ExitStatus, raw: String) -> Result<String, toml_edit::TomlError> {
+fn overwrite_toml_status(
+    status: std::process::ExitStatus,
+    raw: String,
+) -> Result<String, toml_edit::TomlError> {
     let mut doc = raw.parse::<toml_edit::Document>()?;
     if let Some(code) = status.code() {
         if status.success() {
@@ -441,10 +442,10 @@ fn overwrite_toml_status(status: ExitStatus, raw: String) -> Result<String, toml
 }
 
 fn overwrite_trycmd_status(
-    exit: Option<ExitStatus>,
+    exit: Option<std::process::ExitStatus>,
     expected_status: Option<CommandStatus>,
     expected_status_source: Option<usize>,
-    line_nums: &mut Range<usize>,
+    line_nums: &mut std::ops::Range<usize>,
     normalized: &mut String,
 ) -> Result<(), snapbox::Error> {
     if let Some(status) = exit {
@@ -490,7 +491,7 @@ fn overwrite_trycmd_status(
 /// Update an inline snapshot
 fn replace_lines(
     data: &mut String,
-    line_nums: Range<usize>,
+    line_nums: std::ops::Range<usize>,
     text: &str,
 ) -> Result<(), crate::Error> {
     let mut output_lines = String::new();
@@ -569,9 +570,9 @@ pub(crate) struct Step {
     pub(crate) stderr_to_stdout: bool,
     pub(crate) expected_status_source: Option<usize>,
     pub(crate) expected_status: Option<CommandStatus>,
-    pub(crate) expected_stdout_source: Option<Range<usize>>,
+    pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
     pub(crate) expected_stdout: Option<crate::Data>,
-    pub(crate) expected_stderr_source: Option<Range<usize>>,
+    pub(crate) expected_stderr_source: Option<std::ops::Range<usize>>,
     pub(crate) expected_stderr: Option<crate::Data>,
     pub(crate) binary: bool,
     pub(crate) timeout: Option<std::time::Duration>,
@@ -897,8 +898,6 @@ impl std::str::FromStr for CommandStatus {
 
 #[cfg(test)]
 mod test {
-    use std::process::ExitStatus;
-
     use super::*;
 
     #[test]
@@ -1537,15 +1536,15 @@ bar
     }
 
     #[cfg(unix)]
-    fn exit_code_to_status(code: u8) -> ExitStatus {
+    fn exit_code_to_status(code: u8) -> std::process::ExitStatus {
         use std::os::unix::process::ExitStatusExt;
-        ExitStatus::from_raw((code as i32) << 8)
+        std::process::ExitStatus::from_raw((code as i32) << 8)
     }
 
     #[cfg(windows)]
-    fn exit_code_to_status(code: u8) -> ExitStatus {
+    fn exit_code_to_status(code: u8) -> std::process::ExitStatus {
         use std::os::windows::process::ExitStatusExt;
-        ExitStatus::from_raw(code as u32)
+        std::process::ExitStatus::from_raw(code as u32)
     }
 
     #[test]
