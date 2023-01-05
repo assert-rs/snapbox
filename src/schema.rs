@@ -425,8 +425,10 @@ fn overwrite_toml_status(
                     }
                 }
                 _ => {
-                    doc["status"] = toml_edit::value(toml_edit::InlineTable::default());
-                    doc["status"]["code"] = toml_edit::value(code);
+                    let mut status = toml_edit::InlineTable::default();
+                    status.set_dotted(true);
+                    status.insert("code", code.into());
+                    doc["status"] = toml_edit::value(status);
                 }
             }
         }
@@ -1421,7 +1423,7 @@ status = "failed"
     fn overwrite_toml_status_failed() {
         let expected = r#"
 bin.name = "cmd"
-status = { code = 1 }
+status.code = 1
 "#;
         let actual = overwrite_toml_status(
             exit_code_to_status(1),
@@ -1438,13 +1440,13 @@ bin.name = "cmd"
     fn overwrite_toml_status_keeps_style() {
         let expected = r#"
 bin.name = "cmd"
-status.code= 1
+status = { code = 1 } # comment
 "#;
         let actual = overwrite_toml_status(
             exit_code_to_status(1),
             r#"
 bin.name = "cmd"
-status.code= 2
+status = { code = 2 } # comment
 "#
             .into(),
         )
