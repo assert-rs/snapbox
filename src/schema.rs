@@ -450,40 +450,47 @@ fn overwrite_trycmd_status(
     line_nums: &mut std::ops::Range<usize>,
     normalized: &mut String,
 ) -> Result<(), snapbox::Error> {
-    if let Some(status) = exit {
-        if let Some(status) = if let Some(code) = status.code() {
-            if status.success() {
-                if let (true, Some(line_num)) = (
-                    expected_status != Some(CommandStatus::Success),
-                    expected_status_source,
-                ) {
-                    replace_lines(normalized, line_num..line_num + 1, "")?;
-                    *line_nums = line_nums.start - 1..line_nums.end - 1;
-                }
-                None
-            } else {
-                match expected_status {
-                    Some(CommandStatus::Success | CommandStatus::Interrupted) => {
-                        Some(format!("? {code}"))
-                    }
-                    Some(CommandStatus::Code(expected)) if expected != code => {
-                        Some(format!("? {code}"))
-                    }
-                    _ => None,
-                }
+    let status = match exit {
+        Some(status) => status,
+        _ => {
+            return Ok(());
+        }
+    };
+
+    let formatted_status = if let Some(code) = status.code() {
+        if status.success() {
+            if let (true, Some(line_num)) = (
+                expected_status != Some(CommandStatus::Success),
+                expected_status_source,
+            ) {
+                replace_lines(normalized, line_num..line_num + 1, "")?;
+                *line_nums = line_nums.start - 1..line_nums.end - 1;
             }
-        } else if expected_status == Some(CommandStatus::Interrupted) {
             None
         } else {
-            Some("? interrupted".into())
-        } {
-            if let Some(line_num) = expected_status_source {
-                replace_lines(normalized, line_num..line_num + 1, &status)?;
-            } else {
-                let line_num = line_nums.start;
-                replace_lines(normalized, line_num..line_num, &status)?;
-                *line_nums = line_num + 1..line_nums.end + 1;
+            match expected_status {
+                Some(CommandStatus::Success | CommandStatus::Interrupted) => {
+                    Some(format!("? {code}"))
+                }
+                Some(CommandStatus::Code(expected)) if expected != code => {
+                    Some(format!("? {code}"))
+                }
+                _ => None,
             }
+        }
+    } else if expected_status == Some(CommandStatus::Interrupted) {
+        None
+    } else {
+        Some("? interrupted".into())
+    };
+
+    if let Some(status) = formatted_status {
+        if let Some(line_num) = expected_status_source {
+            replace_lines(normalized, line_num..line_num + 1, &status)?;
+        } else {
+            let line_num = line_nums.start;
+            replace_lines(normalized, line_num..line_num, &status)?;
+            *line_nums = line_num + 1..line_nums.end + 1;
         }
     }
 
