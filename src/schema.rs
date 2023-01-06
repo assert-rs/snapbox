@@ -125,6 +125,7 @@ impl TryCmd {
         id: Option<&str>,
         stdout: Option<&crate::Data>,
         stderr: Option<&crate::Data>,
+        exit: Option<std::process::ExitStatus>,
     ) -> Result<(), crate::Error> {
         if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
@@ -132,6 +133,15 @@ impl TryCmd {
 
                 overwrite_toml_output(path, id, stdout, "stdout", "stdout")?;
                 overwrite_toml_output(path, id, stderr, "stderr", "stderr")?;
+
+                if let Some(status) = exit {
+                    let raw = std::fs::read_to_string(path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    let overwritten = overwrite_toml_status(status, raw)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    std::fs::write(path, overwritten)
+                        .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+                }
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 if stderr.is_some() && stderr != Some(&crate::Data::new()) {
                     panic!("stderr should have been merged: {:?}", stderr);
@@ -142,17 +152,22 @@ impl TryCmd {
                         .iter()
                         .find(|s| s.id.as_deref() == Some(id))
                         .expect("id is valid");
-                    let line_nums = step
+                    let mut line_nums = step
                         .expected_stdout_source
                         .clone()
                         .expect("always present for .trycmd");
-                    let mut stdout = stdout.render().expect("at least Text");
-                    // Add back trailing newline removed when parsing
-                    stdout.push('\n');
+
                     let raw = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     let mut normalized = snapbox::utils::normalize_lines(&raw);
+
+                    overwrite_trycmd_status(exit, step, &mut line_nums, &mut normalized)?;
+
+                    let mut stdout = stdout.render().expect("at least Text");
+                    // Add back trailing newline removed when parsing
+                    stdout.push('\n');
                     replace_lines(&mut normalized, line_nums, &stdout)?;
+
                     std::fs::write(path, normalized.into_bytes())
                         .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
                 }
@@ -214,6 +229,7 @@ impl TryCmd {
 
             'code: loop {
                 let mut cmdline = Vec::new();
+                let mut expected_status_source = None;
                 let mut expected_status = Some(CommandStatus::Success);
                 let mut stdout = String::new();
                 let cmd_start;
@@ -245,6 +261,7 @@ impl TryCmd {
                 }
                 if let Some((line_num, line)) = lines.pop_front() {
                     if let Some(raw) = line.strip_prefix("? ") {
+                        expected_status_source = Some(line_num);
                         expected_status = Some(raw.trim().parse::<CommandStatus>()?);
                         stdout_start = line_num + 1;
                     } else {
@@ -293,6 +310,7 @@ impl TryCmd {
                     env,
                     stdin: None,
                     stderr_to_stdout: true,
+                    expected_status_source,
                     expected_status,
                     expected_stdout_source: Some(stdout_start..post_stdout_start),
                     expected_stdout: Some(crate::Data::text(stdout)),
@@ -348,6 +366,128 @@ fn overwrite_toml_output(
             doc[output_field] = toml_edit::Item::None;
             std::fs::write(path, doc.to_string())
                 .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
+        }
+    }
+
+    Ok(())
+}
+
+fn overwrite_toml_status(
+    status: std::process::ExitStatus,
+    raw: String,
+) -> Result<String, toml_edit::TomlError> {
+    let mut doc = raw.parse::<toml_edit::Document>()?;
+    if let Some(code) = status.code() {
+        if status.success() {
+            match doc.get("status") {
+                Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+                    if expected.value() == "success" => {}
+                Some(
+                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
+                    | toml_edit::Item::Table(_),
+                ) => {
+                    if !matches!(
+                        doc["status"].get("code"),
+                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                            if expected.value() == &0)
+                    {
+                        // Remove `status` to use the default value (success)
+                        doc["status"] = toml_edit::Item::None;
+                    }
+                }
+                _ => {
+                    // Remove `status` to use the default value (success)
+                    doc["status"] = toml_edit::Item::None;
+                }
+            }
+        } else {
+            let code = code as i64;
+            match doc.get("status") {
+                Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected))) => {
+                    if expected.value() != "failed" {
+                        doc["status"] = toml_edit::value("failed");
+                    }
+                }
+                Some(
+                    toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
+                    | toml_edit::Item::Table(_),
+                ) => {
+                    if !matches!(
+                        doc["status"].get("code"),
+                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                            if expected.value() == &code)
+                    {
+                        doc["status"]["code"] = toml_edit::value(code);
+                    }
+                }
+                _ => {
+                    let mut status = toml_edit::InlineTable::default();
+                    status.set_dotted(true);
+                    status.insert("code", code.into());
+                    doc["status"] = toml_edit::value(status);
+                }
+            }
+        }
+    } else if !matches!(
+        doc.get("status"),
+        Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+            if expected.value() == "interrupted")
+    {
+        doc["status"] = toml_edit::value("interrupted");
+    }
+
+    Ok(doc.to_string())
+}
+
+fn overwrite_trycmd_status(
+    exit: Option<std::process::ExitStatus>,
+    step: &Step,
+    stdout_line_nums: &mut std::ops::Range<usize>,
+    normalized: &mut String,
+) -> Result<(), snapbox::Error> {
+    let status = match exit {
+        Some(status) => status,
+        _ => {
+            return Ok(());
+        }
+    };
+
+    let formatted_status = if let Some(code) = status.code() {
+        if status.success() {
+            if let (true, Some(line_num)) = (
+                step.expected_status != Some(CommandStatus::Success),
+                step.expected_status_source,
+            ) {
+                replace_lines(normalized, line_num..(line_num + 1), "")?;
+                *stdout_line_nums = (stdout_line_nums.start - 1)..(stdout_line_nums.end - 1);
+            }
+            None
+        } else {
+            match step.expected_status {
+                Some(CommandStatus::Success | CommandStatus::Interrupted) => {
+                    Some(format!("? {code}"))
+                }
+                Some(CommandStatus::Code(expected)) if expected != code => {
+                    Some(format!("? {code}"))
+                }
+                _ => None,
+            }
+        }
+    } else {
+        if step.expected_status == Some(CommandStatus::Interrupted) {
+            None
+        } else {
+            Some("? interrupted".into())
+        }
+    };
+
+    if let Some(status) = formatted_status {
+        if let Some(line_num) = step.expected_status_source {
+            replace_lines(normalized, line_num..(line_num + 1), &status)?;
+        } else {
+            let line_num = stdout_line_nums.start;
+            replace_lines(normalized, line_num..line_num, &status)?;
+            *stdout_line_nums = (line_num + 1)..(stdout_line_nums.end + 1);
         }
     }
 
@@ -412,6 +552,7 @@ impl From<OneShot> for TryCmd {
                 env,
                 stdin: stdin.map(crate::Data::text),
                 stderr_to_stdout,
+                expected_status_source: None,
                 expected_status: status,
                 expected_stdout_source: None,
                 expected_stdout: stdout.map(crate::Data::text),
@@ -433,6 +574,7 @@ pub(crate) struct Step {
     pub(crate) env: Env,
     pub(crate) stdin: Option<crate::Data>,
     pub(crate) stderr_to_stdout: bool,
+    pub(crate) expected_status_source: Option<usize>,
     pub(crate) expected_status: Option<CommandStatus>,
     pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
     pub(crate) expected_stdout: Option<crate::Data>,
@@ -911,6 +1053,7 @@ $ KEY1=VALUE1 KEY2='VALUE2 with space' cmd
             steps: vec![Step {
                 id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
+                expected_status_source: Some(4),
                 expected_status: Some(CommandStatus::Skipped),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
@@ -938,6 +1081,7 @@ $ cmd
             steps: vec![Step {
                 id: Some("3".into()),
                 bin: Some(Bin::Name("cmd".into())),
+                expected_status_source: Some(4),
                 expected_status: Some(CommandStatus::Code(-1)),
                 stderr_to_stdout: true,
                 expected_stdout_source: Some(5..5),
@@ -1021,6 +1165,7 @@ Hello World
                 Step {
                     id: Some("3".into()),
                     bin: Some(Bin::Name("cmd1".into())),
+                    expected_status_source: Some(4),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
@@ -1061,6 +1206,7 @@ $ cmd2
                 Step {
                     id: Some("3".into()),
                     bin: Some(Bin::Name("bare-cmd".into())),
+                    expected_status_source: Some(4),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(5..5),
@@ -1071,6 +1217,7 @@ $ cmd2
                 Step {
                     id: Some("8".into()),
                     bin: Some(Bin::Name("trycmd-cmd".into())),
+                    expected_status_source: Some(9),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(10..10),
@@ -1081,6 +1228,7 @@ $ cmd2
                 Step {
                     id: Some("18".into()),
                     bin: Some(Bin::Name("console-cmd".into())),
+                    expected_status_source: Some(19),
                     expected_status: Some(CommandStatus::Code(1)),
                     stderr_to_stdout: true,
                     expected_stdout_source: Some(20..20),
@@ -1272,5 +1420,172 @@ $ rust-cmd1
         let mut actual = input.to_owned();
         replace_lines(&mut actual, line_nums, replacement).unwrap();
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_toml_status_success() {
+        let expected = r#"
+bin.name = "cmd"
+"#;
+        let actual = overwrite_toml_status(
+            exit_code_to_status(0),
+            r#"
+bin.name = "cmd"
+status = "failed"
+"#
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_toml_status_failed() {
+        let expected = r#"
+bin.name = "cmd"
+status.code = 1
+"#;
+        let actual = overwrite_toml_status(
+            exit_code_to_status(1),
+            r#"
+bin.name = "cmd"
+"#
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_toml_status_keeps_style() {
+        let expected = r#"
+bin.name = "cmd"
+status = { code = 1 } # comment
+"#;
+        let actual = overwrite_toml_status(
+            exit_code_to_status(1),
+            r#"
+bin.name = "cmd"
+status = { code = 2 } # comment
+"#
+            .into(),
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_trycmd_status_success() {
+        let expected = r#"
+```
+$ cmd arg
+foo
+bar
+```
+"#;
+
+        let mut actual = r"
+```
+$ cmd arg
+? failed
+foo
+bar
+```
+"
+        .to_owned();
+
+        let step = &TryCmd::parse_trycmd(&actual).unwrap().steps[0];
+        overwrite_trycmd_status(
+            Some(exit_code_to_status(0)),
+            step,
+            &mut step.expected_stdout_source.clone().unwrap(),
+            &mut actual,
+        )
+        .unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_trycmd_status_failed() {
+        let expected = r#"
+```
+$ cmd arg
+? 1
+foo
+bar
+```
+"#;
+
+        let mut actual = r"
+```
+$ cmd arg
+? 2
+foo
+bar
+```
+"
+        .to_owned();
+
+        let step = &TryCmd::parse_trycmd(&actual).unwrap().steps[0];
+        overwrite_trycmd_status(
+            Some(exit_code_to_status(1)),
+            step,
+            &mut step.expected_stdout_source.clone().unwrap(),
+            &mut actual,
+        )
+        .unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn overwrite_trycmd_status_keeps_style() {
+        let expected = r#"
+```
+$ cmd arg
+? success
+foo
+bar
+```
+"#;
+
+        let mut actual = r"
+```
+$ cmd arg
+? success
+foo
+bar
+```
+"
+        .to_owned();
+
+        let step = &TryCmd::parse_trycmd(&actual).unwrap().steps[0];
+        overwrite_trycmd_status(
+            Some(exit_code_to_status(0)),
+            step,
+            &mut step.expected_stdout_source.clone().unwrap(),
+            &mut actual,
+        )
+        .unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[cfg(unix)]
+    fn exit_code_to_status(code: u8) -> std::process::ExitStatus {
+        use std::os::unix::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw((code as i32) << 8)
+    }
+
+    #[cfg(windows)]
+    fn exit_code_to_status(code: u8) -> std::process::ExitStatus {
+        use std::os::windows::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(code as u32)
+    }
+
+    #[test]
+    fn exit_code_to_status_works() {
+        assert_eq!(exit_code_to_status(42).code(), Some(42));
     }
 }

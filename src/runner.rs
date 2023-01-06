@@ -243,6 +243,7 @@ impl Case {
                             output.id.as_deref(),
                             output.stdout.as_ref().map(|s| &s.content),
                             output.stderr.as_ref().map(|s| &s.content),
+                            output.spawn.exit,
                         );
                     }
                 }
