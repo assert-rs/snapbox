@@ -478,10 +478,12 @@ fn overwrite_trycmd_status(
                 _ => None,
             }
         }
-    } else if expected_status == Some(CommandStatus::Interrupted) {
-        None
     } else {
-        Some("? interrupted".into())
+        if expected_status == Some(CommandStatus::Interrupted) {
+            None
+        } else {
+            Some("? interrupted".into())
+        }
     };
 
     if let Some(status) = formatted_status {
