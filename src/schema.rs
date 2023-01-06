@@ -463,8 +463,8 @@ fn overwrite_trycmd_status(
                 expected_status != Some(CommandStatus::Success),
                 expected_status_source,
             ) {
-                replace_lines(normalized, line_num..line_num + 1, "")?;
-                *line_nums = line_nums.start - 1..line_nums.end - 1;
+                replace_lines(normalized, line_num..(line_num + 1), "")?;
+                *line_nums = (line_nums.start - 1)..(line_nums.end - 1);
             }
             None
         } else {
@@ -486,11 +486,11 @@ fn overwrite_trycmd_status(
 
     if let Some(status) = formatted_status {
         if let Some(line_num) = expected_status_source {
-            replace_lines(normalized, line_num..line_num + 1, &status)?;
+            replace_lines(normalized, line_num..(line_num + 1), &status)?;
         } else {
             let line_num = line_nums.start;
             replace_lines(normalized, line_num..line_num, &status)?;
-            *line_nums = line_num + 1..line_nums.end + 1;
+            *line_nums = (line_num + 1)..(line_nums.end + 1);
         }
     }
 
