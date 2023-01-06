@@ -161,13 +161,7 @@ impl TryCmd {
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     let mut normalized = snapbox::utils::normalize_lines(&raw);
 
-                    overwrite_trycmd_status(
-                        exit,
-                        step.expected_status,
-                        step.expected_status_source,
-                        &mut line_nums,
-                        &mut normalized,
-                    )?;
+                    overwrite_trycmd_status(exit, step, &mut line_nums, &mut normalized)?;
 
                     let mut stdout = stdout.render().expect("at least Text");
                     // Add back trailing newline removed when parsing
@@ -445,9 +439,8 @@ fn overwrite_toml_status(
 
 fn overwrite_trycmd_status(
     exit: Option<std::process::ExitStatus>,
-    expected_status: Option<CommandStatus>,
-    expected_status_source: Option<usize>,
-    line_nums: &mut std::ops::Range<usize>,
+    step: &Step,
+    stdout_line_nums: &mut std::ops::Range<usize>,
     normalized: &mut String,
 ) -> Result<(), snapbox::Error> {
     let status = match exit {
@@ -460,15 +453,15 @@ fn overwrite_trycmd_status(
     let formatted_status = if let Some(code) = status.code() {
         if status.success() {
             if let (true, Some(line_num)) = (
-                expected_status != Some(CommandStatus::Success),
-                expected_status_source,
+                step.expected_status != Some(CommandStatus::Success),
+                step.expected_status_source,
             ) {
                 replace_lines(normalized, line_num..(line_num + 1), "")?;
-                *line_nums = (line_nums.start - 1)..(line_nums.end - 1);
+                *stdout_line_nums = (stdout_line_nums.start - 1)..(stdout_line_nums.end - 1);
             }
             None
         } else {
-            match expected_status {
+            match step.expected_status {
                 Some(CommandStatus::Success | CommandStatus::Interrupted) => {
                     Some(format!("? {code}"))
                 }
@@ -479,7 +472,7 @@ fn overwrite_trycmd_status(
             }
         }
     } else {
-        if expected_status == Some(CommandStatus::Interrupted) {
+        if step.expected_status == Some(CommandStatus::Interrupted) {
             None
         } else {
             Some("? interrupted".into())
@@ -487,12 +480,12 @@ fn overwrite_trycmd_status(
     };
 
     if let Some(status) = formatted_status {
-        if let Some(line_num) = expected_status_source {
+        if let Some(line_num) = step.expected_status_source {
             replace_lines(normalized, line_num..(line_num + 1), &status)?;
         } else {
-            let line_num = line_nums.start;
+            let line_num = stdout_line_nums.start;
             replace_lines(normalized, line_num..line_num, &status)?;
-            *line_nums = (line_num + 1)..(line_nums.end + 1);
+            *stdout_line_nums = (line_num + 1)..(stdout_line_nums.end + 1);
         }
     }
 
@@ -1466,23 +1459,28 @@ status = { code = 2 } # comment
     #[test]
     fn overwrite_trycmd_status_success() {
         let expected = r#"
+```
 $ cmd arg
 foo
 bar
+```
 "#;
 
         let mut actual = r"
+```
 $ cmd arg
 ? failed
 foo
 bar
+```
 "
-        .into();
+        .to_owned();
+
+        let step = &TryCmd::parse_trycmd(&actual).unwrap().steps[0];
         overwrite_trycmd_status(
             Some(exit_code_to_status(0)),
-            Some(CommandStatus::Failed),
-            Some(3),
-            &mut (4..6),
+            step,
+            &mut step.expected_stdout_source.clone().unwrap(),
             &mut actual,
         )
         .unwrap();
@@ -1493,24 +1491,29 @@ bar
     #[test]
     fn overwrite_trycmd_status_failed() {
         let expected = r#"
+```
 $ cmd arg
 ? 1
 foo
 bar
+```
 "#;
 
         let mut actual = r"
+```
 $ cmd arg
 ? 2
 foo
 bar
+```
 "
-        .into();
+        .to_owned();
+
+        let step = &TryCmd::parse_trycmd(&actual).unwrap().steps[0];
         overwrite_trycmd_status(
             Some(exit_code_to_status(1)),
-            Some(CommandStatus::Code(2)),
-            Some(3),
-            &mut (4..6),
+            step,
+            &mut step.expected_stdout_source.clone().unwrap(),
             &mut actual,
         )
         .unwrap();
@@ -1521,24 +1524,29 @@ bar
     #[test]
     fn overwrite_trycmd_status_keeps_style() {
         let expected = r#"
+```
 $ cmd arg
 ? success
 foo
 bar
+```
 "#;
 
         let mut actual = r"
+```
 $ cmd arg
 ? success
 foo
 bar
+```
 "
-        .into();
+        .to_owned();
+
+        let step = &TryCmd::parse_trycmd(&actual).unwrap().steps[0];
         overwrite_trycmd_status(
             Some(exit_code_to_status(0)),
-            Some(CommandStatus::Success),
-            Some(3),
-            &mut (4..6),
+            step,
+            &mut step.expected_stdout_source.clone().unwrap(),
             &mut actual,
         )
         .unwrap();
