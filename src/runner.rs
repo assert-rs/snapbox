@@ -77,7 +77,7 @@ impl Runner {
                 })
                 .collect();
 
-            if !failures.is_empty() && mode != &Mode::Overwrite {
+            if !failures.is_empty() {
                 let stderr = std::io::stderr();
                 let mut stderr = stderr.lock();
                 let _ = writeln!(
@@ -236,15 +236,19 @@ impl Case {
             }
             Mode::Overwrite => {
                 // `rev()` to ensure we don't mess up our line number info
-                for output in outputs.iter().rev() {
-                    if let Err(output) = output {
-                        let _ = sequence.overwrite(
+                for step_status in outputs.iter_mut().rev() {
+                    if let Err(output) = step_status {
+                        let res = sequence.overwrite(
                             &self.path,
                             output.id.as_deref(),
                             output.stdout.as_ref().map(|s| &s.content),
                             output.stderr.as_ref().map(|s| &s.content),
                             output.spawn.exit,
                         );
+
+                        if res.is_ok() {
+                            *step_status = Ok(output.clone());
+                        }
                     }
                 }
             }
