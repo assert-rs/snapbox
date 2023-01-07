@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.14.10] - 2023-01-07
+
 ### Fixes
 
 - Ensure `TRYCMD=overwrite` errors get reported to the user
@@ -336,7 +338,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.9...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.10...HEAD
+[0.14.10]: https://github.com/assert-rs/trycmd/compare/v0.14.9...v0.14.10
 [0.14.9]: https://github.com/assert-rs/trycmd/compare/v0.14.8...v0.14.9
 [0.14.8]: https://github.com/assert-rs/trycmd/compare/v0.14.7...v0.14.8
 [0.14.7]: https://github.com/assert-rs/trycmd/compare/v0.14.6...v0.14.7
