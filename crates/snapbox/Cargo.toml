@@ -48,6 +48,8 @@ detect-encoding = ["dep:content_inspector"]
 path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
 ## Snapshotting of commands
 cmd = ["dep:os_pipe", "dep:wait-timeout", "dep:libc", "dep:windows-sys"]
+## Building of examples for snapshotting
+examples = ["dep:escargot"]
 
 ## Snapshotting of json
 json = ["structured-data"]
@@ -85,6 +87,7 @@ filetime = { version = "0.2", optional = true }
 
 os_pipe = { version = "1.0", optional = true }
 wait-timeout = { version = "0.2.0", optional = true }
+escargot = { version = "0.5.7", optional = true }
 libc = { version = "0.2.137", optional = true }
 windows-sys = { version = "0.45.0", features = ["Win32_Foundation"], optional = true }
 
