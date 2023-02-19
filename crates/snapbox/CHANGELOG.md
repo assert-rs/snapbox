@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Added `examples` feature to expose example-compilation functions in the `cmd` module
+
 ## [0.4.5] - 2023-02-15
 
 ### Internal
