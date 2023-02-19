@@ -1,0 +1,1 @@
+../src/bin/snap-fixture.rs

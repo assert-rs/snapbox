@@ -45,7 +45,7 @@ diff = ["snapbox/diff"]
 filesystem = ["snapbox/path"]
 
 schema = ["dep:schemars", "dep:serde_json"]
-examples = ["dep:escargot"]
+examples = ["snapbox/examples"]
 debug = ["snapbox/debug"]
 
 [[bin]]

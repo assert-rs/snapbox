@@ -769,6 +769,7 @@ dependencies = [
  "content_inspector",
  "document-features",
  "dunce",
+ "escargot",
  "filetime",
  "ignore",
  "libc",
