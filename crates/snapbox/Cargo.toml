@@ -1,6 +1,6 @@
 [package]
 name = "snapbox"
-version = "0.4.6"
+version = "0.4.7"
 description = "Snapshot testing toolbox"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/assert-rs/trycmd/"
