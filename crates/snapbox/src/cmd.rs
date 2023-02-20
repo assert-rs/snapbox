@@ -1042,7 +1042,7 @@ pub(crate) mod examples {
     /// ## Example
     ///
     /// ```rust,no_run
-    /// snapbox::cmd::compile_example("example-fixture", []);
+    /// snapbox::cmd::compile_example("snap-example-fixture", []);
     /// ```
     #[cfg(feature = "examples")]
     pub fn compile_example<'a>(
