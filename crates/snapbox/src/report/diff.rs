@@ -1,3 +1,5 @@
+use crate::report::Styled;
+
 pub fn write_diff(
     writer: &mut dyn std::fmt::Write,
     expected: &crate::Data,
@@ -169,13 +171,13 @@ fn write_change(
     } else {
         write!(writer, "{:>4} ", " ",)?;
     }
-    write!(writer, "{} ", style.paint(sign))?;
+    write!(writer, "{} ", Styled::new(sign, style))?;
     for &(emphasized, change) in change.values() {
         let cur_style = if emphasized { em_style } else { style };
-        write!(writer, "{}", cur_style.paint(change))?;
+        write!(writer, "{}", Styled::new(change, cur_style))?;
     }
     if change.missing_newline() {
-        writeln!(writer, "{}", em_style.paint("∅"))?;
+        writeln!(writer, "{}", Styled::new("∅", em_style))?;
     }
 
     Ok(())
