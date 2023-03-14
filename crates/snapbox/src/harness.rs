@@ -99,7 +99,7 @@ where
                 overrides
                     .matched(&path, is_dir)
                     .is_whitelist()
-                    .then(|| path)
+                    .then_some(path)
             } else {
                 Some(path)
             }
