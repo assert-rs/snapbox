@@ -1,27 +1,36 @@
 [workspace]
 members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.64.0"  # MSRV
+include = [
+  "build.rs",
+  "src/**/*",
+  "Cargo.toml",
+  "LICENSE*",
+  "README.md",
+  "benches/**/*",
+  "examples/**/*"
+]
 
 [package]
 name = "trycmd"
 version = "0.14.13"
 description = "Snapshot testing for a herd of CLI tests"
 authors = ["Ed Page <eopage@gmail.com>"]
-license = "MIT OR Apache-2.0"
 repository = "https://github.com/assert-rs/trycmd.git"
 homepage = "https://github.com/assert-rs/trycmd"
 documentation = "http://docs.rs/trycmd/"
 readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command", "duct"]
-edition = "2021"
-rust-version = "1.64.0"  # MSRV
-include = [
-  "src/**/*",
-  "Cargo.toml",
-  "LICENSE*",
-  "README.md",
-  "examples/**/*"
-]
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+include.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

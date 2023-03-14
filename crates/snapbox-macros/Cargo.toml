@@ -2,24 +2,16 @@
 name = "snapbox-macros"
 version = "0.3.1"
 description = "Snapshot testing toolbox"
-license = "MIT OR Apache-2.0"
 repository = "https://github.com/assert-rs/trycmd/"
 homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
 documentation = "http://docs.rs/snapbox/"
 readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
-edition = "2021"
-rust-version = "1.64.0"  # MSRV
-include = [
-  "build.rs",
-  "src/**/*",
-  "Cargo.toml",
-  "LICENSE*",
-  "README.md",
-  "benches/**/*",
-  "examples/**/*"
-]
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+include.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true
