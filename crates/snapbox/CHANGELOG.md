@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- Update MSRV to 1.64.0
+- Deprecated `color-auto` feature, its now automatic
+
+## Fixes
+
+- Improved terminal detection for color
+
 ## [0.4.8] - 2023-02-28
 
 ### Internal
