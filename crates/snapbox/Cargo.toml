@@ -64,7 +64,7 @@ debug = ["snapbox-macros/debug", "dep:backtrace"]
 ## Fancy diffs on failure
 diff = ["dep:similar"]
 ## Colored output support
-color = ["dep:anstyle-stream"]
+color = ["dep:anstyle-stream", "snapbox-macros/color"]
 ## Auto-detect whether to use colors
 color-auto = ["color"]
 

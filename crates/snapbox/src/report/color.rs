@@ -9,7 +9,7 @@ pub struct Palette {
 }
 
 impl Palette {
-    pub fn always() -> Self {
+    pub fn color() -> Self {
         if cfg!(feature = "color") {
             Self {
                 info: anstyle::AnsiColor::Green.into(),
@@ -20,19 +20,33 @@ impl Palette {
                 actual: anstyle::AnsiColor::Red | anstyle::Effects::UNDERLINE,
             }
         } else {
-            Self::never()
+            Self::plain()
         }
     }
 
-    pub fn never() -> Self {
+    pub fn plain() -> Self {
         Self::default()
     }
 
+    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::color")]
+    pub fn always() -> Self {
+        Self::color()
+    }
+
+    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::plain")]
+    pub fn never() -> Self {
+        Self::plain()
+    }
+
+    #[deprecated(
+        since = "0.4.9",
+        note = "Use `Palette::always`, `auto` behavior is now implicit"
+    )]
     pub fn auto() -> Self {
         if is_colored() {
-            Self::always()
+            Self::color()
         } else {
-            Self::never()
+            Self::plain()
         }
     }
 

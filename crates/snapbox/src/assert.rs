@@ -1,3 +1,10 @@
+#[cfg(feature = "color")]
+use anstyle_stream::panic;
+#[cfg(feature = "color")]
+use anstyle_stream::stderr;
+#[cfg(not(feature = "color"))]
+use std::io::stderr;
+
 use crate::data::{DataFormat, NormalizeMatches, NormalizeNewlines, NormalizePaths};
 use crate::Action;
 
@@ -232,36 +239,25 @@ impl Assert {
                     use std::io::Write;
 
                     let _ = writeln!(
-                        std::io::stderr(),
+                        stderr(),
                         "{}: {}",
                         self.palette.warn("Ignoring failure"),
                         err
                     );
                 }
                 Action::Verify => {
-                    use std::fmt::Write;
-                    let mut buffer = String::new();
-                    write!(&mut buffer, "{}", err).unwrap();
-                    if let Some(action_var) = self.action_var.as_deref() {
-                        writeln!(
-                            &mut buffer,
-                            "{}",
-                            self.palette
-                                .hint(format_args!("Update with {}=overwrite", action_var))
-                        )
-                        .unwrap();
-                    }
-                    panic!("{}", buffer);
+                    let message = if let Some(action_var) = self.action_var.as_deref() {
+                        self.palette
+                            .hint(format!("Update with {}=overwrite", action_var))
+                    } else {
+                        crate::report::Styled::new(String::new(), Default::default())
+                    };
+                    panic!("{err}{message}");
                 }
                 Action::Overwrite => {
                     use std::io::Write;
 
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "{}: {}",
-                        self.palette.warn("Fixing"),
-                        err
-                    );
+                    let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
                     actual.write_to(expected_path).unwrap();
                 }
             }
@@ -415,20 +411,17 @@ impl Assert {
             }
             if ok {
                 use std::io::Write;
-                let _ = write!(std::io::stderr(), "{}", buffer);
+                let _ = write!(stderr(), "{}", buffer);
                 match self.action {
                     Action::Skip => unreachable!("Bailed out earlier"),
                     Action::Ignore => {
-                        let _ = write!(
-                            std::io::stderr(),
-                            "{}",
-                            self.palette.warn("Ignoring above failures")
-                        );
+                        let _ =
+                            write!(stderr(), "{}", self.palette.warn("Ignoring above failures"));
                     }
                     Action::Verify => unreachable!("Something had to fail to get here"),
                     Action::Overwrite => {
                         let _ = write!(
-                            std::io::stderr(),
+                            stderr(),
                             "{}",
                             self.palette.warn("Overwrote above failures")
                         );
@@ -519,7 +512,7 @@ impl Default for Assert {
             action_var: Default::default(),
             normalize_paths: true,
             substitutions: Default::default(),
-            palette: crate::report::Palette::auto(),
+            palette: crate::report::Palette::color(),
             data_format: Default::default(),
         }
         .substitutions(crate::Substitutions::with_exe())

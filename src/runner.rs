@@ -1,5 +1,16 @@
 use std::io::prelude::*;
 
+#[cfg(feature = "color")]
+use anstyle_stream::eprintln;
+#[cfg(feature = "color")]
+use anstyle_stream::panic;
+#[cfg(feature = "color")]
+use anstyle_stream::stderr;
+#[cfg(not(feature = "color"))]
+use std::eprintln;
+#[cfg(not(feature = "color"))]
+use std::io::stderr;
+
 use rayon::prelude::*;
 use snapbox::path::FileType;
 use snapbox::{DataFormat, NormalizeNewlines, NormalizePaths};
@@ -26,7 +37,7 @@ impl Runner {
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Substitutions,
     ) {
-        let palette = snapbox::report::Palette::auto();
+        let palette = snapbox::report::Palette::color();
 
         if self.cases.is_empty() {
             eprintln!("{}", palette.warn("There are no trycmd tests enabled yet"));
@@ -37,7 +48,7 @@ impl Runner {
                 .flat_map(|c| {
                     let results = c.run(mode, bins, substitutions);
 
-                    let stderr = std::io::stderr();
+                    let stderr = stderr();
                     let mut stderr = stderr.lock();
 
                     results
@@ -78,7 +89,7 @@ impl Runner {
                 .collect();
 
             if !failures.is_empty() {
-                let stderr = std::io::stderr();
+                let stderr = stderr();
                 let mut stderr = stderr.lock();
                 let _ = writeln!(
                     stderr,
@@ -642,7 +653,7 @@ impl Default for Spawn {
 
 impl std::fmt::Display for Spawn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = snapbox::report::Palette::auto();
+        let palette = snapbox::report::Palette::color();
 
         match &self.status {
             SpawnStatus::Ok => {
@@ -704,7 +715,7 @@ impl SpawnStatus {
     }
 
     fn summary(&self) -> impl std::fmt::Display {
-        let palette = snapbox::report::Palette::auto();
+        let palette = snapbox::report::Palette::color();
         match self {
             Self::Ok => palette.info("ok"),
             Self::Skipped => palette.warn("ignored"),
@@ -739,7 +750,7 @@ impl Stream {
 
 impl std::fmt::Display for Stream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = snapbox::report::Palette::auto();
+        let palette = snapbox::report::Palette::color();
 
         match &self.status {
             StreamStatus::Ok => {
@@ -915,7 +926,7 @@ impl From<snapbox::path::PathDiff> for FileStatus {
 
 impl std::fmt::Display for FileStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let palette = snapbox::report::Palette::auto();
+        let palette = snapbox::report::Palette::color();
 
         match &self {
             Self::Ok {

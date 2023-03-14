@@ -194,7 +194,7 @@ mod test {
         let expected_name = "A";
         let actual = "Hello\nWorld\n";
         let actual_name = "B";
-        let palette = crate::report::Palette::never();
+        let palette = crate::report::Palette::plain();
 
         let mut actual_diff = String::new();
         write_diff_inner(
@@ -223,7 +223,7 @@ mod test {
         let expected_name = "A";
         let actual = "Hello\n";
         let actual_name = "B";
-        let palette = crate::report::Palette::never();
+        let palette = crate::report::Palette::plain();
 
         let mut actual_diff = String::new();
         write_diff_inner(
@@ -252,7 +252,7 @@ mod test {
         let expected_name = "A";
         let actual = "Hello\nWorld\n";
         let actual_name = "B";
-        let palette = crate::report::Palette::never();
+        let palette = crate::report::Palette::plain();
 
         let mut actual_diff = String::new();
         write_diff_inner(
@@ -282,7 +282,7 @@ mod test {
         let expected_name = "A";
         let actual = "Hello\nWorld";
         let actual_name = "B";
-        let palette = crate::report::Palette::never();
+        let palette = crate::report::Palette::plain();
 
         let mut actual_diff = String::new();
         write_diff_inner(
@@ -336,7 +336,7 @@ mod test {
         actual.push_str("?\n");
         let actual_name = "B";
 
-        let palette = crate::report::Palette::never();
+        let palette = crate::report::Palette::plain();
 
         let mut actual_diff = String::new();
         write_diff_inner(

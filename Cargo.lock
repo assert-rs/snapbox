@@ -824,6 +824,9 @@ dependencies = [
 [[package]]
 name = "snapbox-macros"
 version = "0.3.1"
+dependencies = [
+ "anstyle-stream",
+]
 
 [[package]]
 name = "strsim"
@@ -909,6 +912,7 @@ dependencies = [
 name = "trycmd"
 version = "0.14.13"
 dependencies = [
+ "anstyle-stream",
  "escargot",
  "glob",
  "humantime",

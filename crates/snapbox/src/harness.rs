@@ -114,6 +114,7 @@ where
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
                     let actual = crate::Data::text(actual).normalize(NormalizeNewlines);
+                    #[allow(deprecated)]
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
                         .action(self.action);
@@ -199,6 +200,7 @@ impl Verifier {
 impl Default for Verifier {
     fn default() -> Self {
         Self {
+            #[allow(deprecated)]
             palette: crate::report::Palette::auto(),
             action: Action::Verify,
         }
