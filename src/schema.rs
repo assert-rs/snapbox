@@ -193,7 +193,7 @@ impl TryCmd {
             while let Some((_, line)) = lines.pop_front() {
                 let tick_end = line
                     .char_indices()
-                    .find_map(|(i, c)| (c != '`').then(|| i))
+                    .find_map(|(i, c)| (c != '`').then_some(i))
                     .unwrap_or(line.len());
                 if 3 <= tick_end {
                     fence_pattern = line[..tick_end].to_owned();

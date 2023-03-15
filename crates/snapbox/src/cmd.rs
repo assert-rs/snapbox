@@ -1,5 +1,8 @@
 //! Run commands and assert on their behavior
 
+#[cfg(feature = "color")]
+use anstyle_stream::panic;
+
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
 pub struct Command {

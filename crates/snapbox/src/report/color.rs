@@ -1,127 +1,111 @@
-#[derive(Copy, Clone, Debug)]
-#[allow(dead_code)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Palette {
-    pub(crate) info: styled::Style,
-    pub(crate) warn: styled::Style,
-    pub(crate) error: styled::Style,
-    pub(crate) hint: styled::Style,
-    pub(crate) expected: styled::Style,
-    pub(crate) actual: styled::Style,
+    pub(crate) info: anstyle::Style,
+    pub(crate) warn: anstyle::Style,
+    pub(crate) error: anstyle::Style,
+    pub(crate) hint: anstyle::Style,
+    pub(crate) expected: anstyle::Style,
+    pub(crate) actual: anstyle::Style,
 }
 
 impl Palette {
-    #[cfg(feature = "color")]
-    pub fn always() -> Self {
-        Self {
-            info: styled::Style(yansi::Style::new(yansi::Color::Green)),
-            warn: styled::Style(yansi::Style::new(yansi::Color::Yellow)),
-            error: styled::Style(yansi::Style::new(yansi::Color::Red)),
-            hint: styled::Style(yansi::Style::new(yansi::Color::Unset).dimmed()),
-            expected: styled::Style(yansi::Style::new(yansi::Color::Green).underline()),
-            actual: styled::Style(yansi::Style::new(yansi::Color::Red).underline()),
+    pub fn color() -> Self {
+        if cfg!(feature = "color") {
+            Self {
+                info: anstyle::AnsiColor::Green.into(),
+                warn: anstyle::AnsiColor::Yellow.into(),
+                error: anstyle::AnsiColor::Red.into(),
+                hint: anstyle::Effects::DIMMED.into(),
+                expected: anstyle::AnsiColor::Green | anstyle::Effects::UNDERLINE,
+                actual: anstyle::AnsiColor::Red | anstyle::Effects::UNDERLINE,
+            }
+        } else {
+            Self::plain()
         }
     }
 
-    #[cfg(not(feature = "color"))]
-    pub fn always() -> Self {
-        Self::never()
+    pub fn plain() -> Self {
+        Self::default()
     }
 
+    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::color")]
+    pub fn always() -> Self {
+        Self::color()
+    }
+
+    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::plain")]
     pub fn never() -> Self {
-        Self {
-            info: Default::default(),
-            warn: Default::default(),
-            error: Default::default(),
-            hint: Default::default(),
-            expected: Default::default(),
-            actual: Default::default(),
-        }
+        Self::plain()
     }
 
+    #[deprecated(
+        since = "0.4.9",
+        note = "Use `Palette::always`, `auto` behavior is now implicit"
+    )]
     pub fn auto() -> Self {
         if is_colored() {
-            Self::always()
+            Self::color()
         } else {
-            Self::never()
+            Self::plain()
         }
     }
 
     pub fn info<D: std::fmt::Display>(self, item: D) -> Styled<D> {
-        self.info.paint(item)
+        Styled::new(item, self.info)
     }
 
     pub fn warn<D: std::fmt::Display>(self, item: D) -> Styled<D> {
-        self.warn.paint(item)
+        Styled::new(item, self.warn)
     }
 
     pub fn error<D: std::fmt::Display>(self, item: D) -> Styled<D> {
-        self.error.paint(item)
+        Styled::new(item, self.error)
     }
 
     pub fn hint<D: std::fmt::Display>(self, item: D) -> Styled<D> {
-        self.hint.paint(item)
+        Styled::new(item, self.hint)
     }
 
     pub fn expected<D: std::fmt::Display>(self, item: D) -> Styled<D> {
-        self.expected.paint(item)
+        Styled::new(item, self.expected)
     }
 
     pub fn actual<D: std::fmt::Display>(self, item: D) -> Styled<D> {
-        self.actual.paint(item)
+        Styled::new(item, self.actual)
     }
 }
 
 fn is_colored() -> bool {
     #[cfg(feature = "color")]
     {
-        concolor::get(concolor::Stream::Either).ansi_color()
+        anstyle_stream::AutoStream::choice(&std::io::stderr()) != anstyle_stream::ColorChoice::Never
     }
-
     #[cfg(not(feature = "color"))]
     {
         false
     }
 }
 
-pub(crate) use styled::Style;
-pub use styled::Styled;
+pub(crate) use anstyle::Style;
 
-#[cfg(feature = "color")]
-mod styled {
-    #[derive(Copy, Clone, Debug, Default)]
-    pub(crate) struct Style(pub(crate) yansi::Style);
+#[derive(Debug)]
+pub struct Styled<D> {
+    display: D,
+    style: anstyle::Style,
+}
 
-    impl Style {
-        pub(crate) fn paint<T: std::fmt::Display>(self, item: T) -> Styled<T> {
-            Styled(self.0.paint(item))
-        }
-    }
-
-    pub struct Styled<D: std::fmt::Display>(yansi::Paint<D>);
-
-    impl<D: std::fmt::Display> std::fmt::Display for Styled<D> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            self.0.fmt(f)
-        }
+impl<D: std::fmt::Display> Styled<D> {
+    pub(crate) fn new(display: D, style: anstyle::Style) -> Self {
+        Self { display, style }
     }
 }
 
-#[cfg(not(feature = "color"))]
-mod styled {
-    #[derive(Copy, Clone, Debug, Default)]
-    pub(crate) struct Style;
-
-    impl Style {
-        pub(crate) fn paint<T: std::fmt::Display>(self, item: T) -> Styled<T> {
-            Styled(item)
-        }
-    }
-
-    pub struct Styled<D: std::fmt::Display>(D);
-
-    impl<D: std::fmt::Display> std::fmt::Display for Styled<D> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            self.0.fmt(f)
-        }
+impl<D: std::fmt::Display> std::fmt::Display for Styled<D> {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.style.render())?;
+        self.display.fmt(f)?;
+        write!(f, "{}", self.style.render_reset())?;
+        Ok(())
     }
 }
