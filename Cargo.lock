@@ -27,6 +27,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstream"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd0982309face56a044e935a18bbffcddeb1ce72e69a3ecc3bafb56d4e959f37"
+dependencies = [
+ "anstyle",
+ "anstyle-parse",
+ "anstyle-wincon",
+ "concolor-override",
+ "concolor-query",
+ "is-terminal",
+ "utf8parse",
+]
+
+[[package]]
 name = "anstyle"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -38,21 +53,6 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7d1bb534e9efed14f3e5f44e7dd1a4f709384023a4165199a4241e18dff0116"
 dependencies = [
- "utf8parse",
-]
-
-[[package]]
-name = "anstyle-stream"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e72365ef034ed9e365d226f6194ae7afa8a7bedc70ca8ea00668b3cddd42fd2a"
-dependencies = [
- "anstyle",
- "anstyle-parse",
- "anstyle-wincon",
- "concolor-override",
- "concolor-query",
- "is-terminal",
  "utf8parse",
 ]
 
@@ -799,8 +799,8 @@ checksum = "62ac7f900db32bf3fd12e0117dd3dc4da74bc52ebaac97f39668446d89694803"
 name = "snapbox"
 version = "0.4.9"
 dependencies = [
+ "anstream",
  "anstyle",
- "anstyle-stream",
  "backtrace",
  "content_inspector",
  "document-features",
@@ -825,7 +825,7 @@ dependencies = [
 name = "snapbox-macros"
 version = "0.3.2"
 dependencies = [
- "anstyle-stream",
+ "anstream",
 ]
 
 [[package]]
@@ -912,7 +912,7 @@ dependencies = [
 name = "trycmd"
 version = "0.14.14"
 dependencies = [
- "anstyle-stream",
+ "anstream",
  "escargot",
  "glob",
  "humantime",

@@ -56,7 +56,7 @@ debug = ["snapbox-macros/debug", "dep:backtrace"]
 ## Fancy diffs on failure
 diff = ["dep:similar"]
 ## Colored output support
-color = ["dep:anstyle-stream", "snapbox-macros/color"]
+color = ["dep:anstream", "snapbox-macros/color"]
 ## Auto-detect whether to use colors
 color-auto = ["color"]
 
@@ -86,7 +86,7 @@ backtrace = { version = "0.3", optional = true }
 similar = { version = "2.1.0", features = ["inline"], optional = true }
 
 anstyle = "0.3.1"
-anstyle-stream = { version = "0.2.1", optional = true }
+anstream = { version = "0.2.1", optional = true }
 
 document-features = { version = "0.2.6", optional = true }
 

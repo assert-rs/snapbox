@@ -1,7 +1,7 @@
 #[cfg(feature = "color")]
-pub use anstyle_stream::eprint;
+pub use anstream::eprint;
 #[cfg(feature = "color")]
-pub use anstyle_stream::eprintln;
+pub use anstream::eprintln;
 #[cfg(not(feature = "color"))]
 pub use std::eprint;
 #[cfg(not(feature = "color"))]
