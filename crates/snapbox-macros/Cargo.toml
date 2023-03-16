@@ -18,10 +18,10 @@ all-features = true
 
 [features]
 default = []
-color = ["dep:anstyle-stream"]
+color = ["dep:anstream"]
 
 ## Extra debugging information
 debug = []
 
 [dependencies]
-anstyle-stream = { version = "0.2.1", optional = true }
+anstream = { version = "0.2.1", optional = true }

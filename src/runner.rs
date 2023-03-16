@@ -1,11 +1,11 @@
 use std::io::prelude::*;
 
 #[cfg(feature = "color")]
-use anstyle_stream::eprintln;
+use anstream::eprintln;
 #[cfg(feature = "color")]
-use anstyle_stream::panic;
+use anstream::panic;
 #[cfg(feature = "color")]
-use anstyle_stream::stderr;
+use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::eprintln;
 #[cfg(not(feature = "color"))]

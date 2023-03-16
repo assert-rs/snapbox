@@ -78,7 +78,7 @@ impl Palette {
 fn is_colored() -> bool {
     #[cfg(feature = "color")]
     {
-        anstyle_stream::AutoStream::choice(&std::io::stderr()) != anstyle_stream::ColorChoice::Never
+        anstream::AutoStream::choice(&std::io::stderr()) != anstream::ColorChoice::Never
     }
     #[cfg(not(feature = "color"))]
     {
