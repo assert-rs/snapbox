@@ -10,7 +10,7 @@ pub struct Data {
 enum DataInner {
     Binary(Vec<u8>),
     Text(String),
-    #[cfg(feature = "structured-data")]
+    #[cfg(feature = "json")]
     Json(serde_json::Value),
 }
 
