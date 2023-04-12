@@ -44,7 +44,7 @@ cmd = ["dep:os_pipe", "dep:wait-timeout", "dep:libc", "dep:windows-sys"]
 examples = ["dep:escargot"]
 
 ## Snapshotting of json
-json = ["structured-data"]
+json = ["structured-data", "dep:serde_json"]
 ## Snapshotting of structured data
 structured-data = ["dep:serde_json"]
 
