@@ -24,4 +24,4 @@ color = ["dep:anstream"]
 debug = []
 
 [dependencies]
-anstream = { version = "0.2.1", optional = true }
+anstream = { version = "0.3.0", optional = true }

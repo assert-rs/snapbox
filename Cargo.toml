@@ -66,7 +66,7 @@ required-features = ["schema"]
 
 [dependencies]
 snapbox = { path = "crates/snapbox", version = "0.4.10", default-features = false, features = ["cmd"] }
-anstream = { version = "0.2.1", optional = true }
+anstream = { version = "0.3.0", optional = true }
 
 glob = "0.3.0"
 rayon = "1.5.1"
