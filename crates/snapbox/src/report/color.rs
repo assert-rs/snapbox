@@ -12,12 +12,12 @@ impl Palette {
     pub fn color() -> Self {
         if cfg!(feature = "color") {
             Self {
-                info: anstyle::AnsiColor::Green.into(),
-                warn: anstyle::AnsiColor::Yellow.into(),
-                error: anstyle::AnsiColor::Red.into(),
+                info: anstyle::AnsiColor::Green.on_default(),
+                warn: anstyle::AnsiColor::Yellow.on_default(),
+                error: anstyle::AnsiColor::Red.on_default(),
                 hint: anstyle::Effects::DIMMED.into(),
-                expected: anstyle::AnsiColor::Green | anstyle::Effects::UNDERLINE,
-                actual: anstyle::AnsiColor::Red | anstyle::Effects::UNDERLINE,
+                expected: anstyle::AnsiColor::Green.on_default() | anstyle::Effects::UNDERLINE,
+                actual: anstyle::AnsiColor::Red.on_default() | anstyle::Effects::UNDERLINE,
             }
         } else {
             Self::plain()

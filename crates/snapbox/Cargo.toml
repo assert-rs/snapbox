@@ -85,8 +85,8 @@ backtrace = { version = "0.3", optional = true }
 
 similar = { version = "2.1.0", features = ["inline"], optional = true }
 
-anstyle = "0.3.1"
-anstream = { version = "0.2.1", optional = true }
+anstyle = "1.0.0"
+anstream = { version = "0.3.0", optional = true }
 
 document-features = { version = "0.2.6", optional = true }
 
