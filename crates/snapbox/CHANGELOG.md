@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.4.11] - 2023-04-13
+
 ### Internal
 
 - Dependency update
@@ -190,7 +192,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.10...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.11...HEAD
+[0.4.11]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.10...snapbox-v0.4.11
 [0.4.10]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.9...snapbox-v0.4.10
 [0.4.9]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.8...snapbox-v0.4.9
 [0.4.8]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.7...snapbox-v0.4.8
