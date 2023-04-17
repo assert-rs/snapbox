@@ -360,9 +360,39 @@ fn normalize_value_matches(
             *act = substitutions.normalize(act, exp);
         }
         (Array(act), Array(exp)) => {
-            act.iter_mut()
-                .zip(exp)
-                .for_each(|(a, e)| normalize_value_matches(a, e, substitutions));
+            let wildcard = String("{...}".to_string());
+            let mut sections = exp.split(|e| e == &wildcard).peekable();
+            let mut processed = 0;
+            while let Some(expected_subset) = sections.next() {
+                // Process all values in the current section
+                if !expected_subset.is_empty() {
+                    let actual_subset = &mut act[processed..processed + expected_subset.len()];
+                    for (a, e) in actual_subset.iter_mut().zip(expected_subset) {
+                        normalize_value_matches(a, e, substitutions);
+                    }
+                    processed += expected_subset.len();
+                }
+
+                if let Some(next_section) = sections.peek() {
+                    // If the next section has nothing in it, replace from processed to end with
+                    // a single "{...}"
+                    if next_section.is_empty() {
+                        act.splice(processed.., vec![wildcard.clone()]);
+                        processed += 1;
+                    } else {
+                        let first = next_section.first().unwrap();
+                        // Replace everything up until the value we are looking for with
+                        // a single "{...}".
+                        if let Some(index) = act.iter().position(|v| v == first) {
+                            act.splice(processed..index, vec![wildcard.clone()]);
+                            processed += 1;
+                        } else {
+                            // If we cannot find the value we are looking for return early
+                            break;
+                        }
+                    }
+                }
+            }
         }
         (Object(act), Object(exp)) => {
             act.iter_mut()
@@ -707,6 +737,207 @@ mod test {
         });
         if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
             assert_ne!(exp, act);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "json")]
+    fn json_normalize_wildcard_object_first() {
+        let exp = json!({
+            "people": [
+                "{...}",
+                {
+                    "name": "three",
+                    "nickname": "3",
+                }
+            ]
+        });
+        let expected = Data::json(exp);
+        let actual = json!({
+            "people": [
+                {
+                    "name": "one",
+                    "nickname": "1",
+                },
+                {
+                    "name": "two",
+                    "nickname": "2",
+                },
+                {
+                    "name": "three",
+                    "nickname": "3",
+                }
+            ]
+        });
+        let actual = Data::json(actual).normalize(NormalizeMatches {
+            substitutions: &Default::default(),
+            pattern: &expected,
+        });
+        if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+            assert_eq!(exp, act);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "json")]
+    fn json_normalize_wildcard_array_first() {
+        let exp = json!([
+            "{...}",
+            {
+                "name": "three",
+                "nickname": "3",
+            }
+        ]);
+        let expected = Data::json(exp);
+        let actual = json!([
+            {
+                "name": "one",
+                "nickname": "1",
+            },
+            {
+                "name": "two",
+                "nickname": "2",
+            },
+            {
+                "name": "three",
+                "nickname": "3",
+            }
+        ]);
+        let actual = Data::json(actual).normalize(NormalizeMatches {
+            substitutions: &Default::default(),
+            pattern: &expected,
+        });
+        if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+            assert_eq!(exp, act);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "json")]
+    fn json_normalize_wildcard_array_first_last() {
+        let exp = json!([
+            "{...}",
+            {
+                "name": "two",
+                "nickname": "2",
+            },
+            "{...}"
+        ]);
+        let expected = Data::json(exp);
+        let actual = json!([
+            {
+                "name": "one",
+                "nickname": "1",
+            },
+            {
+                "name": "two",
+                "nickname": "2",
+            },
+            {
+                "name": "three",
+                "nickname": "3",
+            },
+            {
+                "name": "four",
+                "nickname": "4",
+            }
+        ]);
+        let actual = Data::json(actual).normalize(NormalizeMatches {
+            substitutions: &Default::default(),
+            pattern: &expected,
+        });
+        if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+            assert_eq!(exp, act);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "json")]
+    fn json_normalize_wildcard_array_middle_last() {
+        let exp = json!([
+            {
+                "name": "one",
+                "nickname": "1",
+            },
+            "{...}",
+            {
+                "name": "three",
+                "nickname": "3",
+            },
+            "{...}"
+        ]);
+        let expected = Data::json(exp);
+        let actual = json!([
+            {
+                "name": "one",
+                "nickname": "1",
+            },
+            {
+                "name": "two",
+                "nickname": "2",
+            },
+            {
+                "name": "three",
+                "nickname": "3",
+            },
+            {
+                "name": "four",
+                "nickname": "4",
+            },
+            {
+                "name": "five",
+                "nickname": "5",
+            }
+        ]);
+        let actual = Data::json(actual).normalize(NormalizeMatches {
+            substitutions: &Default::default(),
+            pattern: &expected,
+        });
+        if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+            assert_eq!(exp, act);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "json")]
+    fn json_normalize_wildcard_array_middle_last_early_return() {
+        let exp = json!([
+            {
+                "name": "one",
+                "nickname": "1",
+            },
+            "{...}",
+            {
+                "name": "three",
+                "nickname": "3",
+            },
+            "{...}"
+        ]);
+        let expected = Data::json(exp);
+        let actual = json!([
+            {
+                "name": "one",
+                "nickname": "1",
+            },
+            {
+                "name": "two",
+                "nickname": "2",
+            },
+            {
+                "name": "four",
+                "nickname": "4",
+            },
+            {
+                "name": "five",
+                "nickname": "5",
+            }
+        ]);
+        let actual_normalized = Data::json(actual.clone()).normalize(NormalizeMatches {
+            substitutions: &Default::default(),
+            pattern: &expected,
+        });
+        if let DataInner::Json(act) = actual_normalized.inner {
+            assert_eq!(act, actual);
         }
     }
 }
