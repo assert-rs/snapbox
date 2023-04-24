@@ -128,7 +128,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// ```rust
 /// let output = "something";
 /// let expected = "something";
-/// snapbox::assert_matches(expected, output);
+/// snapbox::assert_eq(expected, output);
 /// ```
 #[track_caller]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
