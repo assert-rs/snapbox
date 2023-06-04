@@ -6,10 +6,11 @@ use snapbox::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
+/// Represents an executable set of commands and their environment.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
-pub(crate) struct TryCmd {
-    pub(crate) steps: Vec<Step>,
-    pub(crate) fs: Filesystem,
+pub struct TryCmd {
+    pub steps: Vec<Step>,
+    pub fs: Filesystem,
 }
 
 impl TryCmd {
@@ -576,22 +577,34 @@ impl From<OneShot> for TryCmd {
     }
 }
 
+/// A command invocation and its expected result.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
-pub(crate) struct Step {
-    pub(crate) id: Option<String>,
-    pub(crate) bin: Option<Bin>,
-    pub(crate) args: Vec<String>,
-    pub(crate) env: Env,
-    pub(crate) stdin: Option<crate::Data>,
-    pub(crate) stderr_to_stdout: bool,
-    pub(crate) expected_status_source: Option<usize>,
-    pub(crate) expected_status: Option<CommandStatus>,
-    pub(crate) expected_stdout_source: Option<std::ops::Range<usize>>,
-    pub(crate) expected_stdout: Option<crate::Data>,
-    pub(crate) expected_stderr_source: Option<std::ops::Range<usize>>,
-    pub(crate) expected_stderr: Option<crate::Data>,
-    pub(crate) binary: bool,
-    pub(crate) timeout: Option<std::time::Duration>,
+pub struct Step {
+    /// Uniquely identifies this step from others.
+    pub id: Option<String>,
+    /// The program that will be executed.
+    pub bin: Option<Bin>,
+    /// Arguments to the executed program.
+    pub args: Vec<String>,
+    /// Environment variables for the execution.
+    pub env: Env,
+    /// Process stdin
+    pub stdin: Option<crate::Data>,
+    /// Whether to redirect stderr to stdout.
+    pub stderr_to_stdout: bool,
+    pub expected_status_source: Option<usize>,
+    /// Expected command status result.
+    pub expected_status: Option<CommandStatus>,
+    pub expected_stdout_source: Option<std::ops::Range<usize>>,
+    /// Expected process stdout content.
+    pub expected_stdout: Option<crate::Data>,
+    pub expected_stderr_source: Option<std::ops::Range<usize>>,
+    /// Expected process stderr content.
+    pub expected_stderr: Option<crate::Data>,
+    /// Whether process output is binary (as opposed to text).
+    pub binary: bool,
+    /// How long to wait for process to exit before timing out.
+    pub timeout: Option<std::time::Duration>,
 }
 
 impl Step {
@@ -766,10 +779,12 @@ impl serde::ser::Serialize for JoinedArgs {
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct Filesystem {
-    pub(crate) cwd: Option<std::path::PathBuf>,
+    /// Current working directory.
+    pub cwd: Option<std::path::PathBuf>,
     /// Sandbox base
-    pub(crate) base: Option<std::path::PathBuf>,
-    pub(crate) sandbox: Option<bool>,
+    pub base: Option<std::path::PathBuf>,
+    /// Whether to create a sandboxed copy of the base at run-time.
+    pub sandbox: Option<bool>,
 }
 
 impl Filesystem {
@@ -799,15 +814,15 @@ impl Filesystem {
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct Env {
     #[serde(default)]
-    pub(crate) inherit: Option<bool>,
+    pub inherit: Option<bool>,
     #[serde(default)]
-    pub(crate) add: BTreeMap<String, String>,
+    pub add: BTreeMap<String, String>,
     #[serde(default)]
-    pub(crate) remove: Vec<String>,
+    pub remove: Vec<String>,
 }
 
 impl Env {
-    pub(crate) fn update(&mut self, other: &Self) {
+    pub fn update(&mut self, other: &Self) {
         if self.inherit.is_none() {
             self.inherit = other.inherit;
         }

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+- Structs in `trycmd::schema` are now `pub` instead of `pub(crate)`. Their fields are also `pub` instead of `pub(crate)`.
+
 ## [0.14.16] - 2023-04-13
 
 ### Internal
