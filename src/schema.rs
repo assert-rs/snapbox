@@ -13,63 +13,73 @@ pub(crate) struct TryCmd {
 }
 
 impl TryCmd {
+    /// Construct an instance from a TOML file.
+    pub fn load_toml(path: &std::path::Path) -> Result<Self, crate::Error> {
+        let raw = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+        let one_shot = OneShot::parse_toml(&raw)?;
+        let mut sequence: Self = one_shot.into();
+        let is_binary = match sequence.steps[0].binary {
+            true => snapbox::DataFormat::Binary,
+            false => snapbox::DataFormat::Text,
+        };
+
+        if sequence.steps[0].stdin.is_none() {
+            let stdin_path = path.with_extension("stdin");
+            let stdin = if stdin_path.exists() {
+                // No `map_text` as we will trust what the user inputted
+                Some(crate::Data::read_from(&stdin_path, Some(is_binary))?)
+            } else {
+                None
+            };
+            sequence.steps[0].stdin = stdin;
+        }
+
+        if sequence.steps[0].expected_stdout.is_none() {
+            let stdout_path = path.with_extension("stdout");
+            let stdout = if stdout_path.exists() {
+                Some(
+                    crate::Data::read_from(&stdout_path, Some(is_binary))?
+                        .normalize(NormalizePaths)
+                        .normalize(NormalizeNewlines),
+                )
+            } else {
+                None
+            };
+            sequence.steps[0].expected_stdout = stdout;
+        }
+
+        if sequence.steps[0].expected_stderr.is_none() {
+            let stderr_path = path.with_extension("stderr");
+            let stderr = if stderr_path.exists() {
+                Some(
+                    crate::Data::read_from(&stderr_path, Some(is_binary))?
+                        .normalize(NormalizePaths)
+                        .normalize(NormalizeNewlines),
+                )
+            } else {
+                None
+            };
+            sequence.steps[0].expected_stderr = stderr;
+        }
+
+        Ok(sequence)
+    }
+
+    /// Construct an instance from a .trycmd file.
+    pub fn load_trycmd(path: &std::path::Path) -> Result<Self, crate::Error> {
+        let raw = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+        let normalized = snapbox::utils::normalize_lines(&raw);
+        Self::parse_trycmd(&normalized)
+    }
+
     pub(crate) fn load(path: &std::path::Path) -> Result<Self, crate::Error> {
         let mut sequence = if let Some(ext) = path.extension() {
             if ext == std::ffi::OsStr::new("toml") {
-                let raw = std::fs::read_to_string(path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let one_shot = OneShot::parse_toml(&raw)?;
-                let mut sequence: Self = one_shot.into();
-                let is_binary = match sequence.steps[0].binary {
-                    true => snapbox::DataFormat::Binary,
-                    false => snapbox::DataFormat::Text,
-                };
-
-                if sequence.steps[0].stdin.is_none() {
-                    let stdin_path = path.with_extension("stdin");
-                    let stdin = if stdin_path.exists() {
-                        // No `map_text` as we will trust what the user inputted
-                        Some(crate::Data::read_from(&stdin_path, Some(is_binary))?)
-                    } else {
-                        None
-                    };
-                    sequence.steps[0].stdin = stdin;
-                }
-
-                if sequence.steps[0].expected_stdout.is_none() {
-                    let stdout_path = path.with_extension("stdout");
-                    let stdout = if stdout_path.exists() {
-                        Some(
-                            crate::Data::read_from(&stdout_path, Some(is_binary))?
-                                .normalize(NormalizePaths)
-                                .normalize(NormalizeNewlines),
-                        )
-                    } else {
-                        None
-                    };
-                    sequence.steps[0].expected_stdout = stdout;
-                }
-
-                if sequence.steps[0].expected_stderr.is_none() {
-                    let stderr_path = path.with_extension("stderr");
-                    let stderr = if stderr_path.exists() {
-                        Some(
-                            crate::Data::read_from(&stderr_path, Some(is_binary))?
-                                .normalize(NormalizePaths)
-                                .normalize(NormalizeNewlines),
-                        )
-                    } else {
-                        None
-                    };
-                    sequence.steps[0].expected_stderr = stderr;
-                }
-
-                sequence
+                Self::load_toml(path)?
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                let raw = std::fs::read_to_string(path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let normalized = snapbox::utils::normalize_lines(&raw);
-                Self::parse_trycmd(&normalized)?
+                Self::load_trycmd(path)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
             }
