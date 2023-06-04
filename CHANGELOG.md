@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased] - ReleaseDate
 
 - Structs in `trycmd::schema` are now `pub` instead of `pub(crate)`. Their fields are also `pub` instead of `pub(crate)`.
+- Custom file loading support.
+  - `TestCases::file_extension_loader()` allows registering a function for loading a file.
+  - You can now define your own file formats or bring modified code for loading `toml` and `trycmd` files.
 
 ## [0.14.16] - 2023-04-13
 

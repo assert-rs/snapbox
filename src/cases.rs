@@ -7,6 +7,7 @@ pub struct TestCases {
     bins: std::cell::RefCell<crate::BinRegistry>,
     substitutions: std::cell::RefCell<snapbox::Substitutions>,
     has_run: std::cell::Cell<bool>,
+    file_loaders: std::cell::RefCell<crate::schema::TryCmdLoaders>,
 }
 
 impl TestCases {
@@ -106,6 +107,25 @@ impl TestCases {
         self
     }
 
+    /// Define a function used to load a filesystem path into a test.
+    ///
+    /// `extension` is the file extension to register the loader for, without
+    /// the leading dot. e.g. `toml`, `json`, or `trycmd`.
+    ///
+    /// By default there are loaders for `toml`, `trycmd`, and `md` extensions.
+    /// Calling this function with those extensions will overwrite the default
+    /// loaders.
+    pub fn file_extension_loader(
+        &self,
+        extension: impl Into<std::ffi::OsString>,
+        loader: crate::schema::TryCmdLoader,
+    ) -> &Self {
+        self.file_loaders
+            .borrow_mut()
+            .insert(extension.into(), loader);
+        self
+    }
+
     /// Add a variable for normalizing output
     ///
     /// Variable names must be
@@ -162,7 +182,12 @@ impl TestCases {
         mode.initialize().unwrap();
 
         let runner = self.runner.borrow_mut().prepare();
-        runner.run(&mode, &self.bins.borrow(), &self.substitutions.borrow());
+        runner.run(
+            &self.file_loaders.borrow(),
+            &mode,
+            &self.bins.borrow(),
+            &self.substitutions.borrow(),
+        );
     }
 }
 

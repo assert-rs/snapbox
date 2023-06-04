@@ -6,6 +6,53 @@ use snapbox::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
+/// A function that turns a filesystem path into a [TryCmd].
+pub type TryCmdLoader = fn(&std::path::Path) -> Result<TryCmd, crate::Error>;
+
+/// Mapping of file extension to function that can load it.
+#[derive(Clone)]
+pub struct TryCmdLoaders(BTreeMap<std::ffi::OsString, TryCmdLoader>);
+
+// Rust <1.70 cannot derive(Debug) for function pointers.
+// TODO remove once MSRV >= 1.70.
+impl std::fmt::Debug for TryCmdLoaders {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = f
+            .debug_map()
+            .entries(self.0.keys().map(|k| (k, "<function>")))
+            .finish()?;
+
+        f.debug_struct("TryCmdLoaders").field("0", &inner).finish()
+    }
+}
+
+impl Default for TryCmdLoaders {
+    fn default() -> Self {
+        let mut res = BTreeMap::new();
+
+        res.insert("toml".to_string().into(), TryCmd::load_toml as _);
+        res.insert("trycmd".to_string().into(), TryCmd::load_trycmd as _);
+        res.insert("md".to_string().into(), TryCmd::load_trycmd as _);
+
+        Self(res)
+    }
+}
+
+impl std::ops::Deref for TryCmdLoaders {
+    type Target =
+        BTreeMap<std::ffi::OsString, fn(&std::path::Path) -> Result<TryCmd, crate::Error>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for TryCmdLoaders {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /// Represents an executable set of commands and their environment.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct TryCmd {
@@ -75,12 +122,18 @@ impl TryCmd {
         Self::parse_trycmd(&normalized)
     }
 
-    pub(crate) fn load(path: &std::path::Path) -> Result<Self, crate::Error> {
+    /// Construct an instance from a path, using the file extension to determine the type.
+    pub(crate) fn load(
+        loaders: &TryCmdLoaders,
+        path: &std::path::Path,
+    ) -> Result<Self, crate::Error> {
         let mut sequence = if let Some(ext) = path.extension() {
-            if ext == std::ffi::OsStr::new("toml") {
-                Self::load_toml(path)?
-            } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
-                Self::load_trycmd(path)?
+            let loader = loaders
+                .iter()
+                .find_map(|(x, loader)| if ext == x { Some(loader) } else { None });
+
+            if let Some(loader) = loader {
+                loader(path)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
             }

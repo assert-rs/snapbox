@@ -33,6 +33,7 @@ impl Runner {
 
     pub(crate) fn run(
         &self,
+        loaders: &crate::schema::TryCmdLoaders,
         mode: &Mode,
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Substitutions,
@@ -46,7 +47,7 @@ impl Runner {
                 .cases
                 .par_iter()
                 .flat_map(|c| {
-                    let results = c.run(mode, bins, substitutions);
+                    let results = c.run(loaders, mode, bins, substitutions);
 
                     let stderr = stderr();
                     let mut stderr = stderr.lock();
@@ -137,6 +138,7 @@ impl Case {
 
     pub(crate) fn run(
         &self,
+        loaders: &crate::schema::TryCmdLoaders,
         mode: &Mode,
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Substitutions,
@@ -153,7 +155,7 @@ impl Case {
             return vec![Err(output)];
         }
 
-        let mut sequence = match crate::schema::TryCmd::load(&self.path) {
+        let mut sequence = match crate::schema::TryCmd::load(loaders, &self.path) {
             Ok(sequence) => sequence,
             Err(e) => {
                 let output = Output::step(self.path.clone(), "setup".into());
