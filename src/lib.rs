@@ -160,7 +160,7 @@
 //!
 //! To elide a section of content:
 //! - `...` as its own line: match all lines until the next one.  This is equivalent of
-//!   `\n(([^\n]*\n)*?`.
+//!   `\n(([^\n]*\n)*)?`.
 //! - `[..]` as part of a line: match any characters.  This is equivalent of `[^\n]*?`.
 //! - `[EXE]` as part of the line: On Windows, matches `.exe`, ignored otherwise
 //! - `[ROOT]` as part of the line: The root directory for where the test is running
