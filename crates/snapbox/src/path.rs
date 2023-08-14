@@ -40,8 +40,8 @@ impl PathFixture {
 
     #[cfg(feature = "path")]
     pub fn mutable_at(target: &std::path::Path) -> Result<Self, crate::Error> {
-        let _ = std::fs::remove_dir_all(&target);
-        std::fs::create_dir_all(&target)
+        let _ = std::fs::remove_dir_all(target);
+        std::fs::create_dir_all(target)
             .map_err(|e| format!("Failed to create {}: {}", target.display(), e))?;
         Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
     }
@@ -577,7 +577,7 @@ fn copy_stats(
     dest: &std::path::Path,
 ) -> Result<(), std::io::Error> {
     let src_mtime = filetime::FileTime::from_last_modification_time(source_meta);
-    filetime::set_file_mtime(&dest, src_mtime)?;
+    filetime::set_file_mtime(dest, src_mtime)?;
 
     Ok(())
 }

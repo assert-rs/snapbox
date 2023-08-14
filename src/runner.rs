@@ -302,6 +302,7 @@ impl Case {
         outputs
     }
 
+    #[allow(clippy::result_large_err)]
     pub(crate) fn run_step(
         &self,
         step: &mut crate::schema::Step,

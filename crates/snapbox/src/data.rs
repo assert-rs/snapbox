@@ -63,24 +63,24 @@ impl Data {
         let data = match data_format {
             Some(df) => match df {
                 DataFormat::Binary => {
-                    let data = std::fs::read(&path)
+                    let data = std::fs::read(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     Self::binary(data)
                 }
                 DataFormat::Text => {
-                    let data = std::fs::read_to_string(&path)
+                    let data = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     Self::text(data)
                 }
                 #[cfg(feature = "json")]
                 DataFormat::Json => {
-                    let data = std::fs::read_to_string(&path)
+                    let data = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     Self::json(serde_json::from_str::<serde_json::Value>(&data).unwrap())
                 }
             },
             None => {
-                let data = std::fs::read(&path)
+                let data = std::fs::read(path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                 let data = Self::binary(data);
                 match path
@@ -334,11 +334,14 @@ fn normalize_value(value: &mut serde_json::Value, op: fn(&str) -> String) {
             *str = op(str);
         }
         serde_json::Value::Array(arr) => {
-            arr.iter_mut().for_each(|value| normalize_value(value, op));
+            for value in arr.iter_mut() {
+                normalize_value(value, op)
+            }
         }
         serde_json::Value::Object(obj) => {
-            obj.iter_mut()
-                .for_each(|(_, value)| normalize_value(value, op));
+            for (_, value) in obj.iter_mut() {
+                normalize_value(value, op)
+            }
         }
         _ => {}
     }
@@ -395,10 +398,9 @@ fn normalize_value_matches(
             }
         }
         (Object(act), Object(exp)) => {
-            act.iter_mut()
-                .zip(exp)
-                .filter(|(a, e)| a.0 == e.0)
-                .for_each(|(a, e)| normalize_value_matches(a.1, e.1, substitutions));
+            for (a, e) in act.iter_mut().zip(exp).filter(|(a, e)| a.0 == e.0) {
+                normalize_value_matches(a.1, e.1, substitutions)
+            }
         }
         (_, _) => {}
     }

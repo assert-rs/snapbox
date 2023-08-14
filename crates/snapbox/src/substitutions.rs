@@ -184,7 +184,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
                 if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
                     .iter()
                     .enumerate()
-                    .find(|(_, l)| **l == future_input_line || is_line_elide(**l))
+                    .find(|(_, l)| **l == future_input_line || is_line_elide(l))
                     .map(|(i, _)| next_pattern_index + i)
                 {
                     normalized.extend(

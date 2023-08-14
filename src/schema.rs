@@ -811,7 +811,7 @@ impl Env {
             command = command.env_clear();
         }
         for remove in &self.remove {
-            command = command.env_remove(&remove);
+            command = command.env_remove(remove);
         }
         command.envs(&self.add)
     }

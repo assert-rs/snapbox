@@ -45,7 +45,8 @@ fn run() -> Result<(), Box<dyn Error>> {
 
     let code = exit
         .map(|v| v.parse::<i32>())
-        .map_or(Ok(None), |r| r.map(Some))?
+        .map(|r| r.map(Some))
+        .unwrap_or(Ok(None))?
         .unwrap_or(0);
     process::exit(code);
 }
