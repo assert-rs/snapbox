@@ -25,6 +25,12 @@ repository:
   merge_commit_message: "PR_BODY"
 
 labels:
+  - name: "A-snapbox"
+    description: "Area: snapbox package"
+    color: '#f7e101'
+  - name: "A-trycmd"
+    description: "Area: trycmd package"
+    color: '#f7e101'
   # Type
   - name: bug
     color: '#b60205'
