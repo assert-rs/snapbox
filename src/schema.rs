@@ -806,7 +806,10 @@ impl Env {
         self.remove.extend(other.remove.iter().cloned());
     }
 
-    pub(crate) fn apply(&self, mut command: snapbox::cmd::Command) -> snapbox::cmd::Command {
+    pub(crate) fn apply<'a>(
+        &self,
+        mut command: snapbox::cmd::Command<'a>,
+    ) -> snapbox::cmd::Command<'a> {
         if !self.inherit() {
             command = command.env_clear();
         }

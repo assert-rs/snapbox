@@ -5,16 +5,16 @@ use anstream::panic;
 
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
-pub struct Command {
+pub struct Command<'a> {
     cmd: std::process::Command,
     stdin: Option<crate::Data>,
     timeout: Option<std::time::Duration>,
     _stderr_to_stdout: bool,
-    config: crate::Assert,
+    config: crate::Assert<'a>,
 }
 
 /// # Builder API
-impl Command {
+impl<'a> Command<'a> {
     pub fn new(program: impl AsRef<std::ffi::OsStr>) -> Self {
         Self {
             cmd: std::process::Command::new(program),
@@ -37,7 +37,7 @@ impl Command {
     }
 
     /// Customize the assertion behavior
-    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+    pub fn with_assert(mut self, config: crate::Assert<'a>) -> Self {
         self.config = config;
         self
     }
@@ -275,7 +275,7 @@ impl Command {
 }
 
 /// # Run Command
-impl Command {
+impl<'a> Command<'a> {
     /// Run the command and assert on the results
     ///
     /// ```rust
@@ -288,7 +288,7 @@ impl Command {
     ///     .stdout_eq("42");
     /// ```
     #[track_caller]
-    pub fn assert(self) -> OutputAssert {
+    pub fn assert(self) -> OutputAssert<'a> {
         let config = self.config.clone();
         match self.output() {
             Ok(output) => OutputAssert::new(output).with_assert(config),
@@ -424,7 +424,7 @@ where
     })
 }
 
-impl From<std::process::Command> for Command {
+impl From<std::process::Command> for Command<'_> {
     fn from(cmd: std::process::Command) -> Self {
         Self::from_std(cmd)
     }
@@ -435,12 +435,12 @@ impl From<std::process::Command> for Command {
 /// Create an `OutputAssert` through the [`Command::assert`].
 ///
 /// [`Output`]: std::process::Output
-pub struct OutputAssert {
+pub struct OutputAssert<'a> {
     output: std::process::Output,
-    config: crate::Assert,
+    config: crate::Assert<'a>,
 }
 
-impl OutputAssert {
+impl<'a> OutputAssert<'a> {
     /// Create an `Assert` for a given [`Output`].
     ///
     /// [`Output`]: std::process::Output
@@ -452,7 +452,7 @@ impl OutputAssert {
     }
 
     /// Customize the assertion behavior
-    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+    pub fn with_assert(mut self, config: crate::Assert<'a>) -> Self {
         self.config = config;
         self
     }

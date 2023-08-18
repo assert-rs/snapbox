@@ -21,17 +21,18 @@ use crate::Action;
 ///     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
 /// ```
 #[derive(Clone, Debug)]
-pub struct Assert {
+pub struct Assert<'a> {
     action: Action,
     action_var: Option<String>,
     normalize_paths: bool,
     substitutions: crate::Substitutions,
     pub(crate) palette: crate::report::Palette,
     pub(crate) data_format: Option<DataFormat>,
+    message: Option<std::fmt::Arguments<'a>>,
 }
 
 /// # Assertions
-impl Assert {
+impl<'a> Assert<'a> {
     pub fn new() -> Self {
         Default::default()
     }
@@ -288,14 +289,34 @@ impl Assert {
         }
     }
 
-    fn error_message(&self, message: &'static str) -> crate::report::Styled<&str> {
-        self.palette.error(message)
+    fn error_message(
+        &self,
+        default_message: &'static str,
+    ) -> crate::report::Styled<ErrorMessage<'a>> {
+        self.palette.error(match self.message {
+            Some(custom_message) => ErrorMessage::Formatted(custom_message),
+            None => ErrorMessage::Static(default_message),
+        })
+    }
+}
+
+enum ErrorMessage<'a> {
+    Static(&'static str),
+    Formatted(std::fmt::Arguments<'a>),
+}
+
+impl std::fmt::Display for ErrorMessage<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ErrorMessage::Static(err) => write!(f, "{err}"),
+            ErrorMessage::Formatted(err) => write!(f, "{err}"),
+        }
     }
 }
 
 /// # Directory Assertions
 #[cfg(feature = "path")]
-impl Assert {
+impl Assert<'_> {
     #[track_caller]
     pub fn subset_eq(
         &self,
@@ -456,7 +477,7 @@ impl Assert {
 }
 
 /// # Customize Behavior
-impl Assert {
+impl<'a> Assert<'a> {
     /// Override the color palette
     pub fn palette(mut self, palette: crate::report::Palette) -> Self {
         self.palette = palette;
@@ -475,6 +496,14 @@ impl Assert {
     pub fn action(mut self, action: Action) -> Self {
         self.action = action;
         self.action_var = None;
+        self
+    }
+
+    /// Override the panic message.
+    ///
+    /// Currently only supported by `eq`, `eq_path`, `matches` and `matches_path`.
+    pub fn message(mut self, args: std::fmt::Arguments<'a>) -> Self {
+        self.message = Some(args);
         self
     }
 
@@ -509,7 +538,7 @@ impl Assert {
     }
 }
 
-impl Default for Assert {
+impl Default for Assert<'_> {
     fn default() -> Self {
         Self {
             action: Default::default(),
@@ -518,6 +547,7 @@ impl Default for Assert {
             substitutions: Default::default(),
             palette: crate::report::Palette::color(),
             data_format: Default::default(),
+            message: Default::default(),
         }
         .substitutions(crate::Substitutions::with_exe())
     }
