@@ -56,7 +56,7 @@ impl Assert {
     fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
         let (pattern, actual) = self.normalize_eq(Ok(expected), actual);
         if let Err(desc) = pattern.and_then(|p| self.try_verify(&p, &actual, None, None)) {
-            panic!("{}: {}", self.palette.error("Eq failed"), desc);
+            panic!("{}: {}", self.error_message("Eq failed"), desc);
         }
     }
 
@@ -87,7 +87,7 @@ impl Assert {
     fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
         let (pattern, actual) = self.normalize_match(Ok(pattern), actual);
         if let Err(desc) = pattern.and_then(|p| self.try_verify(&p, &actual, None, None)) {
-            panic!("{}: {}", self.palette.error("Match failed"), desc);
+            panic!("{}: {}", self.error_message("Match failed"), desc);
         }
     }
 
@@ -286,6 +286,10 @@ impl Assert {
         } else {
             Ok(())
         }
+    }
+
+    fn error_message(&self, message: &'static str) -> crate::report::Styled<&str> {
+        self.palette.error(message)
     }
 }
 
