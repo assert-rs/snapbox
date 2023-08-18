@@ -244,3 +244,14 @@ pub fn assert_subset_matches(
         .action_env(DEFAULT_ACTION_ENV)
         .subset_matches(pattern_root, actual_root);
 }
+
+/// A [`std::assert_eq`] compatible wrapper around the [`Assert`] API.
+#[macro_export]
+macro_rules! assert_eq {
+    ($left:expr, $right:expr $(,)?) => {
+        Assert::new().eq($left, $right);
+    };
+    ($left:expr, $right:expr, $($arg:tt)+) => {
+        Assert::new().message(format_args!($($arg)+)).eq($left, $right);
+    };
+}
