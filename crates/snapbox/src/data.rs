@@ -14,18 +14,13 @@ enum DataInner {
     Json(serde_json::Value),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
 pub enum DataFormat {
     Binary,
+    #[default]
     Text,
     #[cfg(feature = "json")]
     Json,
-}
-
-impl Default for DataFormat {
-    fn default() -> Self {
-        DataFormat::Text
-    }
 }
 
 impl Data {
