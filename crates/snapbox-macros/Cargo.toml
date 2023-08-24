@@ -1,6 +1,6 @@
 [package]
 name = "snapbox-macros"
-version = "0.3.4"
+version = "0.3.5"
 description = "Snapshot testing toolbox"
 repository = "https://github.com/assert-rs/trycmd/"
 homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
