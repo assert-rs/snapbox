@@ -1013,7 +1013,7 @@ pub use snapbox_macros::cargo_bin;
 pub fn cargo_bin(name: &str) -> std::path::PathBuf {
     let file_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
     let target_dir = target_dir();
-    target_dir.join(&file_name)
+    target_dir.join(file_name)
 }
 
 // Adapted from

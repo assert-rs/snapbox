@@ -871,18 +871,14 @@ where
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[derive(Default)]
 pub enum CommandStatus {
+    #[default]
     Success,
     Failed,
     Interrupted,
     Skipped,
     Code(i32),
-}
-
-impl Default for CommandStatus {
-    fn default() -> Self {
-        CommandStatus::Success
-    }
 }
 
 impl std::str::FromStr for CommandStatus {
