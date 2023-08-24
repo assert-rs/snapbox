@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- MSRV bumped to 1.70.0
+
+### Performance
+
+- Improved build-times by dropping the `is-terminal` dependency
+
+### Features
+
+- Wildcard support for structured data
+
 ## [0.4.11] - 2023-04-13
 
 ### Internal
