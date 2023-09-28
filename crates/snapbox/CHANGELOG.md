@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Internal
+
+- Update `anstream`
+
 ## [0.4.12] - 2023-08-24
 
 ### Compatibility
