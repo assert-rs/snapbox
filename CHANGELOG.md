@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Match standard diff colors
+
 ## [0.14.18] - 2023-09-28
 
 ### Internal
