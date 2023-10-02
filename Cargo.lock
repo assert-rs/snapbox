@@ -806,7 +806,7 @@ checksum = "62ac7f900db32bf3fd12e0117dd3dc4da74bc52ebaac97f39668446d89694803"
 
 [[package]]
 name = "snapbox"
-version = "0.4.13"
+version = "0.4.14"
 dependencies = [
  "anstream",
  "anstyle",
@@ -919,7 +919,7 @@ dependencies = [
 
 [[package]]
 name = "trycmd"
-version = "0.14.18"
+version = "0.14.19"
 dependencies = [
  "anstream",
  "escargot",

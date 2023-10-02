@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.14.19] - 2023-10-02
+
 ### Fixes
 
 - Match standard diff colors
@@ -394,7 +396,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.18...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.19...HEAD
+[0.14.19]: https://github.com/assert-rs/trycmd/compare/v0.14.18...v0.14.19
 [0.14.18]: https://github.com/assert-rs/trycmd/compare/v0.14.17...v0.14.18
 [0.14.17]: https://github.com/assert-rs/trycmd/compare/v0.14.16...v0.14.17
 [0.14.16]: https://github.com/assert-rs/trycmd/compare/v0.14.15...v0.14.16
