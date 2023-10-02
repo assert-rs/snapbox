@@ -25,17 +25,17 @@ pub fn write_diff(
 
     if !rendered {
         if let Some(expected_name) = expected_name {
-            writeln!(writer, "{} {}:", expected_name, palette.info("(expected)"))?;
+            writeln!(writer, "{} {}:", expected_name, palette.error("(expected)"))?;
         } else {
-            writeln!(writer, "{}:", palette.info("Expected"))?;
+            writeln!(writer, "{}:", palette.error("Expected"))?;
         }
-        writeln!(writer, "{}", palette.info(&expected))?;
+        writeln!(writer, "{}", palette.error(&expected))?;
         if let Some(actual_name) = actual_name {
-            writeln!(writer, "{} {}:", actual_name, palette.error("(actual)"))?;
+            writeln!(writer, "{} {}:", actual_name, palette.info("(actual)"))?;
         } else {
-            writeln!(writer, "{}:", palette.error("Actual"))?;
+            writeln!(writer, "{}:", palette.info("Actual"))?;
         }
-        writeln!(writer, "{}", palette.error(&actual))?;
+        writeln!(writer, "{}", palette.info(&actual))?;
     }
     Ok(())
 }
@@ -64,19 +64,19 @@ fn write_diff_inner(
         writeln!(
             writer,
             "{}",
-            palette.info(format_args!("{:->4} expected: {}", "", expected_name))
+            palette.error(format_args!("{:->4} expected: {}", "", expected_name))
         )?;
     } else {
-        writeln!(writer, "{}", palette.info(format_args!("--- Expected")))?;
+        writeln!(writer, "{}", palette.error(format_args!("--- Expected")))?;
     }
     if let Some(actual_name) = actual_name {
         writeln!(
             writer,
             "{}",
-            palette.error(format_args!("{:+>4} actual:   {}", "", actual_name))
+            palette.info(format_args!("{:+>4} actual:   {}", "", actual_name))
         )?;
     } else {
-        writeln!(writer, "{}", palette.error(format_args!("+++ Actual")))?;
+        writeln!(writer, "{}", palette.info(format_args!("+++ Actual")))?;
     }
     let changes = changes
         .ops()
@@ -137,10 +137,17 @@ fn write_diff_inner(
             elided = false;
             match change.tag() {
                 similar::ChangeTag::Insert => {
-                    write_change(writer, change, "+", palette.actual, palette.error, palette)?;
+                    write_change(writer, change, "+", palette.actual, palette.info, palette)?;
                 }
                 similar::ChangeTag::Delete => {
-                    write_change(writer, change, "-", palette.expected, palette.info, palette)?;
+                    write_change(
+                        writer,
+                        change,
+                        "-",
+                        palette.expected,
+                        palette.error,
+                        palette,
+                    )?;
                 }
                 similar::ChangeTag::Equal => {
                     write_change(writer, change, "|", palette.hint, palette.hint, palette)?;
