@@ -25,7 +25,7 @@
 //! ## Getting Started
 //!
 //! Testing Functions:
-//! - [`assert_eq`][crate::assert_eq] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
+//! - [`assert_eq`][crate::assert_eq()] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
 //! - [`assert_eq_path`][crate::assert_eq_path] and [`assert_matches_path`] for one-off assertions with the snapshot stored in a file
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
