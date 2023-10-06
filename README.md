@@ -4,7 +4,7 @@
 
 [![Documentation](https://img.shields.io/badge/docs-master-blue.svg)][Documentation]
 ![License](https://img.shields.io/crates/l/trycmd.svg)
-[![Crates Status](https://img.shields.io/crates/v/trycmd.svg)](https://crates.io/crates/trycmd)
+[![Crates Status](https://img.shields.io/crates/v/trycmd.svg)][Crates.io]
 
 `trycmd` is a test harness that will enumerate test case files and run them to verify the
 results, taking inspiration from
@@ -39,8 +39,8 @@ See the [docs](http://docs.rs/trycmd) for more.
 
 Licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
 
 at your option.
 
