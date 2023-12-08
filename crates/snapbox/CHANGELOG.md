@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.4.15] - 2023-12-08
+
 ### Fixes
 
 - Actually match standard diff colors
@@ -222,7 +224,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.14...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.15...HEAD
+[0.4.15]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.14...snapbox-v0.4.15
 [0.4.14]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.13...snapbox-v0.4.14
 [0.4.13]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.12...snapbox-v0.4.13
 [0.4.12]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.4.11...snapbox-v0.4.12
