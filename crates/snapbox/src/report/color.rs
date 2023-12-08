@@ -16,8 +16,8 @@ impl Palette {
                 warn: anstyle::AnsiColor::Yellow.on_default(),
                 error: anstyle::AnsiColor::Red.on_default(),
                 hint: anstyle::Effects::DIMMED.into(),
-                expected: anstyle::AnsiColor::Green.on_default() | anstyle::Effects::UNDERLINE,
-                actual: anstyle::AnsiColor::Red.on_default() | anstyle::Effects::UNDERLINE,
+                expected: anstyle::AnsiColor::Red.on_default() | anstyle::Effects::UNDERLINE,
+                actual: anstyle::AnsiColor::Green.on_default() | anstyle::Effects::UNDERLINE,
             }
         } else {
             Self::plain()
