@@ -719,7 +719,7 @@ impl SpawnStatus {
         let palette = snapbox::report::Palette::color();
         match self {
             Self::Ok => palette.info("ok"),
-            Self::Skipped => palette.warn("ignored"),
+            Self::Skipped => palette.warn("ignored, check if binary is correctly named"),
             Self::Failure(_) | Self::Expected(_) => palette.error("failed"),
         }
     }
