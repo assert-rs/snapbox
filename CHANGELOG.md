@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Internal
+
+- Update `toml_edit`
+
 ## [0.14.20] - 2024-01-12
 
 ### Internal
