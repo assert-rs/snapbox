@@ -1,6 +1,6 @@
 [package]
 name = "snapbox"
-version = "0.4.16"
+version = "0.4.17"
 description = "Snapshot testing toolbox"
 repository = "https://github.com/assert-rs/trycmd/"
 homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
@@ -65,7 +65,7 @@ name = "snap-fixture"  # For `snapbox`s tests only
 
 [dependencies]
 normalize-line-endings = "0.3.0"
-snapbox-macros = { path = "../snapbox-macros", version = "0.3.7" }
+snapbox-macros = { path = "../snapbox-macros", version = "0.3.8" }
 
 libtest-mimic = { version = "0.7.0", optional = true }
 ignore = { version = "0.4", optional = true }

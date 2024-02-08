@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.14.21] - 2024-02-08
+
 ### Internal
 
 - Update `toml_edit`
@@ -406,7 +408,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.20...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.21...HEAD
+[0.14.21]: https://github.com/assert-rs/trycmd/compare/v0.14.20...v0.14.21
 [0.14.20]: https://github.com/assert-rs/trycmd/compare/v0.14.19...v0.14.20
 [0.14.19]: https://github.com/assert-rs/trycmd/compare/v0.14.18...v0.14.19
 [0.14.18]: https://github.com/assert-rs/trycmd/compare/v0.14.17...v0.14.18
