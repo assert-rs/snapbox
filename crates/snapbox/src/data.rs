@@ -150,7 +150,7 @@ impl Data {
     /// Overwrite a snapshot
     pub fn write_to(&self, source: &DataSource) -> Result<(), crate::Error> {
         match &source.inner {
-            DataSourceInner::Path(p) => self.write_to_path(&p),
+            DataSourceInner::Path(p) => self.write_to_path(p),
         }
     }
 
