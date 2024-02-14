@@ -1,5 +1,8 @@
 //! Initialize working directories and assert on how they've changed
 
+#[doc(inline)]
+pub use crate::current_dir;
+
 #[cfg(feature = "path")]
 use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
 /// Working directory for tests

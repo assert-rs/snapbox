@@ -99,6 +99,7 @@ mod action;
 mod assert;
 mod data;
 mod error;
+mod macros;
 mod substitutions;
 
 pub mod cmd;
