@@ -62,6 +62,9 @@ impl Assert {
 
     #[track_caller]
     fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
+        if expected.source().is_none() && actual.source().is_some() {
+            panic!("received `(actual, expected)`, expected `(expected, actual)`");
+        }
         match self.action {
             Action::Skip => {
                 return;
@@ -108,6 +111,9 @@ impl Assert {
 
     #[track_caller]
     fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
+        if pattern.source().is_none() && actual.source().is_some() {
+            panic!("received `(actual, expected)`, expected `(expected, actual)`");
+        }
         match self.action {
             Action::Skip => {
                 return;
