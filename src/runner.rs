@@ -12,8 +12,8 @@ use std::eprintln;
 use std::io::stderr;
 
 use rayon::prelude::*;
+use snapbox::data::{DataFormat, NormalizeNewlines, NormalizePaths};
 use snapbox::path::FileType;
-use snapbox::{DataFormat, NormalizeNewlines, NormalizePaths};
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -441,10 +441,12 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            stream.content = stream.content.normalize(snapbox::NormalizeMatches::new(
-                substitutions,
-                expected_content,
-            ));
+            stream.content = stream
+                .content
+                .normalize(snapbox::data::NormalizeMatches::new(
+                    substitutions,
+                    expected_content,
+                ));
 
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());

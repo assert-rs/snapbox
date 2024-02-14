@@ -95,12 +95,12 @@
 
 mod action;
 mod assert;
-mod data;
 mod error;
 mod macros;
 mod substitutions;
 
 pub mod cmd;
+pub mod data;
 pub mod path;
 pub mod report;
 pub mod utils;
@@ -112,9 +112,6 @@ pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
-pub use data::DataFormat;
-pub use data::DataSource;
-pub use data::{Normalize, NormalizeMatches, NormalizeNewlines, NormalizePaths};
 pub use error::Error;
 pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;

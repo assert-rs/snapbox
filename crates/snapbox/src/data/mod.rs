@@ -35,11 +35,11 @@ macro_rules! file {
     }};
     [_ : $type:ident] => {{
         let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
-        let ext = $crate::DataFormat:: $type.ext();
+        let ext = $crate::data::DataFormat:: $type.ext();
         let rel_path = ::std::format!("snapshots/{}-{}.{ext}", stem.to_str().unwrap(), line!());
         let mut path = $crate::current_dir!();
         path.push(rel_path);
-        $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
+        $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
     [$path:literal] => {{
         let mut path = $crate::current_dir!();
@@ -49,7 +49,7 @@ macro_rules! file {
     [$path:literal : $type:ident] => {{
         let mut path = $crate::current_dir!();
         path.push($path);
-        $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
+        $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
 }
 
