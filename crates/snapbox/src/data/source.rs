@@ -26,6 +26,18 @@ impl DataSource {
     }
 }
 
+impl From<&'_ std::path::Path> for DataSource {
+    fn from(value: &'_ std::path::Path) -> Self {
+        Self::path(value)
+    }
+}
+
+impl From<std::path::PathBuf> for DataSource {
+    fn from(value: std::path::PathBuf) -> Self {
+        Self::path(value)
+    }
+}
+
 impl std::fmt::Display for DataSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.inner {

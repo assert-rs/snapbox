@@ -74,33 +74,21 @@ enum DataInner {
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
-        Self {
-            inner: DataInner::Binary(raw.into()),
-            source: None,
-        }
+        DataInner::Binary(raw.into()).into()
     }
 
     /// Mark the data as text (post-processing)
     pub fn text(raw: impl Into<String>) -> Self {
-        Self {
-            inner: DataInner::Text(raw.into()),
-            source: None,
-        }
+        DataInner::Text(raw.into()).into()
     }
 
     #[cfg(feature = "json")]
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
-        Self {
-            inner: DataInner::Json(raw.into()),
-            source: None,
-        }
+        DataInner::Json(raw.into()).into()
     }
 
     fn error(raw: impl Into<crate::Error>) -> Self {
-        Self {
-            inner: DataInner::Error(raw.into()),
-            source: None,
-        }
+        DataInner::Error(raw.into()).into()
     }
 
     /// Empty test data
@@ -108,9 +96,13 @@ impl Data {
         Self::text("")
     }
 
-    fn with_path(mut self, path: impl Into<std::path::PathBuf>) -> Self {
-        self.source = Some(DataSource::path(path));
+    fn with_source(mut self, source: impl Into<DataSource>) -> Self {
+        self.source = Some(source.into());
         self
+    }
+
+    fn with_path(self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.with_source(path.into())
     }
 
     /// Load test data from a file
@@ -223,10 +215,7 @@ impl Data {
     pub fn coerce_to(self, format: DataFormat) -> Self {
         let mut data = match (self.inner, format) {
             (DataInner::Error(inner), _) => Self::error(inner),
-            (inner, DataFormat::Error) => Self {
-                inner,
-                source: None,
-            },
+            (inner, DataFormat::Error) => inner.into(),
             (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
             #[cfg(feature = "json")]
@@ -260,21 +249,14 @@ impl Data {
                     Err(_) => Self::text(inner),
                 }
             }
-            (inner, DataFormat::Binary) => Self::binary(
-                Self {
-                    inner,
-                    source: None,
-                }
-                .to_bytes()
-                .expect("error case handled"),
-            ),
+            (inner, DataFormat::Binary) => {
+                let remake: Self = inner.into();
+                Self::binary(remake.to_bytes().expect("error case handled"))
+            }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                let remake = Self {
-                    inner,
-                    source: None,
-                };
+                let remake: Self = inner.into();
                 if let Some(str) = remake.render() {
                     Self::text(str)
                 } else {
@@ -294,6 +276,15 @@ impl Data {
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
             DataInner::Json(_) => DataFormat::Json,
+        }
+    }
+}
+
+impl From<DataInner> for Data {
+    fn from(inner: DataInner) -> Self {
+        Data {
+            inner,
+            source: None,
         }
     }
 }
