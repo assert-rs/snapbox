@@ -11,10 +11,12 @@
 macro_rules! file {
     [_] => {{
         let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
-        let path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
-        $crate::file![path]
+        let rel_path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
+        let mut path = $crate::current_dir!();
+        path.push(rel_path);
+        $crate::Data::read_from(&path, None)
     }};
-    [$path:expr] => {{
+    [$path:literal] => {{
         let mut path = $crate::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, None)
