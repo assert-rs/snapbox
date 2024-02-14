@@ -5,7 +5,7 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::data::{DataFormat, NormalizeMatches, NormalizeNewlines, NormalizePaths};
+use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
 use crate::Action;
 
 /// Snapshot assertion against a file's contents
@@ -15,10 +15,10 @@ use crate::Action;
 /// # Examples
 ///
 /// ```rust,no_run
-/// let actual = "...";
-/// snapbox::Assert::new()
-///     .action_env("SNAPSHOTS")
-///     .matches_path(actual, "tests/fixtures/help_output_is_clean.txt");
+/// # use snapbox::Assert;
+/// # use snapbox::expect_file;
+/// let actual = "something";
+/// Assert::new().matches(expect_file!["output.txt"], actual);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -27,7 +27,6 @@ pub struct Assert {
     normalize_paths: bool,
     substitutions: crate::Substitutions,
     pub(crate) palette: crate::report::Palette,
-    pub(crate) data_format: Option<DataFormat>,
 }
 
 /// # Assertions
@@ -41,9 +40,18 @@ impl Assert {
     /// When the content is text, newlines are normalized.
     ///
     /// ```rust
-    /// let output = "something";
+    /// # use snapbox::Assert;
+    /// let actual = "something";
     /// let expected = "something";
-    /// snapbox::Assert::new().eq(expected, output);
+    /// Assert::new().eq(expected, actual);
+    /// ```
+    ///
+    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// ```rust,no_run
+    /// # use snapbox::Assert;
+    /// # use snapbox::expect_file;
+    /// let actual = "something";
+    /// Assert::new().eq(expect_file!["output.txt"], actual);
     /// ```
     #[track_caller]
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
@@ -54,10 +62,16 @@ impl Assert {
 
     #[track_caller]
     fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
-        let (pattern, actual) = self.normalize_eq(expected, actual);
-        if let Err(desc) = self.try_verify(&pattern, &actual, None) {
-            panic!("{}: {}", self.palette.error("Eq failed"), desc);
+        match self.action {
+            Action::Skip => {
+                return;
+            }
+            Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
+
+        let (expected, actual) = self.normalize_eq(expected, actual);
+
+        self.do_action(expected, actual, Some(&"In-memory"));
     }
 
     /// Check if a value matches a pattern
@@ -72,9 +86,18 @@ impl Assert {
     /// - `\` to `/`
     ///
     /// ```rust
-    /// let output = "something";
+    /// # use snapbox::Assert;
+    /// let actual = "something";
     /// let expected = "so[..]g";
-    /// snapbox::Assert::new().matches(expected, output);
+    /// Assert::new().matches(expected, actual);
+    /// ```
+    ///
+    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// ```rust,no_run
+    /// # use snapbox::Assert;
+    /// # use snapbox::expect_file;
+    /// let actual = "something";
+    /// Assert::new().matches(expect_file!["output.txt"], actual);
     /// ```
     #[track_caller]
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
@@ -85,34 +108,6 @@ impl Assert {
 
     #[track_caller]
     fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
-        let (pattern, actual) = self.normalize_match(pattern, actual);
-        if let Err(desc) = self.try_verify(&pattern, &actual, None) {
-            panic!("{}: {}", self.palette.error("Match failed"), desc);
-        }
-    }
-
-    /// Check if a value matches the content of a file
-    ///
-    /// When the content is text, newlines are normalized.
-    ///
-    /// ```rust,no_run
-    /// let output = "something";
-    /// let expected_path = "tests/snapshots/output.txt";
-    /// snapbox::Assert::new().eq_path(output, expected_path);
-    /// ```
-    #[track_caller]
-    pub fn eq_path(
-        &self,
-        expected_path: impl AsRef<std::path::Path>,
-        actual: impl Into<crate::Data>,
-    ) {
-        let expected_path = expected_path.as_ref();
-        let actual = actual.into();
-        self.eq_path_inner(expected_path, actual);
-    }
-
-    #[track_caller]
-    fn eq_path_inner(&self, pattern_path: &std::path::Path, actual: crate::Data) {
         match self.action {
             Action::Skip => {
                 return;
@@ -120,50 +115,7 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let expected = crate::Data::read_from(pattern_path, self.data_format());
-        let (expected, actual) = self.normalize_eq(expected, actual);
-
-        self.do_action(expected, actual, Some(&"In-memory"));
-    }
-
-    /// Check if a value matches the pattern in a file
-    ///
-    /// Pattern syntax:
-    /// - `...` is a line-wildcard when on a line by itself
-    /// - `[..]` is a character-wildcard when inside a line
-    /// - `[EXE]` matches `.exe` on Windows (override with [`Assert::substitutions`])
-    ///
-    /// Normalization:
-    /// - Newlines
-    /// - `\` to `/`
-    ///
-    /// ```rust,no_run
-    /// let output = "something";
-    /// let expected_path = "tests/snapshots/output.txt";
-    /// snapbox::Assert::new().matches_path(expected_path, output);
-    /// ```
-    #[track_caller]
-    pub fn matches_path(
-        &self,
-        pattern_path: impl AsRef<std::path::Path>,
-        actual: impl Into<crate::Data>,
-    ) {
-        let pattern_path = pattern_path.as_ref();
-        let actual = actual.into();
-        self.matches_path_inner(pattern_path, actual);
-    }
-
-    #[track_caller]
-    fn matches_path_inner(&self, pattern_path: &std::path::Path, actual: crate::Data) {
-        match self.action {
-            Action::Skip => {
-                return;
-            }
-            Action::Ignore | Action::Verify | Action::Overwrite => {}
-        }
-
-        let expected = crate::Data::read_from(pattern_path, self.data_format());
-        let (expected, actual) = self.normalize_match(expected, actual);
+        let (expected, actual) = self.normalize_match(pattern, actual);
 
         self.do_action(expected, actual, Some(&"In-memory"));
     }
@@ -472,22 +424,6 @@ impl Assert {
         self.normalize_paths = yes;
         self
     }
-
-    /// Specify whether the content should be treated as binary or not
-    ///
-    /// The default is to auto-detect
-    pub fn binary(mut self, yes: bool) -> Self {
-        self.data_format = if yes {
-            Some(DataFormat::Binary)
-        } else {
-            Some(DataFormat::Text)
-        };
-        self
-    }
-
-    pub(crate) fn data_format(&self) -> Option<DataFormat> {
-        self.data_format
-    }
 }
 
 impl Default for Assert {
@@ -498,7 +434,6 @@ impl Default for Assert {
             normalize_paths: true,
             substitutions: Default::default(),
             palette: crate::report::Palette::color(),
-            data_format: Default::default(),
         }
         .substitutions(crate::Substitutions::with_exe())
     }
