@@ -28,7 +28,7 @@ fn json_to_bytes_render() {
 fn binary_to_text() {
     let binary = String::from("test").into_bytes();
     let d = Data::binary(binary);
-    let text = d.try_coerce(DataFormat::Text);
+    let text = d.coerce_to(DataFormat::Text);
     assert_eq!(DataFormat::Text, text.format())
 }
 
@@ -36,7 +36,7 @@ fn binary_to_text() {
 fn binary_to_text_not_utf8() {
     let binary = b"\xFF\xE0\x00\x10\x4A\x46\x49\x46\x00".to_vec();
     let d = Data::binary(binary);
-    let d = d.try_coerce(DataFormat::Text);
+    let d = d.coerce_to(DataFormat::Text);
     assert_ne!(DataFormat::Text, d.format());
     assert_eq!(DataFormat::Binary, d.format());
 }
@@ -47,7 +47,7 @@ fn binary_to_json() {
     let value = json!({"name": "John\\Doe\r\n"});
     let binary = serde_json::to_vec_pretty(&value).unwrap();
     let d = Data::binary(binary);
-    let json = d.try_coerce(DataFormat::Json);
+    let json = d.coerce_to(DataFormat::Json);
     assert_eq!(DataFormat::Json, json.format());
 }
 
@@ -56,7 +56,7 @@ fn binary_to_json() {
 fn binary_to_json_not_utf8() {
     let binary = b"\xFF\xE0\x00\x10\x4A\x46\x49\x46\x00".to_vec();
     let d = Data::binary(binary);
-    let d = d.try_coerce(DataFormat::Json);
+    let d = d.coerce_to(DataFormat::Json);
     assert_ne!(DataFormat::Json, d.format());
     assert_eq!(DataFormat::Binary, d.format());
 }
@@ -66,7 +66,7 @@ fn binary_to_json_not_utf8() {
 fn binary_to_json_not_json() {
     let binary = String::from("test").into_bytes();
     let d = Data::binary(binary);
-    let d = d.try_coerce(DataFormat::Json);
+    let d = d.coerce_to(DataFormat::Json);
     assert_ne!(DataFormat::Json, d.format());
     assert_eq!(DataFormat::Binary, d.format());
 }
@@ -75,7 +75,7 @@ fn binary_to_json_not_json() {
 fn text_to_binary() {
     let text = String::from("test");
     let d = Data::text(text);
-    let binary = d.try_coerce(DataFormat::Binary);
+    let binary = d.coerce_to(DataFormat::Binary);
     assert_eq!(DataFormat::Binary, binary.format());
 }
 
@@ -85,7 +85,7 @@ fn text_to_json() {
     let value = json!({"name": "John\\Doe\r\n"});
     let text = serde_json::to_string_pretty(&value).unwrap();
     let d = Data::text(text);
-    let json = d.try_coerce(DataFormat::Json);
+    let json = d.coerce_to(DataFormat::Json);
     assert_eq!(DataFormat::Json, json.format());
 }
 
@@ -94,7 +94,7 @@ fn text_to_json() {
 fn text_to_json_not_json() {
     let text = String::from("test");
     let d = Data::text(text);
-    let json = d.try_coerce(DataFormat::Json);
+    let json = d.coerce_to(DataFormat::Json);
     assert_eq!(DataFormat::Text, json.format());
 }
 
@@ -103,7 +103,7 @@ fn text_to_json_not_json() {
 fn json_to_binary() {
     let value = json!({"name": "John\\Doe\r\n"});
     let d = Data::json(value);
-    let binary = d.try_coerce(DataFormat::Binary);
+    let binary = d.coerce_to(DataFormat::Binary);
     assert_eq!(DataFormat::Binary, binary.format());
 }
 
@@ -112,7 +112,7 @@ fn json_to_binary() {
 fn json_to_text() {
     let value = json!({"name": "John\\Doe\r\n"});
     let d = Data::json(value);
-    let text = d.try_coerce(DataFormat::Text);
+    let text = d.coerce_to(DataFormat::Text);
     assert_eq!(DataFormat::Text, text.format());
 }
 
@@ -124,7 +124,7 @@ fn json_to_text() {
 fn text_to_bin_coerce_equals_to_bytes() {
     let text = String::from("test");
     let d = Data::text(text);
-    let binary = d.clone().try_coerce(DataFormat::Binary);
+    let binary = d.clone().coerce_to(DataFormat::Binary);
     assert_eq!(Data::binary(d.to_bytes().unwrap()), binary);
 }
 
@@ -133,7 +133,7 @@ fn text_to_bin_coerce_equals_to_bytes() {
 fn json_to_bin_coerce_equals_to_bytes() {
     let json = json!({"name": "John\\Doe\r\n"});
     let d = Data::json(json);
-    let binary = d.clone().try_coerce(DataFormat::Binary);
+    let binary = d.clone().coerce_to(DataFormat::Binary);
     assert_eq!(Data::binary(d.to_bytes().unwrap()), binary);
 }
 
@@ -142,7 +142,7 @@ fn json_to_bin_coerce_equals_to_bytes() {
 fn json_to_text_coerce_equals_render() {
     let json = json!({"name": "John\\Doe\r\n"});
     let d = Data::json(json);
-    let text = d.clone().try_coerce(DataFormat::Text);
+    let text = d.clone().coerce_to(DataFormat::Text);
     assert_eq!(Data::text(d.render().unwrap()), text);
 }
 

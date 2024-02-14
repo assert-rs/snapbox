@@ -736,7 +736,7 @@ struct Stream {
 
 impl Stream {
     fn make_text(mut self) -> Self {
-        let content = self.content.try_coerce(DataFormat::Text);
+        let content = self.content.coerce_to(DataFormat::Text);
         if content.format() != DataFormat::Text {
             self.status = StreamStatus::Failure("Unable to convert underlying Data to Text".into());
         }

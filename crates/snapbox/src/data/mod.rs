@@ -156,8 +156,8 @@ impl Data {
                     .unwrap_or_default()
                 {
                     #[cfg(feature = "json")]
-                    "json" => data.try_coerce(DataFormat::Json),
-                    _ => data.try_coerce(DataFormat::Text),
+                    "json" => data.coerce_to(DataFormat::Json),
+                    _ => data.coerce_to(DataFormat::Text),
                 }
             }
         };
@@ -220,7 +220,7 @@ impl Data {
         }
     }
 
-    pub fn try_coerce(self, format: DataFormat) -> Self {
+    pub fn coerce_to(self, format: DataFormat) -> Self {
         let mut data = match (self.inner, format) {
             (DataInner::Error(inner), _) => Self::error(inner),
             (inner, DataFormat::Error) => Self {
@@ -237,11 +237,11 @@ impl Data {
                 } else {
                     match String::from_utf8(inner) {
                         Ok(str) => {
-                            let coerced = Self::text(str).try_coerce(format);
+                            let coerced = Self::text(str).coerce_to(format);
                             // if the Text cannot be coerced into the correct format
                             // reset it back to Binary
                             if coerced.format() != format {
-                                coerced.try_coerce(DataFormat::Binary)
+                                coerced.coerce_to(DataFormat::Binary)
                             } else {
                                 coerced
                             }
