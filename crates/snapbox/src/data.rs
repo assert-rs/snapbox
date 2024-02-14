@@ -10,8 +10,8 @@
 #[macro_export]
 macro_rules! expect_file {
     [_] => {{
-        let path = std::path::Path::new(file!()).file_stem().unwrap();
-        let path = format!("snapshots/{}-{}.txt", path.to_str().unwrap(), line!());
+        let path = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
+        let path = ::std::format!("snapshots/{}-{}.txt", path.to_str().unwrap(), line!());
         $crate::expect_file![path]
     }};
     [$path:expr] => {{
