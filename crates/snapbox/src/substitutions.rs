@@ -7,7 +7,7 @@ use std::borrow::Cow;
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Substitutions {
-    vars: std::collections::BTreeMap<&'static str, Cow<'static, str>>,
+    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<Cow<'static, str>>>,
     unused: std::collections::BTreeSet<&'static str>,
 }
 
@@ -43,7 +43,9 @@ impl Substitutions {
             self.unused.insert(key);
         } else {
             self.vars
-                .insert(key, crate::utils::normalize_text(value.as_ref()).into());
+                .entry(key)
+                .or_default()
+                .insert(crate::utils::normalize_text(value.as_ref()).into());
         }
         Ok(())
     }
@@ -58,6 +60,12 @@ impl Substitutions {
         for (key, value) in vars {
             self.insert(key, value)?;
         }
+        Ok(())
+    }
+
+    pub fn remove(&mut self, key: &'static str) -> Result<(), crate::Error> {
+        let key = validate_key(key)?;
+        self.vars.remove(key);
         Ok(())
     }
 
@@ -79,8 +87,10 @@ impl Substitutions {
     fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
         let mut value = Cow::Borrowed(value);
         for (var, replace) in self.vars.iter() {
-            debug_assert!(!replace.is_empty());
-            value = Cow::Owned(value.replace(replace.as_ref(), var));
+            for replace in replace {
+                debug_assert!(!replace.is_empty());
+                value = Cow::Owned(value.replace(replace.as_ref(), var));
+            }
         }
         value
     }
