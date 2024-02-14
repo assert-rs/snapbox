@@ -1,3 +1,20 @@
+/// Declare an expected value for an assert from a file
+///
+/// This is relative to the source file the macro is run from
+///
+/// ```
+/// # use snapbox::expect_file;
+/// expect_file!["./test_data/bar.html"];
+/// ```
+#[macro_export]
+macro_rules! expect_file {
+    [$path:expr] => {{
+        let mut path = $crate::current_dir!();
+        path.push($path);
+        $crate::Data::read_from(&path, None)
+    }};
+}
+
 /// Test fixture, actual output, or expected result
 ///
 /// This provides conveniences for tracking the intended format (binary vs text).
