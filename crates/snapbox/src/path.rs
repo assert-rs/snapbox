@@ -178,11 +178,10 @@ impl PathDiff {
                 }
                 FileType::File => {
                     let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
+                        crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
-                    let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.normalize(NormalizeNewlines))
-                        .map_err(Self::Failure)?;
+                    let expected =
+                        crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
                     actual = actual
                         .try_coerce(expected.format())
@@ -256,11 +255,10 @@ impl PathDiff {
                 }
                 FileType::File => {
                     let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
+                        crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
-                    let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.normalize(NormalizeNewlines))
-                        .map_err(Self::Failure)?;
+                    let expected =
+                        crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
                     actual = actual
                         .try_coerce(expected.format())

@@ -54,8 +54,8 @@ impl Assert {
 
     #[track_caller]
     fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
-        let (pattern, actual) = self.normalize_eq(Ok(expected), actual);
-        if let Err(desc) = pattern.and_then(|p| self.try_verify(&p, &actual, None, None)) {
+        let (pattern, actual) = self.normalize_eq(expected, actual);
+        if let Err(desc) = self.try_verify(&pattern, &actual, None, None) {
             panic!("{}: {}", self.palette.error("Eq failed"), desc);
         }
     }
@@ -85,8 +85,8 @@ impl Assert {
 
     #[track_caller]
     fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
-        let (pattern, actual) = self.normalize_match(Ok(pattern), actual);
-        if let Err(desc) = pattern.and_then(|p| self.try_verify(&p, &actual, None, None)) {
+        let (pattern, actual) = self.normalize_match(pattern, actual);
+        if let Err(desc) = self.try_verify(&pattern, &actual, None, None) {
             panic!("{}: {}", self.palette.error("Match failed"), desc);
         }
     }
@@ -182,15 +182,12 @@ impl Assert {
 
     pub(crate) fn normalize_eq(
         &self,
-        expected: crate::Result<crate::Data>,
+        expected: crate::Data,
         mut actual: crate::Data,
-    ) -> (crate::Result<crate::Data>, crate::Data) {
-        let expected = expected.map(|d| d.normalize(NormalizeNewlines));
+    ) -> (crate::Data, crate::Data) {
+        let expected = expected.normalize(NormalizeNewlines);
         // On `expected` being an error, make a best guess
-        let format = expected
-            .as_ref()
-            .map(|d| d.format())
-            .unwrap_or(DataFormat::Text);
+        let format = expected.format();
 
         actual = actual.try_coerce(format).normalize(NormalizeNewlines);
 
@@ -199,12 +196,12 @@ impl Assert {
 
     pub(crate) fn normalize_match(
         &self,
-        expected: crate::Result<crate::Data>,
+        expected: crate::Data,
         mut actual: crate::Data,
-    ) -> (crate::Result<crate::Data>, crate::Data) {
-        let expected = expected.map(|d| d.normalize(NormalizeNewlines));
+    ) -> (crate::Data, crate::Data) {
+        let expected = expected.normalize(NormalizeNewlines);
         // On `expected` being an error, make a best guess
-        let format = expected.as_ref().map(|e| e.format()).unwrap_or_default();
+        let format = expected.format();
         actual = actual.try_coerce(format);
 
         if self.normalize_paths {
@@ -214,9 +211,7 @@ impl Assert {
         actual = actual.normalize(NormalizeNewlines);
 
         // If expected is not an error normalize matches
-        if let Ok(expected) = expected.as_ref() {
-            actual = actual.normalize(NormalizeMatches::new(&self.substitutions, expected));
-        }
+        actual = actual.normalize(NormalizeMatches::new(&self.substitutions, &expected));
 
         (expected, actual)
     }
@@ -224,14 +219,13 @@ impl Assert {
     #[track_caller]
     pub(crate) fn do_action(
         &self,
-        expected: crate::Result<crate::Data>,
+        expected: crate::Data,
         actual: crate::Data,
         expected_name: Option<&dyn std::fmt::Display>,
         actual_name: Option<&dyn std::fmt::Display>,
         expected_path: &std::path::Path,
     ) {
-        let result =
-            expected.and_then(|e| self.try_verify(&e, &actual, expected_name, actual_name));
+        let result = self.try_verify(&expected, &actual, expected_name, actual_name);
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),

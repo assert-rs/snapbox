@@ -176,7 +176,7 @@ impl Verifier {
         expected_path: &std::path::Path,
         actual: crate::Data,
     ) -> crate::Result<()> {
-        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))?
+        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))
             .normalize(NormalizeNewlines);
 
         if expected != actual {

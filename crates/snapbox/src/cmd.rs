@@ -326,11 +326,13 @@ impl Command {
         // before we read. Here we do this by dropping the Command object.
         drop(self.cmd);
 
-        let stdout = process_single_io(
-            &mut child,
-            reader,
-            self.stdin.as_ref().map(|d| d.to_bytes()),
-        )?;
+        let stdin = self
+            .stdin
+            .as_ref()
+            .map(|d| d.to_bytes())
+            .transpose()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::NotFound, e))?;
+        let stdout = process_single_io(&mut child, reader, stdin)?;
 
         let status = wait(child, self.timeout)?;
         let stdout = stdout.join().unwrap().ok().unwrap_or_default();
@@ -348,8 +350,13 @@ impl Command {
         self.cmd.stderr(std::process::Stdio::piped());
         let mut child = self.cmd.spawn()?;
 
-        let (stdout, stderr) =
-            process_split_io(&mut child, self.stdin.as_ref().map(|d| d.to_bytes()))?;
+        let stdin = self
+            .stdin
+            .as_ref()
+            .map(|d| d.to_bytes())
+            .transpose()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::NotFound, e))?;
+        let (stdout, stderr) = process_split_io(&mut child, stdin)?;
 
         let status = wait(child, self.timeout)?;
         let stdout = stdout
@@ -600,9 +607,10 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let (pattern, actual) = self.config.normalize_eq(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stdout")))
+        let (pattern, actual) = self.config.normalize_eq(expected, actual);
+        if let Err(desc) = self
+            .config
+            .try_verify(&pattern, &actual, None, Some(&"stdout"))
         {
             use std::fmt::Write;
             let mut buf = String::new();
@@ -670,9 +678,10 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let (pattern, actual) = self.config.normalize_match(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stdout")))
+        let (pattern, actual) = self.config.normalize_match(expected, actual);
+        if let Err(desc) = self
+            .config
+            .try_verify(&pattern, &actual, None, Some(&"stdout"))
         {
             use std::fmt::Write;
             let mut buf = String::new();
@@ -740,9 +749,10 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let (pattern, actual) = self.config.normalize_eq(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stderr")))
+        let (pattern, actual) = self.config.normalize_eq(expected, actual);
+        if let Err(desc) = self
+            .config
+            .try_verify(&pattern, &actual, None, Some(&"stderr"))
         {
             use std::fmt::Write;
             let mut buf = String::new();
@@ -810,9 +820,10 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let (pattern, actual) = self.config.normalize_match(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stderr")))
+        let (pattern, actual) = self.config.normalize_match(expected, actual);
+        if let Err(desc) = self
+            .config
+            .try_verify(&pattern, &actual, None, Some(&"stderr"))
         {
             use std::fmt::Write;
             let mut buf = String::new();

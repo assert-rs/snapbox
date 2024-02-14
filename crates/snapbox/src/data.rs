@@ -8,6 +8,7 @@ pub struct Data {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum DataInner {
+    Error(crate::Error),
     Binary(Vec<u8>),
     Text(String),
     #[cfg(feature = "json")]
@@ -16,6 +17,7 @@ enum DataInner {
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
 pub enum DataFormat {
+    Error,
     Binary,
     #[default]
     Text,
@@ -45,18 +47,33 @@ impl Data {
         }
     }
 
+    fn error(raw: impl Into<crate::Error>) -> Self {
+        Self {
+            inner: DataInner::Error(raw.into()),
+        }
+    }
+
     /// Empty test data
     pub fn new() -> Self {
         Self::text("")
     }
 
     /// Load test data from a file
-    pub fn read_from(
+    pub fn read_from(path: &std::path::Path, data_format: Option<DataFormat>) -> Self {
+        match Self::try_read_from(path, data_format) {
+            Ok(data) => data,
+            Err(err) => Self::error(err),
+        }
+    }
+
+    /// Load test data from a file
+    pub fn try_read_from(
         path: &std::path::Path,
         data_format: Option<DataFormat>,
     ) -> Result<Self, crate::Error> {
         let data = match data_format {
             Some(df) => match df {
+                DataFormat::Error => Self::error("unknown error"),
                 DataFormat::Binary => {
                     let data = std::fs::read(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -99,7 +116,8 @@ impl Data {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
             })?;
         }
-        std::fs::write(path, self.to_bytes())
+        let bytes = self.to_bytes()?;
+        std::fs::write(path, bytes)
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
@@ -115,6 +133,7 @@ impl Data {
     /// Note: this will not inspect binary data for being a valid `String`.
     pub fn render(&self) -> Option<String> {
         match &self.inner {
+            DataInner::Error(_) => None,
             DataInner::Binary(_) => None,
             DataInner::Text(data) => Some(data.to_owned()),
             #[cfg(feature = "json")]
@@ -122,17 +141,22 @@ impl Data {
         }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, crate::Error> {
         match &self.inner {
-            DataInner::Binary(data) => data.clone(),
-            DataInner::Text(data) => data.clone().into_bytes(),
+            DataInner::Error(err) => Err(err.clone()),
+            DataInner::Binary(data) => Ok(data.clone()),
+            DataInner::Text(data) => Ok(data.clone().into_bytes()),
             #[cfg(feature = "json")]
-            DataInner::Json(value) => serde_json::to_vec_pretty(value).unwrap(),
+            DataInner::Json(value) => {
+                serde_json::to_vec_pretty(value).map_err(|err| format!("{err}").into())
+            }
         }
     }
 
     pub fn try_coerce(self, format: DataFormat) -> Self {
         match (self.inner, format) {
+            (DataInner::Error(inner), _) => Self::error(inner),
+            (inner, DataFormat::Error) => Self { inner },
             (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
             #[cfg(feature = "json")]
@@ -166,7 +190,9 @@ impl Data {
                     Err(_) => Self::text(inner),
                 }
             }
-            (inner, DataFormat::Binary) => Self::binary(Self { inner }.to_bytes()),
+            (inner, DataFormat::Binary) => {
+                Self::binary(Self { inner }.to_bytes().expect("error case handled"))
+            }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
@@ -183,6 +209,7 @@ impl Data {
     /// Outputs the current `DataFormat` of the underlying data
     pub fn format(&self) -> DataFormat {
         match &self.inner {
+            DataInner::Error(_) => DataFormat::Error,
             DataInner::Binary(_) => DataFormat::Binary,
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
@@ -194,6 +221,7 @@ impl Data {
 impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.inner {
+            DataInner::Error(err) => err.fmt(f),
             DataInner::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
@@ -252,6 +280,7 @@ pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
         match data.inner {
+            DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_lines(&text);
@@ -271,6 +300,7 @@ pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
         match data.inner {
+            DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_paths(&text);
@@ -303,6 +333,7 @@ impl<'a> NormalizeMatches<'a> {
 impl Normalize for NormalizeMatches<'_> {
     fn normalize(&self, data: Data) -> Data {
         match data.inner {
+            DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = self
@@ -434,7 +465,7 @@ mod test {
     #[test]
     fn text_to_bytes_render() {
         let d = Data::text(String::from("test"));
-        let bytes = d.to_bytes();
+        let bytes = d.to_bytes().unwrap();
         let bytes = String::from_utf8(bytes).unwrap();
         let rendered = d.render().unwrap();
         assert_eq!(bytes, rendered);
@@ -444,7 +475,7 @@ mod test {
     #[cfg(feature = "json")]
     fn json_to_bytes_render() {
         let d = Data::json(json!({"name": "John\\Doe\r\n"}));
-        let bytes = d.to_bytes();
+        let bytes = d.to_bytes().unwrap();
         let bytes = String::from_utf8(bytes).unwrap();
         let rendered = d.render().unwrap();
         assert_eq!(bytes, rendered);
@@ -553,7 +584,7 @@ mod test {
         let text = String::from("test");
         let d = Data::text(text);
         let binary = d.clone().try_coerce(DataFormat::Binary);
-        assert_eq!(Data::binary(d.to_bytes()), binary);
+        assert_eq!(Data::binary(d.to_bytes().unwrap()), binary);
     }
 
     #[test]
@@ -562,7 +593,7 @@ mod test {
         let json = json!({"name": "John\\Doe\r\n"});
         let d = Data::json(json);
         let binary = d.clone().try_coerce(DataFormat::Binary);
-        assert_eq!(Data::binary(d.to_bytes()), binary);
+        assert_eq!(Data::binary(d.to_bytes().unwrap()), binary);
     }
 
     #[test]

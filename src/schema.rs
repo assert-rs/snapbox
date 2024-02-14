@@ -29,7 +29,7 @@ impl TryCmd {
                     let stdin_path = path.with_extension("stdin");
                     let stdin = if stdin_path.exists() {
                         // No `map_text` as we will trust what the user inputted
-                        Some(crate::Data::read_from(&stdin_path, Some(is_binary))?)
+                        Some(crate::Data::try_read_from(&stdin_path, Some(is_binary))?)
                     } else {
                         None
                     };
@@ -40,7 +40,7 @@ impl TryCmd {
                     let stdout_path = path.with_extension("stdout");
                     let stdout = if stdout_path.exists() {
                         Some(
-                            crate::Data::read_from(&stdout_path, Some(is_binary))?
+                            crate::Data::read_from(&stdout_path, Some(is_binary))
                                 .normalize(NormalizePaths)
                                 .normalize(NormalizeNewlines),
                         )
@@ -54,7 +54,7 @@ impl TryCmd {
                     let stderr_path = path.with_extension("stderr");
                     let stderr = if stderr_path.exists() {
                         Some(
-                            crate::Data::read_from(&stderr_path, Some(is_binary))?
+                            crate::Data::read_from(&stderr_path, Some(is_binary))
                                 .normalize(NormalizePaths)
                                 .normalize(NormalizeNewlines),
                         )
