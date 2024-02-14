@@ -3,9 +3,13 @@
 /// This is relative to the source file the macro is run from
 ///
 /// ```
+/// # #[cfg(feature = "json")] {
 /// # use snapbox::file;
-/// file!["./test_data/bar.html"];
+/// file!["./test_data/bar.json"];
+/// file!["./test_data/bar.json": Text];  // do textual rather than structural comparisons
 /// file![_];
+/// file![_: Json];  // ensure its treated as json since a type can't be inferred
+/// # }
 /// ```
 #[macro_export]
 macro_rules! file {
@@ -16,10 +20,22 @@ macro_rules! file {
         path.push(rel_path);
         $crate::Data::read_from(&path, None)
     }};
+    [_ : $type:ident] => {{
+        let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
+        let rel_path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
+        let mut path = $crate::current_dir!();
+        path.push(rel_path);
+        $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
+    }};
     [$path:literal] => {{
         let mut path = $crate::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, None)
+    }};
+    [$path:literal : $type:ident] => {{
+        let mut path = $crate::current_dir!();
+        path.push($path);
+        $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
     }};
 }
 
