@@ -26,7 +26,6 @@
 //!
 //! Testing Functions:
 //! - [`assert_eq`][crate::assert_eq()] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
-//! - [`assert_eq_path`][crate::assert_eq_path] and [`assert_matches_path`] for one-off assertions with the snapshot stored in a file
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Testing Commands:
@@ -53,10 +52,9 @@
 //! [`Assert`]
 //! ```rust,no_run
 //! let actual = "...";
-//! let expected_path = "tests/fixtures/help_output_is_clean.txt";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOTS")
-//!     .matches_path(expected_path, actual);
+//!     .matches(snapbox::expect_file!["help_output_is_clean.txt"], actual);
 //! ```
 //!
 //! [`harness::Harness`]
@@ -99,6 +97,7 @@ mod action;
 mod assert;
 mod data;
 mod error;
+mod macros;
 mod substitutions;
 
 pub mod cmd;
@@ -114,6 +113,7 @@ pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::DataFormat;
+pub use data::DataSource;
 pub use data::{Normalize, NormalizeMatches, NormalizeNewlines, NormalizePaths};
 pub use error::Error;
 pub use snapbox_macros::debug;
@@ -126,9 +126,18 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// When the content is text, newlines are normalized.
 ///
 /// ```rust
+/// # use snapbox::assert_eq;
 /// let output = "something";
 /// let expected = "something";
-/// snapbox::assert_eq(expected, output);
+/// assert_eq(expected, output);
+/// ```
+///
+/// Can combine this with [`expect_file!`]
+/// ```rust,no_run
+/// # use snapbox::assert_eq;
+/// # use snapbox::expect_file;
+/// let actual = "something";
+/// assert_eq(expect_file!["output.txt"], actual);
 /// ```
 #[track_caller]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
@@ -147,55 +156,22 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 /// - `\` to `/`
 ///
 /// ```rust
+/// # use snapbox::assert_matches;
 /// let output = "something";
 /// let expected = "so[..]g";
-/// snapbox::assert_matches(expected, output);
+/// assert_matches(expected, output);
+/// ```
+///
+/// Can combine this with [`expect_file!`]
+/// ```rust,no_run
+/// # use snapbox::assert_matches;
+/// # use snapbox::expect_file;
+/// let actual = "something";
+/// assert_matches(expect_file!["output.txt"], actual);
 /// ```
 #[track_caller]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new().matches(pattern, actual);
-}
-
-/// Check if a value matches the content of a file
-///
-/// When the content is text, newlines are normalized.
-///
-/// ```rust,no_run
-/// let output = "something";
-/// let expected_path = "tests/snapshots/output.txt";
-/// snapbox::assert_eq_path(expected_path, output);
-/// ```
-#[track_caller]
-pub fn assert_eq_path(expected_path: impl AsRef<std::path::Path>, actual: impl Into<crate::Data>) {
-    Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
-        .eq_path(expected_path, actual);
-}
-
-/// Check if a value matches the pattern in a file
-///
-/// Pattern syntax:
-/// - `...` is a line-wildcard when on a line by itself
-/// - `[..]` is a character-wildcard when inside a line
-/// - `[EXE]` matches `.exe` on Windows
-///
-/// Normalization:
-/// - Newlines
-/// - `\` to `/`
-///
-/// ```rust,no_run
-/// let output = "something";
-/// let expected_path = "tests/snapshots/output.txt";
-/// snapbox::assert_matches_path(expected_path, output);
-/// ```
-#[track_caller]
-pub fn assert_matches_path(
-    pattern_path: impl AsRef<std::path::Path>,
-    actual: impl Into<crate::Data>,
-) {
-    Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
-        .matches_path(pattern_path, actual);
 }
 
 /// Check if a path matches the content of another path, recursively

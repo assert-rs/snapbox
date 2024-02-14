@@ -1,13 +1,38 @@
+/// Declare an expected value for an assert from a file
+///
+/// This is relative to the source file the macro is run from
+///
+/// ```
+/// # use snapbox::expect_file;
+/// expect_file!["./test_data/bar.html"];
+/// expect_file![];
+/// ```
+#[macro_export]
+macro_rules! expect_file {
+    [$path:expr] => {{
+        let mut path = $crate::current_dir!();
+        path.push($path);
+        $crate::Data::read_from(&path, None)
+    }};
+    [] => {{
+        let path = std::path::Path::new(file!()).file_stem().unwrap();
+        let path = format!("snapshots/{}-{}.txt", path.to_str().unwrap(), line!());
+        $crate::expect_file![path]
+    }};
+}
+
 /// Test fixture, actual output, or expected result
 ///
 /// This provides conveniences for tracking the intended format (binary vs text).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Data {
     inner: DataInner,
+    source: Option<DataSource>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum DataInner {
+    Error(crate::Error),
     Binary(Vec<u8>),
     Text(String),
     #[cfg(feature = "json")]
@@ -16,6 +41,7 @@ enum DataInner {
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
 pub enum DataFormat {
+    Error,
     Binary,
     #[default]
     Text,
@@ -28,6 +54,7 @@ impl Data {
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
         Self {
             inner: DataInner::Binary(raw.into()),
+            source: None,
         }
     }
 
@@ -35,6 +62,7 @@ impl Data {
     pub fn text(raw: impl Into<String>) -> Self {
         Self {
             inner: DataInner::Text(raw.into()),
+            source: None,
         }
     }
 
@@ -42,6 +70,14 @@ impl Data {
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
         Self {
             inner: DataInner::Json(raw.into()),
+            source: None,
+        }
+    }
+
+    fn error(raw: impl Into<crate::Error>) -> Self {
+        Self {
+            inner: DataInner::Error(raw.into()),
+            source: None,
         }
     }
 
@@ -50,13 +86,27 @@ impl Data {
         Self::text("")
     }
 
+    fn with_path(mut self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.source = Some(DataSource::path(path));
+        self
+    }
+
     /// Load test data from a file
-    pub fn read_from(
+    pub fn read_from(path: &std::path::Path, data_format: Option<DataFormat>) -> Self {
+        match Self::try_read_from(path, data_format) {
+            Ok(data) => data,
+            Err(err) => Self::error(err),
+        }
+    }
+
+    /// Load test data from a file
+    pub fn try_read_from(
         path: &std::path::Path,
         data_format: Option<DataFormat>,
     ) -> Result<Self, crate::Error> {
         let data = match data_format {
             Some(df) => match df {
+                DataFormat::Error => Self::error("unknown error"),
                 DataFormat::Binary => {
                     let data = std::fs::read(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -89,17 +139,30 @@ impl Data {
                 }
             }
         };
-        Ok(data)
+        Ok(data.with_path(path))
+    }
+
+    /// Location the data came from
+    pub fn source(&self) -> Option<&DataSource> {
+        self.source.as_ref()
     }
 
     /// Overwrite a snapshot
-    pub fn write_to(&self, path: &std::path::Path) -> Result<(), crate::Error> {
+    pub fn write_to(&self, source: &DataSource) -> Result<(), crate::Error> {
+        match &source.inner {
+            DataSourceInner::Path(p) => self.write_to_path(p),
+        }
+    }
+
+    /// Overwrite a snapshot
+    pub fn write_to_path(&self, path: &std::path::Path) -> Result<(), crate::Error> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
             })?;
         }
-        std::fs::write(path, self.to_bytes())
+        let bytes = self.to_bytes()?;
+        std::fs::write(path, bytes)
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
@@ -115,6 +178,7 @@ impl Data {
     /// Note: this will not inspect binary data for being a valid `String`.
     pub fn render(&self) -> Option<String> {
         match &self.inner {
+            DataInner::Error(_) => None,
             DataInner::Binary(_) => None,
             DataInner::Text(data) => Some(data.to_owned()),
             #[cfg(feature = "json")]
@@ -122,17 +186,25 @@ impl Data {
         }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, crate::Error> {
         match &self.inner {
-            DataInner::Binary(data) => data.clone(),
-            DataInner::Text(data) => data.clone().into_bytes(),
+            DataInner::Error(err) => Err(err.clone()),
+            DataInner::Binary(data) => Ok(data.clone()),
+            DataInner::Text(data) => Ok(data.clone().into_bytes()),
             #[cfg(feature = "json")]
-            DataInner::Json(value) => serde_json::to_vec_pretty(value).unwrap(),
+            DataInner::Json(value) => {
+                serde_json::to_vec_pretty(value).map_err(|err| format!("{err}").into())
+            }
         }
     }
 
     pub fn try_coerce(self, format: DataFormat) -> Self {
-        match (self.inner, format) {
+        let mut data = match (self.inner, format) {
+            (DataInner::Error(inner), _) => Self::error(inner),
+            (inner, DataFormat::Error) => Self {
+                inner,
+                source: None,
+            },
             (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
             #[cfg(feature = "json")]
@@ -166,23 +238,36 @@ impl Data {
                     Err(_) => Self::text(inner),
                 }
             }
-            (inner, DataFormat::Binary) => Self::binary(Self { inner }.to_bytes()),
+            (inner, DataFormat::Binary) => Self::binary(
+                Self {
+                    inner,
+                    source: None,
+                }
+                .to_bytes()
+                .expect("error case handled"),
+            ),
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                let remake = Self { inner };
+                let remake = Self {
+                    inner,
+                    source: None,
+                };
                 if let Some(str) = remake.render() {
                     Self::text(str)
                 } else {
                     remake
                 }
             }
-        }
+        };
+        data.source = self.source;
+        data
     }
 
     /// Outputs the current `DataFormat` of the underlying data
     pub fn format(&self) -> DataFormat {
         match &self.inner {
+            DataInner::Error(_) => DataFormat::Error,
             DataInner::Binary(_) => DataFormat::Binary,
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
@@ -194,6 +279,7 @@ impl Data {
 impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.inner {
+            DataInner::Error(err) => err.fmt(f),
             DataInner::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
@@ -201,6 +287,14 @@ impl std::fmt::Display for Data {
         }
     }
 }
+
+impl PartialEq for Data {
+    fn eq(&self, other: &Data) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl Eq for Data {}
 
 impl Default for Data {
     fn default() -> Self {
@@ -244,6 +338,42 @@ impl<'s> From<&'s str> for Data {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DataSource {
+    inner: DataSourceInner,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum DataSourceInner {
+    Path(std::path::PathBuf),
+}
+
+impl DataSource {
+    pub fn path(path: impl Into<std::path::PathBuf>) -> Self {
+        Self {
+            inner: DataSourceInner::Path(path.into()),
+        }
+    }
+
+    pub fn is_path(&self) -> bool {
+        self.as_path().is_some()
+    }
+
+    pub fn as_path(&self) -> Option<&std::path::Path> {
+        match &self.inner {
+            DataSourceInner::Path(path) => Some(path.as_ref()),
+        }
+    }
+}
+
+impl std::fmt::Display for DataSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.inner {
+            DataSourceInner::Path(path) => crate::path::display_relpath(path).fmt(f),
+        }
+    }
+}
+
 pub trait Normalize {
     fn normalize(&self, data: Data) -> Data;
 }
@@ -251,7 +381,8 @@ pub trait Normalize {
 pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
-        match data.inner {
+        let mut new = match data.inner {
+            DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_lines(&text);
@@ -263,14 +394,17 @@ impl Normalize for NormalizeNewlines {
                 normalize_value(&mut value, crate::utils::normalize_lines);
                 Data::json(value)
             }
-        }
+        };
+        new.source = data.source;
+        new
     }
 }
 
 pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
-        match data.inner {
+        let mut new = match data.inner {
+            DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_paths(&text);
@@ -282,7 +416,9 @@ impl Normalize for NormalizePaths {
                 normalize_value(&mut value, crate::utils::normalize_paths);
                 Data::json(value)
             }
-        }
+        };
+        new.source = data.source;
+        new
     }
 }
 
@@ -302,7 +438,8 @@ impl<'a> NormalizeMatches<'a> {
 
 impl Normalize for NormalizeMatches<'_> {
     fn normalize(&self, data: Data) -> Data {
-        match data.inner {
+        let mut new = match data.inner {
+            DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = self
@@ -318,7 +455,9 @@ impl Normalize for NormalizeMatches<'_> {
                 }
                 Data::json(value)
             }
-        }
+        };
+        new.source = data.source;
+        new
     }
 }
 
@@ -434,7 +573,7 @@ mod test {
     #[test]
     fn text_to_bytes_render() {
         let d = Data::text(String::from("test"));
-        let bytes = d.to_bytes();
+        let bytes = d.to_bytes().unwrap();
         let bytes = String::from_utf8(bytes).unwrap();
         let rendered = d.render().unwrap();
         assert_eq!(bytes, rendered);
@@ -444,7 +583,7 @@ mod test {
     #[cfg(feature = "json")]
     fn json_to_bytes_render() {
         let d = Data::json(json!({"name": "John\\Doe\r\n"}));
-        let bytes = d.to_bytes();
+        let bytes = d.to_bytes().unwrap();
         let bytes = String::from_utf8(bytes).unwrap();
         let rendered = d.render().unwrap();
         assert_eq!(bytes, rendered);
@@ -553,7 +692,7 @@ mod test {
         let text = String::from("test");
         let d = Data::text(text);
         let binary = d.clone().try_coerce(DataFormat::Binary);
-        assert_eq!(Data::binary(d.to_bytes()), binary);
+        assert_eq!(Data::binary(d.to_bytes().unwrap()), binary);
     }
 
     #[test]
@@ -562,7 +701,7 @@ mod test {
         let json = json!({"name": "John\\Doe\r\n"});
         let d = Data::json(json);
         let binary = d.clone().try_coerce(DataFormat::Binary);
-        assert_eq!(Data::binary(d.to_bytes()), binary);
+        assert_eq!(Data::binary(d.to_bytes().unwrap()), binary);
     }
 
     #[test]

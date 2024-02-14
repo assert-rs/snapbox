@@ -167,7 +167,7 @@ impl Verifier {
         expected_path: &std::path::Path,
         actual: crate::Data,
     ) -> crate::Result<()> {
-        actual.write_to(expected_path)?;
+        actual.write_to_path(expected_path)?;
         Ok(())
     }
 
@@ -176,7 +176,7 @@ impl Verifier {
         expected_path: &std::path::Path,
         actual: crate::Data,
     ) -> crate::Result<()> {
-        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))?
+        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))
             .normalize(NormalizeNewlines);
 
         if expected != actual {

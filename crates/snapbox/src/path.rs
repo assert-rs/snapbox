@@ -1,5 +1,8 @@
 //! Initialize working directories and assert on how they've changed
 
+#[doc(inline)]
+pub use crate::current_dir;
+
 #[cfg(feature = "path")]
 use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
 /// Working directory for tests
@@ -178,11 +181,10 @@ impl PathDiff {
                 }
                 FileType::File => {
                     let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
+                        crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
-                    let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.normalize(NormalizeNewlines))
-                        .map_err(Self::Failure)?;
+                    let expected =
+                        crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
                     actual = actual
                         .try_coerce(expected.format())
@@ -256,11 +258,10 @@ impl PathDiff {
                 }
                 FileType::File => {
                     let mut actual =
-                        crate::Data::read_from(&actual_path, None).map_err(Self::Failure)?;
+                        crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
-                    let expected = crate::Data::read_from(&expected_path, None)
-                        .map(|d| d.normalize(NormalizeNewlines))
-                        .map_err(Self::Failure)?;
+                    let expected =
+                        crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
                     actual = actual
                         .try_coerce(expected.format())
@@ -400,11 +401,11 @@ impl PathDiff {
                 actual_target: _,
             } => shallow_copy(expected_path, actual_path),
             Self::ContentMismatch {
-                expected_path,
+                expected_path: _,
                 actual_path: _,
-                expected_content: _,
+                expected_content,
                 actual_content,
-            } => actual_content.write_to(expected_path),
+            } => actual_content.write_to(expected_content.source().unwrap()),
         }
     }
 }

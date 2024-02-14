@@ -480,7 +480,7 @@ impl Case {
                 }
             };
             let stream_path = root.join(file_name);
-            stream.content.write_to(&stream_path).map_err(|e| {
+            stream.content.write_to_path(&stream_path).map_err(|e| {
                 let mut stream = stream.clone();
                 if stream.is_ok() {
                     stream.status = StreamStatus::Failure(e);

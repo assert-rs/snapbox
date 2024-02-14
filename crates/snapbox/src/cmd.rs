@@ -326,11 +326,13 @@ impl Command {
         // before we read. Here we do this by dropping the Command object.
         drop(self.cmd);
 
-        let stdout = process_single_io(
-            &mut child,
-            reader,
-            self.stdin.as_ref().map(|d| d.to_bytes()),
-        )?;
+        let stdin = self
+            .stdin
+            .as_ref()
+            .map(|d| d.to_bytes())
+            .transpose()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::NotFound, e))?;
+        let stdout = process_single_io(&mut child, reader, stdin)?;
 
         let status = wait(child, self.timeout)?;
         let stdout = stdout.join().unwrap().ok().unwrap_or_default();
@@ -348,8 +350,13 @@ impl Command {
         self.cmd.stderr(std::process::Stdio::piped());
         let mut child = self.cmd.spawn()?;
 
-        let (stdout, stderr) =
-            process_split_io(&mut child, self.stdin.as_ref().map(|d| d.to_bytes()))?;
+        let stdin = self
+            .stdin
+            .as_ref()
+            .map(|d| d.to_bytes())
+            .transpose()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::NotFound, e))?;
+        let (stdout, stderr) = process_split_io(&mut child, stdin)?;
 
         let status = wait(child, self.timeout)?;
         let stdout = stdout
@@ -591,6 +598,19 @@ impl OutputAssert {
     ///     .assert()
     ///     .stdout_eq("hello");
     /// ```
+    ///
+    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    /// use snapbox::expect_file;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_eq(expect_file!["stdout.log"]);
+    /// ```
     #[track_caller]
     pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -600,51 +620,8 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let (pattern, actual) = self.config.normalize_eq(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stdout")))
-        {
-            use std::fmt::Write;
-            let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
-            self.write_status(&mut buf).unwrap();
-            self.write_stderr(&mut buf).unwrap();
-            panic!("{}", buf);
-        }
-
-        self
-    }
-
-    /// Ensure the command wrote the expected data to `stdout`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stdout_eq_path("tests/snapshots/output.txt");
-    /// ```
-    #[track_caller]
-    pub fn stdout_eq_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
-        let expected_path = expected_path.as_ref();
-        self.stdout_eq_path_inner(expected_path)
-    }
-
-    #[track_caller]
-    fn stdout_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
-        let actual = crate::Data::from(self.output.stdout.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_eq(expected, actual);
-        self.config.do_action(
-            pattern,
-            actual,
-            Some(&crate::path::display_relpath(expected_path)),
-            Some(&"stdout"),
-            expected_path,
-        );
+        self.config.do_action(pattern, actual, Some(&"stdout"));
 
         self
     }
@@ -661,6 +638,19 @@ impl OutputAssert {
     ///     .assert()
     ///     .stdout_matches("he[..]o");
     /// ```
+    ///
+    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    /// use snapbox::expect_file;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_matches(expect_file!["stdout.log"]);
+    /// ```
     #[track_caller]
     pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -670,51 +660,8 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        let (pattern, actual) = self.config.normalize_match(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stdout")))
-        {
-            use std::fmt::Write;
-            let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
-            self.write_status(&mut buf).unwrap();
-            self.write_stderr(&mut buf).unwrap();
-            panic!("{}", buf);
-        }
-
-        self
-    }
-
-    /// Ensure the command wrote the expected data to `stdout`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stdout_matches_path("tests/snapshots/output.txt");
-    /// ```
-    #[track_caller]
-    pub fn stdout_matches_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
-        let expected_path = expected_path.as_ref();
-        self.stdout_matches_path_inner(expected_path)
-    }
-
-    #[track_caller]
-    fn stdout_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
-        let actual = crate::Data::from(self.output.stdout.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_match(expected, actual);
-        self.config.do_action(
-            pattern,
-            actual,
-            Some(&expected_path.display()),
-            Some(&"stdout"),
-            expected_path,
-        );
+        self.config.do_action(pattern, actual, Some(&"stdout"));
 
         self
     }
@@ -731,6 +678,19 @@ impl OutputAssert {
     ///     .assert()
     ///     .stderr_eq("world");
     /// ```
+    ///
+    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    /// use snapbox::expect_file;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_eq(expect_file!["stderr.log"]);
+    /// ```
     #[track_caller]
     pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -740,51 +700,8 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let (pattern, actual) = self.config.normalize_eq(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stderr")))
-        {
-            use std::fmt::Write;
-            let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
-            self.write_status(&mut buf).unwrap();
-            self.write_stdout(&mut buf).unwrap();
-            panic!("{}", buf);
-        }
-
-        self
-    }
-
-    /// Ensure the command wrote the expected data to `stderr`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stderr_eq_path("tests/snapshots/err.txt");
-    /// ```
-    #[track_caller]
-    pub fn stderr_eq_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
-        let expected_path = expected_path.as_ref();
-        self.stderr_eq_path_inner(expected_path)
-    }
-
-    #[track_caller]
-    fn stderr_eq_path_inner(self, expected_path: &std::path::Path) -> Self {
-        let actual = crate::Data::from(self.output.stderr.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_eq(expected, actual);
-        self.config.do_action(
-            pattern,
-            actual,
-            Some(&expected_path.display()),
-            Some(&"stderr"),
-            expected_path,
-        );
+        self.config.do_action(pattern, actual, Some(&"stderr"));
 
         self
     }
@@ -801,6 +718,19 @@ impl OutputAssert {
     ///     .assert()
     ///     .stderr_matches("wo[..]d");
     /// ```
+    ///
+    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    /// use snapbox::expect_file;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_matches(expect_file!["stderr.log"]);
+    /// ```
     #[track_caller]
     pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
@@ -810,62 +740,10 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        let (pattern, actual) = self.config.normalize_match(Ok(expected), actual);
-        if let Err(desc) =
-            pattern.and_then(|p| self.config.try_verify(&p, &actual, None, Some(&"stderr")))
-        {
-            use std::fmt::Write;
-            let mut buf = String::new();
-            write!(&mut buf, "{}", desc).unwrap();
-            self.write_status(&mut buf).unwrap();
-            self.write_stdout(&mut buf).unwrap();
-            panic!("{}", buf);
-        }
-
-        self
-    }
-
-    /// Ensure the command wrote the expected data to `stderr`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stderr_matches_path("tests/snapshots/err.txt");
-    /// ```
-    #[track_caller]
-    pub fn stderr_matches_path(self, expected_path: impl AsRef<std::path::Path>) -> Self {
-        let expected_path = expected_path.as_ref();
-        self.stderr_matches_path_inner(expected_path)
-    }
-
-    #[track_caller]
-    fn stderr_matches_path_inner(self, expected_path: &std::path::Path) -> Self {
-        let actual = crate::Data::from(self.output.stderr.as_slice());
-        let expected = crate::Data::read_from(expected_path, self.config.data_format());
         let (pattern, actual) = self.config.normalize_match(expected, actual);
-        self.config.do_action(
-            pattern,
-            actual,
-            Some(&crate::path::display_relpath(expected_path)),
-            Some(&"stderr"),
-            expected_path,
-        );
+        self.config.do_action(pattern, actual, Some(&"stderr"));
 
         self
-    }
-
-    fn write_status(&self, writer: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
-        writeln!(
-            writer,
-            "Exit status: {}",
-            display_exit_status(self.output.status)
-        )?;
-        Ok(())
     }
 
     fn write_stdout(&self, writer: &mut dyn std::fmt::Write) -> Result<(), std::fmt::Error> {
