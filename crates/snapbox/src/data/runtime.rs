@@ -96,7 +96,7 @@ impl Patchwork {
             **pos += insert;
         }
 
-        self.text.replace_range(range, &patch);
+        self.text.replace_range(range, patch);
     }
 }
 
@@ -176,6 +176,7 @@ impl Span {
                 //
                 // Seek past the exclam, then skip any whitespace and
                 // the macro delimiter to get to our argument.
+                #[allow(clippy::skip_while_next)]
                 let byte_offset = line
                     .char_indices()
                     .skip((pos.column - 1).try_into().unwrap())
@@ -340,14 +341,14 @@ mod tests {
             hello
             world
             "#]"##]],
-            &patch,
+            patch,
         );
 
         let patch = format_patch(None, r"hello\tworld");
-        assert_eq(str![[r##"[r#"hello\tworld"#]"##]], &patch);
+        assert_eq(str![[r##"[r#"hello\tworld"#]"##]], patch);
 
         let patch = format_patch(None, "{\"foo\": 42}");
-        assert_eq(str![[r##"[r#"{"foo": 42}"#]"##]], &patch);
+        assert_eq(str![[r##"[r#"{"foo": 42}"#]"##]], patch);
 
         let patch = format_patch(Some(0), "hello\nworld\n");
         assert_eq(
@@ -356,11 +357,11 @@ mod tests {
                 hello
                 world
             "#]"##]],
-            &patch,
+            patch,
         );
 
         let patch = format_patch(Some(4), "single line");
-        assert_eq(str![[r#""single line""#]], &patch);
+        assert_eq(str![[r#""single line""#]], patch);
     }
 
     #[test]
