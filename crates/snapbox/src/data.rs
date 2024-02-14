@@ -5,6 +5,7 @@
 /// ```
 /// # use snapbox::expect_file;
 /// expect_file!["./test_data/bar.html"];
+/// expect_file![];
 /// ```
 #[macro_export]
 macro_rules! expect_file {
@@ -12,6 +13,11 @@ macro_rules! expect_file {
         let mut path = $crate::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, None)
+    }};
+    [] => {{
+        let path = std::path::Path::new(file!()).file_stem().unwrap();
+        let path = format!("snapshots/{}-{}.txt", path.to_str().unwrap(), line!());
+        $crate::expect_file![path]
     }};
 }
 
