@@ -398,11 +398,11 @@ impl PathDiff {
                 actual_target: _,
             } => shallow_copy(expected_path, actual_path),
             Self::ContentMismatch {
-                expected_path,
+                expected_path: _,
                 actual_path: _,
-                expected_content: _,
+                expected_content,
                 actual_content,
-            } => actual_content.write_to(expected_path),
+            } => actual_content.write_to(expected_content.source().unwrap()),
         }
     }
 }

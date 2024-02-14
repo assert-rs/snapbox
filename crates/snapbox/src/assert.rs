@@ -55,7 +55,7 @@ impl Assert {
     #[track_caller]
     fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
         let (pattern, actual) = self.normalize_eq(expected, actual);
-        if let Err(desc) = self.try_verify(&pattern, &actual, None, None) {
+        if let Err(desc) = self.try_verify(&pattern, &actual, None) {
             panic!("{}: {}", self.palette.error("Eq failed"), desc);
         }
     }
@@ -86,7 +86,7 @@ impl Assert {
     #[track_caller]
     fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
         let (pattern, actual) = self.normalize_match(pattern, actual);
-        if let Err(desc) = self.try_verify(&pattern, &actual, None, None) {
+        if let Err(desc) = self.try_verify(&pattern, &actual, None) {
             panic!("{}: {}", self.palette.error("Match failed"), desc);
         }
     }
@@ -123,13 +123,7 @@ impl Assert {
         let expected = crate::Data::read_from(pattern_path, self.data_format());
         let (expected, actual) = self.normalize_eq(expected, actual);
 
-        self.do_action(
-            expected,
-            actual,
-            Some(&crate::path::display_relpath(pattern_path)),
-            Some(&"In-memory"),
-            pattern_path,
-        );
+        self.do_action(expected, actual, Some(&"In-memory"));
     }
 
     /// Check if a value matches the pattern in a file
@@ -171,13 +165,7 @@ impl Assert {
         let expected = crate::Data::read_from(pattern_path, self.data_format());
         let (expected, actual) = self.normalize_match(expected, actual);
 
-        self.do_action(
-            expected,
-            actual,
-            Some(&crate::path::display_relpath(pattern_path)),
-            Some(&"In-memory"),
-            pattern_path,
-        );
+        self.do_action(expected, actual, Some(&"In-memory"));
     }
 
     pub(crate) fn normalize_eq(
@@ -221,11 +209,9 @@ impl Assert {
         &self,
         expected: crate::Data,
         actual: crate::Data,
-        expected_name: Option<&dyn std::fmt::Display>,
         actual_name: Option<&dyn std::fmt::Display>,
-        expected_path: &std::path::Path,
     ) {
-        let result = self.try_verify(&expected, &actual, expected_name, actual_name);
+        let result = self.try_verify(&expected, &actual, actual_name);
         if let Err(err) = result {
             match self.action {
                 Action::Skip => unreachable!("Bailed out earlier"),
@@ -240,7 +226,9 @@ impl Assert {
                     );
                 }
                 Action::Verify => {
-                    let message = if let Some(action_var) = self.action_var.as_deref() {
+                    let message = if expected.source().is_none() {
+                        crate::report::Styled::new(String::new(), Default::default())
+                    } else if let Some(action_var) = self.action_var.as_deref() {
                         self.palette
                             .hint(format!("Update with {}=overwrite", action_var))
                     } else {
@@ -251,8 +239,12 @@ impl Assert {
                 Action::Overwrite => {
                     use std::io::Write;
 
-                    let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
-                    actual.write_to(expected_path).unwrap();
+                    if let Some(source) = expected.source() {
+                        let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
+                        actual.write_to(source).unwrap();
+                    } else {
+                        panic!("{err}");
+                    }
                 }
             }
         }
@@ -262,7 +254,6 @@ impl Assert {
         &self,
         expected: &crate::Data,
         actual: &crate::Data,
-        expected_name: Option<&dyn std::fmt::Display>,
         actual_name: Option<&dyn std::fmt::Display>,
     ) -> crate::Result<()> {
         if expected != actual {
@@ -271,7 +262,7 @@ impl Assert {
                 &mut buf,
                 expected,
                 actual,
-                expected_name,
+                expected.source().map(|s| s as &dyn std::fmt::Display),
                 actual_name,
                 self.palette,
             )

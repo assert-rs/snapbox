@@ -1,9 +1,10 @@
 /// Test fixture, actual output, or expected result
 ///
 /// This provides conveniences for tracking the intended format (binary vs text).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Data {
     inner: DataInner,
+    source: Option<DataSource>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,6 +31,7 @@ impl Data {
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
         Self {
             inner: DataInner::Binary(raw.into()),
+            source: None,
         }
     }
 
@@ -37,6 +39,7 @@ impl Data {
     pub fn text(raw: impl Into<String>) -> Self {
         Self {
             inner: DataInner::Text(raw.into()),
+            source: None,
         }
     }
 
@@ -44,18 +47,25 @@ impl Data {
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
         Self {
             inner: DataInner::Json(raw.into()),
+            source: None,
         }
     }
 
     fn error(raw: impl Into<crate::Error>) -> Self {
         Self {
             inner: DataInner::Error(raw.into()),
+            source: None,
         }
     }
 
     /// Empty test data
     pub fn new() -> Self {
         Self::text("")
+    }
+
+    fn with_path(mut self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.source = Some(DataSource::path(path));
+        self
     }
 
     /// Load test data from a file
@@ -106,11 +116,23 @@ impl Data {
                 }
             }
         };
-        Ok(data)
+        Ok(data.with_path(path))
+    }
+
+    /// Location the data came from
+    pub fn source(&self) -> Option<&DataSource> {
+        self.source.as_ref()
     }
 
     /// Overwrite a snapshot
-    pub fn write_to(&self, path: &std::path::Path) -> Result<(), crate::Error> {
+    pub fn write_to(&self, source: &DataSource) -> Result<(), crate::Error> {
+        match &source.inner {
+            DataSourceInner::Path(p) => self.write_to_path(&p),
+        }
+    }
+
+    /// Overwrite a snapshot
+    pub fn write_to_path(&self, path: &std::path::Path) -> Result<(), crate::Error> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
@@ -154,9 +176,12 @@ impl Data {
     }
 
     pub fn try_coerce(self, format: DataFormat) -> Self {
-        match (self.inner, format) {
+        let mut data = match (self.inner, format) {
             (DataInner::Error(inner), _) => Self::error(inner),
-            (inner, DataFormat::Error) => Self { inner },
+            (inner, DataFormat::Error) => Self {
+                inner,
+                source: None,
+            },
             (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
             #[cfg(feature = "json")]
@@ -190,20 +215,30 @@ impl Data {
                     Err(_) => Self::text(inner),
                 }
             }
-            (inner, DataFormat::Binary) => {
-                Self::binary(Self { inner }.to_bytes().expect("error case handled"))
-            }
+            (inner, DataFormat::Binary) => Self::binary(
+                Self {
+                    inner,
+                    source: None,
+                }
+                .to_bytes()
+                .expect("error case handled"),
+            ),
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                let remake = Self { inner };
+                let remake = Self {
+                    inner,
+                    source: None,
+                };
                 if let Some(str) = remake.render() {
                     Self::text(str)
                 } else {
                     remake
                 }
             }
-        }
+        };
+        data.source = self.source;
+        data
     }
 
     /// Outputs the current `DataFormat` of the underlying data
@@ -229,6 +264,14 @@ impl std::fmt::Display for Data {
         }
     }
 }
+
+impl PartialEq for Data {
+    fn eq(&self, other: &Data) -> bool {
+        self.inner == other.inner
+    }
+}
+
+impl Eq for Data {}
 
 impl Default for Data {
     fn default() -> Self {
@@ -272,6 +315,42 @@ impl<'s> From<&'s str> for Data {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DataSource {
+    inner: DataSourceInner,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum DataSourceInner {
+    Path(std::path::PathBuf),
+}
+
+impl DataSource {
+    pub fn path(path: impl Into<std::path::PathBuf>) -> Self {
+        Self {
+            inner: DataSourceInner::Path(path.into()),
+        }
+    }
+
+    pub fn is_path(&self) -> bool {
+        self.as_path().is_some()
+    }
+
+    pub fn as_path(&self) -> Option<&std::path::Path> {
+        match &self.inner {
+            DataSourceInner::Path(path) => Some(path.as_ref()),
+        }
+    }
+}
+
+impl std::fmt::Display for DataSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.inner {
+            DataSourceInner::Path(path) => crate::path::display_relpath(path).fmt(f),
+        }
+    }
+}
+
 pub trait Normalize {
     fn normalize(&self, data: Data) -> Data;
 }
@@ -279,7 +358,7 @@ pub trait Normalize {
 pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
-        match data.inner {
+        let mut new = match data.inner {
             DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
@@ -292,14 +371,16 @@ impl Normalize for NormalizeNewlines {
                 normalize_value(&mut value, crate::utils::normalize_lines);
                 Data::json(value)
             }
-        }
+        };
+        new.source = data.source;
+        new
     }
 }
 
 pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
-        match data.inner {
+        let mut new = match data.inner {
             DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
@@ -312,7 +393,9 @@ impl Normalize for NormalizePaths {
                 normalize_value(&mut value, crate::utils::normalize_paths);
                 Data::json(value)
             }
-        }
+        };
+        new.source = data.source;
+        new
     }
 }
 
@@ -332,7 +415,7 @@ impl<'a> NormalizeMatches<'a> {
 
 impl Normalize for NormalizeMatches<'_> {
     fn normalize(&self, data: Data) -> Data {
-        match data.inner {
+        let mut new = match data.inner {
             DataInner::Error(err) => Data::error(err),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
@@ -349,7 +432,9 @@ impl Normalize for NormalizeMatches<'_> {
                 }
                 Data::json(value)
             }
-        }
+        };
+        new.source = data.source;
+        new
     }
 }
 

@@ -114,6 +114,7 @@ pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::DataFormat;
+pub use data::DataSource;
 pub use data::{Normalize, NormalizeMatches, NormalizeNewlines, NormalizePaths};
 pub use error::Error;
 pub use snapbox_macros::debug;

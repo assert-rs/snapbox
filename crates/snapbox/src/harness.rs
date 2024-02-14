@@ -167,7 +167,7 @@ impl Verifier {
         expected_path: &std::path::Path,
         actual: crate::Data,
     ) -> crate::Result<()> {
-        actual.write_to(expected_path)?;
+        actual.write_to_path(expected_path)?;
         Ok(())
     }
 
