@@ -599,17 +599,17 @@ impl OutputAssert {
     ///     .stdout_eq("hello");
     /// ```
     ///
-    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// Can combine this with [`file!`][crate::file]
     /// ```rust,no_run
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::expect_file;
+    /// use snapbox::file;
     ///
     /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stdout_eq(expect_file!["stdout.log"]);
+    ///     .stdout_eq(file!["stdout.log"]);
     /// ```
     #[track_caller]
     pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
@@ -639,17 +639,17 @@ impl OutputAssert {
     ///     .stdout_matches("he[..]o");
     /// ```
     ///
-    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// Can combine this with [`file!`][crate::file]
     /// ```rust,no_run
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::expect_file;
+    /// use snapbox::file;
     ///
     /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stdout_matches(expect_file!["stdout.log"]);
+    ///     .stdout_matches(file!["stdout.log"]);
     /// ```
     #[track_caller]
     pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
@@ -679,17 +679,17 @@ impl OutputAssert {
     ///     .stderr_eq("world");
     /// ```
     ///
-    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// Can combine this with [`file!`][crate::file]
     /// ```rust,no_run
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::expect_file;
+    /// use snapbox::file;
     ///
     /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stderr_eq(expect_file!["stderr.log"]);
+    ///     .stderr_eq(file!["stderr.log"]);
     /// ```
     #[track_caller]
     pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
@@ -719,17 +719,17 @@ impl OutputAssert {
     ///     .stderr_matches("wo[..]d");
     /// ```
     ///
-    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// Can combine this with [`file!`][crate::file]
     /// ```rust,no_run
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::expect_file;
+    /// use snapbox::file;
     ///
     /// let assert = Command::new(cargo_bin("snap-fixture"))
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stderr_matches(expect_file!["stderr.log"]);
+    ///     .stderr_matches(file!["stderr.log"]);
     /// ```
     #[track_caller]
     pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {

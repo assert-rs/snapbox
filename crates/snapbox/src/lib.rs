@@ -54,7 +54,7 @@
 //! let actual = "...";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOTS")
-//!     .matches(snapbox::expect_file!["help_output_is_clean.txt"], actual);
+//!     .matches(snapbox::file!["help_output_is_clean.txt"], actual);
 //! ```
 //!
 //! [`harness::Harness`]
@@ -132,12 +132,12 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// assert_eq(expected, output);
 /// ```
 ///
-/// Can combine this with [`expect_file!`]
+/// Can combine this with [`file!`]
 /// ```rust,no_run
 /// # use snapbox::assert_eq;
-/// # use snapbox::expect_file;
+/// # use snapbox::file;
 /// let actual = "something";
-/// assert_eq(expect_file!["output.txt"], actual);
+/// assert_eq(file!["output.txt"], actual);
 /// ```
 #[track_caller]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
@@ -162,12 +162,12 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 /// assert_matches(expected, output);
 /// ```
 ///
-/// Can combine this with [`expect_file!`]
+/// Can combine this with [`file!`]
 /// ```rust,no_run
 /// # use snapbox::assert_matches;
-/// # use snapbox::expect_file;
+/// # use snapbox::file;
 /// let actual = "something";
-/// assert_matches(expect_file!["output.txt"], actual);
+/// assert_matches(file!["output.txt"], actual);
 /// ```
 #[track_caller]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {

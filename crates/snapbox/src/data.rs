@@ -3,16 +3,16 @@
 /// This is relative to the source file the macro is run from
 ///
 /// ```
-/// # use snapbox::expect_file;
-/// expect_file!["./test_data/bar.html"];
-/// expect_file![_];
+/// # use snapbox::file;
+/// file!["./test_data/bar.html"];
+/// file![_];
 /// ```
 #[macro_export]
-macro_rules! expect_file {
+macro_rules! file {
     [_] => {{
         let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
         let path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
-        $crate::expect_file![path]
+        $crate::file![path]
     }};
     [$path:expr] => {{
         let mut path = $crate::current_dir!();
