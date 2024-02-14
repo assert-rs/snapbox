@@ -10,6 +10,18 @@ macro_rules! current_dir {
     }};
 }
 
+/// Find the directory for your source file
+#[doc(hidden)] // forced to be visible in intended location
+#[macro_export]
+macro_rules! current_rs {
+    () => {{
+        let root = $crate::path::cargo_rustc_current_dir!();
+        let file = ::std::file!();
+        let rel_path = ::std::path::Path::new(file);
+        root.join(rel_path)
+    }};
+}
+
 /// Find the base directory for [`std::file!`]
 #[doc(hidden)] // forced to be visible in intended location
 #[macro_export]
