@@ -143,12 +143,20 @@ impl TestCases {
 
     /// Batch add variables for normalizing output
     ///
-    /// See `insert_var`.
+    /// See [`TestCases::insert_var`].
     pub fn extend_vars(
         &self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
     ) -> Result<&Self, crate::Error> {
         self.substitutions.borrow_mut().extend(vars)?;
+        Ok(self)
+    }
+
+    /// Remove an existing var values
+    ///
+    /// See [`TestCases::insert_var`].
+    pub fn clear_var(&self, var: &'static str) -> Result<&Self, crate::Error> {
+        self.substitutions.borrow_mut().remove(var)?;
         Ok(self)
     }
 

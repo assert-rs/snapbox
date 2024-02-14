@@ -63,6 +63,12 @@ impl Substitutions {
         Ok(())
     }
 
+    pub fn remove(&mut self, key: &'static str) -> Result<(), crate::Error> {
+        let key = validate_key(key)?;
+        self.vars.remove(key);
+        Ok(())
+    }
+
     /// Apply match pattern to `input`
     ///
     /// If `pattern` matches `input`, then `pattern` is returned.
