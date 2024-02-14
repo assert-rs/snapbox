@@ -57,16 +57,6 @@ enum DataInner {
     Json(serde_json::Value),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
-pub enum DataFormat {
-    Error,
-    Binary,
-    #[default]
-    Text,
-    #[cfg(feature = "json")]
-    Json,
-}
-
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
@@ -354,6 +344,16 @@ impl<'s> From<&'s str> for Data {
     fn from(other: &'s str) -> Self {
         other.to_owned().into()
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
+pub enum DataFormat {
+    Error,
+    Binary,
+    #[default]
+    Text,
+    #[cfg(feature = "json")]
+    Json,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
