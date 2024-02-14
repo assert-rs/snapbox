@@ -1,5 +1,6 @@
 mod format;
 mod normalize;
+mod runtime;
 mod source;
 #[cfg(test)]
 mod tests;
@@ -10,6 +11,18 @@ pub use normalize::NormalizeMatches;
 pub use normalize::NormalizeNewlines;
 pub use normalize::NormalizePaths;
 pub use source::DataSource;
+pub use source::Inline;
+pub use source::Position;
+
+pub trait ToDebug {
+    fn to_debug(&self) -> Data;
+}
+
+impl<D: std::fmt::Debug> ToDebug for D {
+    fn to_debug(&self) -> Data {
+        Data::text(format!("{:#?}\n", self))
+    }
+}
 
 /// Declare an expected value for an assert from a file
 ///
@@ -51,6 +64,37 @@ macro_rules! file {
         path.push($path);
         $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
+}
+
+/// Declare an expected value from within Rust source
+///
+/// ```
+/// # use snapbox::str;
+/// str![["
+///     Foo { value: 92 }
+/// "]];
+/// str![r#"{"Foo": 92}"#];
+/// ```
+///
+/// Leading indentation is stripped.
+#[macro_export]
+macro_rules! str {
+    [$data:literal] => { $crate::str![[$data]] };
+    [[$data:literal]] => {{
+        let position = $crate::data::Position {
+            file: $crate::path::current_rs!(),
+            line: line!(),
+            column: column!(),
+        };
+        let inline = $crate::data::Inline {
+            position,
+            data: $data,
+            indent: true,
+        };
+        inline
+    }};
+    [] => { $crate::str![[""]] };
+    [[]] => { $crate::str![[""]] };
 }
 
 /// Test fixture, actual output, or expected result
@@ -165,6 +209,9 @@ impl Data {
     pub fn write_to(&self, source: &DataSource) -> Result<(), crate::Error> {
         match &source.inner {
             source::DataSourceInner::Path(p) => self.write_to_path(p),
+            source::DataSourceInner::Inline(p) => runtime::get()
+                .write(self, p)
+                .map_err(|err| err.to_string().into()),
         }
     }
 

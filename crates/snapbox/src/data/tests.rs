@@ -1,6 +1,7 @@
-use super::*;
 #[cfg(feature = "json")]
 use serde_json::json;
+
+use super::*;
 
 // Tests for checking to_bytes and render produce the same results
 #[test]
