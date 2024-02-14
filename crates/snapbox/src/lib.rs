@@ -139,7 +139,9 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// ```
 #[track_caller]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-    Assert::new().eq(expected, actual);
+    Assert::new()
+        .action_env(DEFAULT_ACTION_ENV)
+        .eq(expected, actual);
 }
 
 /// Check if a value matches a pattern
@@ -169,7 +171,9 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 /// ```
 #[track_caller]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-    Assert::new().matches(pattern, actual);
+    Assert::new()
+        .action_env(DEFAULT_ACTION_ENV)
+        .matches(pattern, actual);
 }
 
 /// Check if a path matches the content of another path, recursively
