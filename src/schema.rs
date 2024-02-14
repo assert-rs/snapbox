@@ -2,7 +2,7 @@
 //!
 //! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
-use snapbox::{NormalizeNewlines, NormalizePaths};
+use snapbox::data::{NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
@@ -21,8 +21,8 @@ impl TryCmd {
                 let one_shot = OneShot::parse_toml(&raw)?;
                 let mut sequence: Self = one_shot.into();
                 let is_binary = match sequence.steps[0].binary {
-                    true => snapbox::DataFormat::Binary,
-                    false => snapbox::DataFormat::Text,
+                    true => snapbox::data::DataFormat::Binary,
+                    false => snapbox::data::DataFormat::Text,
                 };
 
                 if sequence.steps[0].stdin.is_none() {

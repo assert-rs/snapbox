@@ -129,7 +129,7 @@ impl Assert {
         // On `expected` being an error, make a best guess
         let format = expected.format();
 
-        actual = actual.try_coerce(format).normalize(NormalizeNewlines);
+        actual = actual.coerce_to(format).normalize(NormalizeNewlines);
 
         (expected, actual)
     }
@@ -142,7 +142,7 @@ impl Assert {
         let expected = expected.normalize(NormalizeNewlines);
         // On `expected` being an error, make a best guess
         let format = expected.format();
-        actual = actual.try_coerce(format);
+        actual = actual.coerce_to(format);
 
         if self.normalize_paths {
             actual = actual.normalize(NormalizePaths);
