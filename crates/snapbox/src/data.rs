@@ -22,7 +22,8 @@ macro_rules! file {
     }};
     [_ : $type:ident] => {{
         let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
-        let rel_path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
+        let ext = $crate::DataFormat:: $type.ext();
+        let rel_path = ::std::format!("snapshots/{}-{}.{ext}", stem.to_str().unwrap(), line!());
         let mut path = $crate::current_dir!();
         path.push(rel_path);
         $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
@@ -354,6 +355,18 @@ pub enum DataFormat {
     Text,
     #[cfg(feature = "json")]
     Json,
+}
+
+impl DataFormat {
+    pub fn ext(self) -> &'static str {
+        match self {
+            Self::Error => "txt",
+            Self::Binary => "bin",
+            Self::Text => "txt",
+            #[cfg(feature = "json")]
+            Self::Json => "json",
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
