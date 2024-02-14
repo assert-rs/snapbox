@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.15.0] - 2024-02-14
+
 ### Breaking Change
 
 - `TestCases::insert_var` / `TestCases::extend_var` no longer overwrite but extend the vr
@@ -417,7 +419,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.14.21...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/assert-rs/trycmd/compare/v0.14.21...v0.15.0
 [0.14.21]: https://github.com/assert-rs/trycmd/compare/v0.14.20...v0.14.21
 [0.14.20]: https://github.com/assert-rs/trycmd/compare/v0.14.19...v0.14.20
 [0.14.19]: https://github.com/assert-rs/trycmd/compare/v0.14.18...v0.14.19

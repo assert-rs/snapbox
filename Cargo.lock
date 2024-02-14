@@ -935,7 +935,7 @@ dependencies = [
 
 [[package]]
 name = "trycmd"
-version = "0.14.21"
+version = "0.15.0"
 dependencies = [
  "anstream",
  "escargot",
