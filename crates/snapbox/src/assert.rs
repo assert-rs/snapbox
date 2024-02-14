@@ -16,9 +16,9 @@ use crate::Action;
 ///
 /// ```rust,no_run
 /// # use snapbox::Assert;
-/// # use snapbox::expect_file;
+/// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().matches(expect_file!["output.txt"], actual);
+/// Assert::new().matches(file!["output.txt"], actual);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -46,12 +46,12 @@ impl Assert {
     /// Assert::new().eq(expected, actual);
     /// ```
     ///
-    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// Can combine this with [`file!`][crate::file]
     /// ```rust,no_run
     /// # use snapbox::Assert;
-    /// # use snapbox::expect_file;
+    /// # use snapbox::file;
     /// let actual = "something";
-    /// Assert::new().eq(expect_file!["output.txt"], actual);
+    /// Assert::new().eq(file!["output.txt"], actual);
     /// ```
     #[track_caller]
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
@@ -92,12 +92,12 @@ impl Assert {
     /// Assert::new().matches(expected, actual);
     /// ```
     ///
-    /// Can combine this with [`expect_file!`][crate::expect_file]
+    /// Can combine this with [`file!`][crate::file]
     /// ```rust,no_run
     /// # use snapbox::Assert;
-    /// # use snapbox::expect_file;
+    /// # use snapbox::file;
     /// let actual = "something";
-    /// Assert::new().matches(expect_file!["output.txt"], actual);
+    /// Assert::new().matches(file!["output.txt"], actual);
     /// ```
     #[track_caller]
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {

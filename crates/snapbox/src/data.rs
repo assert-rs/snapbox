@@ -3,21 +3,40 @@
 /// This is relative to the source file the macro is run from
 ///
 /// ```
-/// # use snapbox::expect_file;
-/// expect_file!["./test_data/bar.html"];
-/// expect_file![];
+/// # #[cfg(feature = "json")] {
+/// # use snapbox::file;
+/// file!["./test_data/bar.json"];
+/// file!["./test_data/bar.json": Text];  // do textual rather than structural comparisons
+/// file![_];
+/// file![_: Json];  // ensure its treated as json since a type can't be inferred
+/// # }
 /// ```
 #[macro_export]
-macro_rules! expect_file {
-    [$path:expr] => {{
+macro_rules! file {
+    [_] => {{
+        let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
+        let rel_path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
+        let mut path = $crate::current_dir!();
+        path.push(rel_path);
+        $crate::Data::read_from(&path, None)
+    }};
+    [_ : $type:ident] => {{
+        let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
+        let ext = $crate::DataFormat:: $type.ext();
+        let rel_path = ::std::format!("snapshots/{}-{}.{ext}", stem.to_str().unwrap(), line!());
+        let mut path = $crate::current_dir!();
+        path.push(rel_path);
+        $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
+    }};
+    [$path:literal] => {{
         let mut path = $crate::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, None)
     }};
-    [] => {{
-        let path = std::path::Path::new(file!()).file_stem().unwrap();
-        let path = format!("snapshots/{}-{}.txt", path.to_str().unwrap(), line!());
-        $crate::expect_file![path]
+    [$path:literal : $type:ident] => {{
+        let mut path = $crate::current_dir!();
+        path.push($path);
+        $crate::Data::read_from(&path, Some($crate::DataFormat:: $type))
     }};
 }
 
@@ -37,16 +56,6 @@ enum DataInner {
     Text(String),
     #[cfg(feature = "json")]
     Json(serde_json::Value),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
-pub enum DataFormat {
-    Error,
-    Binary,
-    #[default]
-    Text,
-    #[cfg(feature = "json")]
-    Json,
 }
 
 impl Data {
@@ -335,6 +344,28 @@ impl<'s> From<&'s String> for Data {
 impl<'s> From<&'s str> for Data {
     fn from(other: &'s str) -> Self {
         other.to_owned().into()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
+pub enum DataFormat {
+    Error,
+    Binary,
+    #[default]
+    Text,
+    #[cfg(feature = "json")]
+    Json,
+}
+
+impl DataFormat {
+    pub fn ext(self) -> &'static str {
+        match self {
+            Self::Error => "txt",
+            Self::Binary => "bin",
+            Self::Text => "txt",
+            #[cfg(feature = "json")]
+            Self::Json => "json",
+        }
     }
 }
 
