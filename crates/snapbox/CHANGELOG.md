@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- `_path` assertions have been replaced by regular assertions accepting and updating `Data::read_from` / `file![]
+- Renamed `Data::try_coerce` to `Data::coerce_to`
+- Normalization types and `DataFormat` were moved to the `data` mod
+
+### Features
+
+- `str![]` macro for inline snapshots
+  - `coerce_to` for specifying the structure of the snapshot
+- `file!["<path-relative-to-rs>"]` macro for test-relative snapshots
+  - `_` placeholder can be used for auto-generated file names
+  - `: Json` (see `DataFormat`) type ascriptions for specifying the structure of the snapshot
+- `ToDebug` extension trait for easier snapshot testing of debug output
+- Help catch swapped parameters to assertions by panicking if the "actual" has a source to update but not the "expected"
+- Allow inserting multiple values for the same variable, to handle multiple forms of the same value (like UNC paths vs regular paths)
+- `path::current_rs!()` macro for an absolute path of `std::fs::file!`
+- `path::current_dir!()` macro to get the absolute path to `std::fs::file!`
+- `path::cargo_rustc_current_dir()` macro as a polyfill for the unstable `CARGO_RUSTC_CURRENT_DIR`
+
 ## [0.4.17] - 2024-02-08
 
 ## [0.4.16] - 2024-01-12

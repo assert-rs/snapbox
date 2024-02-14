@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Change
+
+- `TestCases::insert_var` / `TestCases::extend_var` no longer overwrite but extend the vr
+
+### Features
+
+- Allow inserting multiple values for the same variable, to handle multiple forms of the same value (like UNC paths vs regular paths)
+- Add `TestCases::clear_var`
+
 ## [0.14.21] - 2024-02-08
 
 ### Internal
