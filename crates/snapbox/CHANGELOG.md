@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Fixed regression where you couldn't overwrite a snapshot that doesn't exist yet
+
 ## [0.5.0] - 2024-02-14
 
 ### Breaking Change
