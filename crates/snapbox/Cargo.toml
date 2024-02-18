@@ -45,6 +45,8 @@ examples = ["dep:escargot"]
 
 ## Snapshotting of json
 json = ["structured-data", "dep:serde_json"]
+## Snapshotting of term styling
+term-svg = ["structured-data", "dep:anstyle-svg"]
 ## Snapshotting of structured data
 structured-data = ["dep:serde_json"]
 
@@ -91,6 +93,7 @@ anstream = { version = "0.6.7", optional = true }
 document-features = { version = "0.2.6", optional = true }
 
 serde_json = { version = "1.0.85", optional = true}
+anstyle-svg = { version = "0.1.0", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52.0", features = ["Win32_Foundation"], optional = true }

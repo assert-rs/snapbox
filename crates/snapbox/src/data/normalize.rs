@@ -21,6 +21,11 @@ impl Normalize for NormalizeNewlines {
                 normalize_value(&mut value, crate::utils::normalize_lines);
                 Data::json(value)
             }
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(text) => {
+                let lines = crate::utils::normalize_lines(&text);
+                DataInner::TermSvg(lines).into()
+            }
         };
         new.source = data.source;
         new
@@ -42,6 +47,11 @@ impl Normalize for NormalizePaths {
                 let mut value = value;
                 normalize_value(&mut value, crate::utils::normalize_paths);
                 Data::json(value)
+            }
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(text) => {
+                let lines = crate::utils::normalize_paths(&text);
+                DataInner::TermSvg(lines).into()
             }
         };
         new.source = data.source;
@@ -81,6 +91,13 @@ impl Normalize for NormalizeMatches<'_> {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
                 Data::json(value)
+            }
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(text) => {
+                let lines = self
+                    .substitutions
+                    .normalize(&text, &self.pattern.render().unwrap());
+                DataInner::TermSvg(lines).into()
             }
         };
         new.source = data.source;

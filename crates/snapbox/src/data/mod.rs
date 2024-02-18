@@ -113,6 +113,8 @@ enum DataInner {
     Text(String),
     #[cfg(feature = "json")]
     Json(serde_json::Value),
+    #[cfg(feature = "term-svg")]
+    TermSvg(String),
 }
 
 impl Data {
@@ -181,18 +183,38 @@ impl Data {
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                     Self::json(serde_json::from_str::<serde_json::Value>(&data).unwrap())
                 }
+                #[cfg(feature = "term-svg")]
+                DataFormat::TermSvg => {
+                    let data = std::fs::read_to_string(path)
+                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+                    Self::from(DataInner::TermSvg(data))
+                }
             },
             None => {
                 let data = std::fs::read(path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
                 let data = Self::binary(data);
-                match path
-                    .extension()
+
+                let file_name = path
+                    .file_name()
                     .and_then(|e| e.to_str())
-                    .unwrap_or_default()
-                {
+                    .unwrap_or_default();
+                let (file_stem, mut ext) = file_name.split_once('.').unwrap_or((file_name, ""));
+                if file_stem.is_empty() {
+                    (_, ext) = file_stem.split_once('.').unwrap_or((file_name, ""));
+                }
+                match ext {
                     #[cfg(feature = "json")]
                     "json" => data.coerce_to(DataFormat::Json),
+                    #[cfg(feature = "term-svg")]
+                    "term.svg" => {
+                        let data = data.coerce_to(DataFormat::Text);
+                        let inner = match data.inner {
+                            DataInner::Text(text) => DataInner::TermSvg(text),
+                            other => other,
+                        };
+                        inner.into()
+                    }
                     _ => data.coerce_to(DataFormat::Text),
                 }
             }
@@ -244,6 +266,8 @@ impl Data {
             DataInner::Text(data) => Some(data.to_owned()),
             #[cfg(feature = "json")]
             DataInner::Json(value) => Some(serde_json::to_string_pretty(value).unwrap()),
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(data) => Some(data.to_owned()),
         }
     }
 
@@ -256,6 +280,8 @@ impl Data {
             DataInner::Json(value) => {
                 serde_json::to_vec_pretty(value).map_err(|err| format!("{err}").into())
             }
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(data) => Ok(data.clone().into_bytes()),
         }
     }
 
@@ -267,6 +293,8 @@ impl Data {
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
             #[cfg(feature = "json")]
             (DataInner::Json(inner), DataFormat::Json) => Self::json(inner),
+            #[cfg(feature = "term-svg")]
+            (DataInner::TermSvg(inner), DataFormat::TermSvg) => inner.into(),
             (DataInner::Binary(inner), _) => {
                 if is_binary(&inner) {
                     Self::binary(inner)
@@ -296,6 +324,10 @@ impl Data {
                     Err(_) => Self::text(inner),
                 }
             }
+            #[cfg(feature = "term-svg")]
+            (DataInner::Text(inner), DataFormat::TermSvg) => {
+                DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner)).into()
+            }
             (inner, DataFormat::Binary) => {
                 let remake: Self = inner.into();
                 Self::binary(remake.to_bytes().expect("error case handled"))
@@ -310,6 +342,14 @@ impl Data {
                     remake
                 }
             }
+            // reachable if more than one structured data format is enabled
+            #[allow(unreachable_patterns)]
+            #[cfg(feature = "json")]
+            (inner, DataFormat::Json) => inner.into(),
+            // reachable if more than one structured data format is enabled
+            #[allow(unreachable_patterns)]
+            #[cfg(feature = "term-svg")]
+            (inner, DataFormat::TermSvg) => inner.into(),
         };
         data.source = self.source;
         data
@@ -323,6 +363,8 @@ impl Data {
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
             DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
     }
 }
@@ -344,6 +386,8 @@ impl std::fmt::Display for Data {
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
             DataInner::Json(data) => serde_json::to_string_pretty(data).unwrap().fmt(f),
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(data) => data.fmt(f),
         }
     }
 }

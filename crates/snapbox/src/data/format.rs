@@ -6,6 +6,8 @@ pub enum DataFormat {
     Text,
     #[cfg(feature = "json")]
     Json,
+    #[cfg(feature = "term-svg")]
+    TermSvg,
 }
 
 impl DataFormat {
@@ -16,6 +18,8 @@ impl DataFormat {
             Self::Text => "txt",
             #[cfg(feature = "json")]
             Self::Json => "json",
+            #[cfg(feature = "term-svg")]
+            Self::TermSvg => "term.svg",
         }
     }
 }
