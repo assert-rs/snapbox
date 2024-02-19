@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Add `term-svg` feature for snapshotting of terminal styling by ending files with `.term.svg`
+
 ## [0.5.1] - 2024-02-15
 
 ### Fixes
