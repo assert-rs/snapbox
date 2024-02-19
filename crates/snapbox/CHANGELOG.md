@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Breaking Change
 
-- `_path` assertions have been replaced by regular assertions accepting and updating `Data::read_from` / `file![]
+- `_path` assertions have been replaced by regular assertions accepting and updating `Data::read_from` / `file![]`
 - Renamed `Data::try_coerce` to `Data::coerce_to`
 - Normalization types and `DataFormat` were moved to the `data` mod
 
