@@ -106,7 +106,7 @@ pub struct Data {
     source: Option<DataSource>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 enum DataInner {
     Error(crate::Error),
     Binary(Vec<u8>),
@@ -394,7 +394,16 @@ impl std::fmt::Display for Data {
 
 impl PartialEq for Data {
     fn eq(&self, other: &Data) -> bool {
-        self.inner == other.inner
+        match (&self.inner, &other.inner) {
+            (DataInner::Error(left), DataInner::Error(right)) => left == right,
+            (DataInner::Binary(left), DataInner::Binary(right)) => left == right,
+            (DataInner::Text(left), DataInner::Text(right)) => left == right,
+            #[cfg(feature = "json")]
+            (DataInner::Json(left), DataInner::Json(right)) => left == right,
+            #[cfg(feature = "term-svg")]
+            (DataInner::TermSvg(left), DataInner::TermSvg(right)) => left == right,
+            (_, _) => false,
+        }
     }
 }
 
