@@ -401,10 +401,35 @@ impl PartialEq for Data {
             #[cfg(feature = "json")]
             (DataInner::Json(left), DataInner::Json(right)) => left == right,
             #[cfg(feature = "term-svg")]
-            (DataInner::TermSvg(left), DataInner::TermSvg(right)) => left == right,
+            (DataInner::TermSvg(left), DataInner::TermSvg(right)) => {
+                // HACK: avoid including `width` and `height` in the comparison
+                let left = text_elem(left.as_str());
+                let right = text_elem(right.as_str());
+                left == right
+            }
             (_, _) => false,
         }
     }
+}
+
+#[cfg(feature = "term-svg")]
+fn text_elem(svg: &str) -> Option<&str> {
+    let open_elem_start_idx = svg.find("<text")?;
+    _ = svg[open_elem_start_idx..].find('>')?;
+    let open_elem_line_start_idx = svg[..open_elem_start_idx]
+        .rfind('\n')
+        .map(|idx| idx + 1)
+        .unwrap_or(svg.len());
+
+    let close_elem = "</text>";
+    let close_elem_start_idx = svg.rfind(close_elem).unwrap_or(svg.len());
+    let close_elem_line_end_idx = svg[close_elem_start_idx..]
+        .find('\n')
+        .map(|idx| idx + close_elem_start_idx + 1)
+        .unwrap_or(svg.len());
+
+    let body = &svg[open_elem_line_start_idx..close_elem_line_end_idx];
+    Some(body)
 }
 
 impl Eq for Data {}

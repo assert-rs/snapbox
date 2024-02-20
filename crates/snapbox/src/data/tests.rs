@@ -44,7 +44,7 @@ irrelevant 2
 irrelevant 2"
             .to_owned(),
     ));
-    assert_ne!(left, right);
+    assert_eq!(left, right);
 }
 
 #[test]
@@ -558,5 +558,71 @@ fn json_normalize_wildcard_array_middle_last_early_return() {
         Data::json(actual.clone()).normalize(NormalizeMatches::new(&Default::default(), &expected));
     if let DataInner::Json(act) = actual_normalized.inner {
         assert_eq!(act, actual);
+    }
+}
+
+#[cfg(feature = "term-svg")]
+mod text_elem {
+    use super::super::*;
+
+    #[test]
+    fn empty() {
+        let input = "";
+        let expected = None;
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn no_open_tag() {
+        let input = "hello
+</text>
+world!";
+        let expected = None;
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn unclosed_open_text() {
+        let input = "
+Hello
+<text
+world!";
+        let expected = None;
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn capture_one() {
+        let input = "
+Hello
+<text>
+world
+</text>
+Oh";
+        let expected = Some(
+            "<text>
+world
+</text>
+",
+        );
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn no_end_tag() {
+        let input = "
+Hello
+<text>
+world";
+        let expected = Some(
+            "<text>
+world",
+        );
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
     }
 }
