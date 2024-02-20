@@ -3,6 +3,74 @@ use serde_json::json;
 
 use super::*;
 
+#[test]
+#[cfg(feature = "term-svg")]
+fn term_svg_eq() {
+    let left = Data::from(DataInner::TermSvg(
+        "
+irrelevant
+  <text>relevant
+
+</text>
+irrelevant"
+            .to_owned(),
+    ));
+    let right = Data::from(DataInner::TermSvg(
+        "
+irrelevant
+  <text>relevant
+
+</text>
+irrelevant"
+            .to_owned(),
+    ));
+    assert_eq!(left, right);
+
+    let left = Data::from(DataInner::TermSvg(
+        "
+irrelevant 1
+  <text>relevant
+
+</text>
+irrelevant 1"
+            .to_owned(),
+    ));
+    let right = Data::from(DataInner::TermSvg(
+        "
+irrelevant 2
+  <text>relevant
+
+</text>
+irrelevant 2"
+            .to_owned(),
+    ));
+    assert_ne!(left, right);
+}
+
+#[test]
+#[cfg(feature = "term-svg")]
+fn term_svg_ne() {
+    let left = Data::from(DataInner::TermSvg(
+        "
+irrelevant 1
+  <text>relevant 1
+
+</text>
+irrelevant 1"
+            .to_owned(),
+    ));
+    let right = Data::from(DataInner::TermSvg(
+        "
+irrelevant 2
+  <text>relevant 2
+
+</text>
+irrelevant 2"
+            .to_owned(),
+    ));
+    assert_ne!(left, right);
+}
+
 // Tests for checking to_bytes and render produce the same results
 #[test]
 fn text_to_bytes_render() {
