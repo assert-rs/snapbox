@@ -367,6 +367,18 @@ impl Data {
             DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
     }
+
+    pub(crate) fn relevant(&self) -> Option<&str> {
+        match &self.inner {
+            DataInner::Error(_) => None,
+            DataInner::Binary(_) => None,
+            DataInner::Text(_) => None,
+            #[cfg(feature = "json")]
+            DataInner::Json(data) => None,
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(data) => text_elem(&data),
+        }
+    }
 }
 
 impl From<DataInner> for Data {

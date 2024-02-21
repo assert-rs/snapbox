@@ -11,7 +11,17 @@ pub fn write_diff(
     #[allow(unused_mut)]
     let mut rendered = false;
     #[cfg(feature = "diff")]
-    if let (Some(expected), Some(actual)) = (expected.render(), actual.render()) {
+    if let (Some(expected), Some(actual)) = (expected.relevant(), actual.relevant()) {
+        write_diff_inner(
+            writer,
+            expected,
+            actual,
+            expected_name,
+            actual_name,
+            palette,
+        )?;
+        rendered = true;
+    } else if let (Some(expected), Some(actual)) = (expected.render(), actual.render()) {
         write_diff_inner(
             writer,
             &expected,
@@ -422,13 +432,10 @@ Hello World
         let expected_diff = "
 ---- expected: A
 ++++ actual:   B
-   1      - <svg width='100px' height='200px'>
-        1 + <svg width='200px' height='400px'>
-   2    2 | <text>
-   3      - Hello Moon
-        3 + Hello World
-   4    4 | </text>
-   5    5 | </svg>∅
+   1    1 | <text>
+   2      - Hello Moon
+        2 + Hello World
+   3    3 | </text>
 ";
 
         assert_eq!(expected_diff, actual_diff);
