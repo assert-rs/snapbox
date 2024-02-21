@@ -107,7 +107,7 @@ pub struct Data {
 }
 
 #[derive(Clone, Debug)]
-enum DataInner {
+pub(crate) enum DataInner {
     Error(crate::Error),
     Binary(Vec<u8>),
     Text(String),

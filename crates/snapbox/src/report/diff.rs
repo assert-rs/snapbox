@@ -390,4 +390,47 @@ mod test {
 
         assert_eq!(expected_diff, actual_diff);
     }
+
+    #[cfg(feature = "diff")]
+    #[cfg(feature = "term-svg")]
+    #[test]
+    fn diff_ne_ignore_irrelevant_details() {
+        let expected = "<svg width='100px' height='200px'>
+<text>
+Hello Moon
+</text>
+</svg>";
+        let expected_name = "A";
+        let actual = "<svg width='200px' height='400px'>
+<text>
+Hello World
+</text>
+</svg>";
+        let actual_name = "B";
+        let palette = crate::report::Palette::plain();
+
+        let mut actual_diff = String::new();
+        write_diff(
+            &mut actual_diff,
+            &crate::data::DataInner::TermSvg(expected.to_owned()).into(),
+            &crate::data::DataInner::TermSvg(actual.to_owned()).into(),
+            Some(&expected_name),
+            Some(&actual_name),
+            palette,
+        )
+        .unwrap();
+        let expected_diff = "
+---- expected: A
+++++ actual:   B
+   1      - <svg width='100px' height='200px'>
+        1 + <svg width='200px' height='400px'>
+   2    2 | <text>
+   3      - Hello Moon
+        3 + Hello World
+   4    4 | </text>
+   5    5 | </svg>∅
+";
+
+        assert_eq!(expected_diff, actual_diff);
+    }
 }
