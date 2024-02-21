@@ -3,6 +3,74 @@ use serde_json::json;
 
 use super::*;
 
+#[test]
+#[cfg(feature = "term-svg")]
+fn term_svg_eq() {
+    let left = Data::from(DataInner::TermSvg(
+        "
+irrelevant
+  <text>relevant
+
+</text>
+irrelevant"
+            .to_owned(),
+    ));
+    let right = Data::from(DataInner::TermSvg(
+        "
+irrelevant
+  <text>relevant
+
+</text>
+irrelevant"
+            .to_owned(),
+    ));
+    assert_eq!(left, right);
+
+    let left = Data::from(DataInner::TermSvg(
+        "
+irrelevant 1
+  <text>relevant
+
+</text>
+irrelevant 1"
+            .to_owned(),
+    ));
+    let right = Data::from(DataInner::TermSvg(
+        "
+irrelevant 2
+  <text>relevant
+
+</text>
+irrelevant 2"
+            .to_owned(),
+    ));
+    assert_eq!(left, right);
+}
+
+#[test]
+#[cfg(feature = "term-svg")]
+fn term_svg_ne() {
+    let left = Data::from(DataInner::TermSvg(
+        "
+irrelevant 1
+  <text>relevant 1
+
+</text>
+irrelevant 1"
+            .to_owned(),
+    ));
+    let right = Data::from(DataInner::TermSvg(
+        "
+irrelevant 2
+  <text>relevant 2
+
+</text>
+irrelevant 2"
+            .to_owned(),
+    ));
+    assert_ne!(left, right);
+}
+
 // Tests for checking to_bytes and render produce the same results
 #[test]
 fn text_to_bytes_render() {
@@ -490,5 +558,71 @@ fn json_normalize_wildcard_array_middle_last_early_return() {
         Data::json(actual.clone()).normalize(NormalizeMatches::new(&Default::default(), &expected));
     if let DataInner::Json(act) = actual_normalized.inner {
         assert_eq!(act, actual);
+    }
+}
+
+#[cfg(feature = "term-svg")]
+mod text_elem {
+    use super::super::*;
+
+    #[test]
+    fn empty() {
+        let input = "";
+        let expected = None;
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn no_open_tag() {
+        let input = "hello
+</text>
+world!";
+        let expected = None;
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn unclosed_open_text() {
+        let input = "
+Hello
+<text
+world!";
+        let expected = None;
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn capture_one() {
+        let input = "
+Hello
+<text>
+world
+</text>
+Oh";
+        let expected = Some(
+            "<text>
+world
+</text>
+",
+        );
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn no_end_tag() {
+        let input = "
+Hello
+<text>
+world";
+        let expected = Some(
+            "<text>
+world",
+        );
+        let actual = text_elem(input);
+        assert_eq!(expected, actual);
     }
 }
