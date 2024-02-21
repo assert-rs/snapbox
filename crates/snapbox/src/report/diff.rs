@@ -11,17 +11,35 @@ pub fn write_diff(
     #[allow(unused_mut)]
     let mut rendered = false;
     #[cfg(feature = "diff")]
-    if let (Some(expected), Some(actual)) = (expected.relevant(), actual.relevant()) {
+    if let (Some(expected_relevant), Some(actual_relevant)) =
+        (expected.relevant(), actual.relevant())
+    {
+        let expected_rendered = expected.render().unwrap();
+        let expected_line_offset = expected_rendered[..expected_rendered
+            .find(expected_relevant)
+            .unwrap_or(expected_rendered.len())]
+            .lines()
+            .count();
+        let actual_rendered = actual.render().unwrap();
+        let actual_line_offset = actual_rendered[..actual_rendered
+            .find(actual_relevant)
+            .unwrap_or(actual_rendered.len())]
+            .lines()
+            .count();
         write_diff_inner(
             writer,
-            expected,
-            actual,
+            expected_relevant,
+            actual_relevant,
             expected_name,
             actual_name,
             palette,
+            expected_line_offset,
+            actual_line_offset,
         )?;
         rendered = true;
     } else if let (Some(expected), Some(actual)) = (expected.render(), actual.render()) {
+        let expected_line_offset = 0;
+        let actual_line_offset = 0;
         write_diff_inner(
             writer,
             &expected,
@@ -29,6 +47,8 @@ pub fn write_diff(
             expected_name,
             actual_name,
             palette,
+            expected_line_offset,
+            actual_line_offset,
         )?;
         rendered = true;
     }
@@ -51,6 +71,7 @@ pub fn write_diff(
 }
 
 #[cfg(feature = "diff")]
+#[allow(clippy::too_many_arguments)]
 fn write_diff_inner(
     writer: &mut dyn std::fmt::Write,
     expected: &str,
@@ -58,6 +79,8 @@ fn write_diff_inner(
     expected_name: Option<&dyn std::fmt::Display>,
     actual_name: Option<&dyn std::fmt::Display>,
     palette: crate::report::Palette,
+    expected_line_offset: usize,
+    actual_line_offset: usize,
 ) -> Result<(), std::fmt::Error> {
     let timeout = std::time::Duration::from_millis(500);
     let min_elide = 20;
@@ -147,7 +170,16 @@ fn write_diff_inner(
             elided = false;
             match change.tag() {
                 similar::ChangeTag::Insert => {
-                    write_change(writer, change, "+", palette.actual, palette.info, palette)?;
+                    write_change(
+                        writer,
+                        change,
+                        "+",
+                        palette.actual,
+                        palette.info,
+                        palette,
+                        expected_line_offset,
+                        actual_line_offset,
+                    )?;
                 }
                 similar::ChangeTag::Delete => {
                     write_change(
@@ -157,10 +189,21 @@ fn write_diff_inner(
                         palette.expected,
                         palette.error,
                         palette,
+                        expected_line_offset,
+                        actual_line_offset,
                     )?;
                 }
                 similar::ChangeTag::Equal => {
-                    write_change(writer, change, "|", palette.hint, palette.hint, palette)?;
+                    write_change(
+                        writer,
+                        change,
+                        "|",
+                        palette.hint,
+                        palette.hint,
+                        palette,
+                        expected_line_offset,
+                        actual_line_offset,
+                    )?;
                 }
             }
         }
@@ -170,6 +213,7 @@ fn write_diff_inner(
 }
 
 #[cfg(feature = "diff")]
+#[allow(clippy::too_many_arguments)]
 fn write_change(
     writer: &mut dyn std::fmt::Write,
     change: similar::InlineChange<str>,
@@ -177,14 +221,24 @@ fn write_change(
     em_style: crate::report::Style,
     style: crate::report::Style,
     palette: crate::report::Palette,
+    expected_line_offset: usize,
+    actual_line_offset: usize,
 ) -> Result<(), std::fmt::Error> {
     if let Some(index) = change.old_index() {
-        write!(writer, "{:>4} ", palette.hint(index + 1),)?;
+        write!(
+            writer,
+            "{:>4} ",
+            palette.hint(index + 1 + expected_line_offset),
+        )?;
     } else {
         write!(writer, "{:>4} ", " ",)?;
     }
     if let Some(index) = change.new_index() {
-        write!(writer, "{:>4} ", palette.hint(index + 1),)?;
+        write!(
+            writer,
+            "{:>4} ",
+            palette.hint(index + 1 + actual_line_offset),
+        )?;
     } else {
         write!(writer, "{:>4} ", " ",)?;
     }
@@ -221,6 +275,8 @@ mod test {
             Some(&expected_name),
             Some(&actual_name),
             palette,
+            0,
+            0,
         )
         .unwrap();
         let expected_diff = "
@@ -250,6 +306,8 @@ mod test {
             Some(&expected_name),
             Some(&actual_name),
             palette,
+            0,
+            0,
         )
         .unwrap();
         let expected_diff = "
@@ -279,6 +337,8 @@ mod test {
             Some(&expected_name),
             Some(&actual_name),
             palette,
+            0,
+            0,
         )
         .unwrap();
         let expected_diff = "
@@ -309,6 +369,8 @@ mod test {
             Some(&expected_name),
             Some(&actual_name),
             palette,
+            0,
+            0,
         )
         .unwrap();
         let expected_diff = "
@@ -363,6 +425,8 @@ mod test {
             Some(&expected_name),
             Some(&actual_name),
             palette,
+            0,
+            0,
         )
         .unwrap();
         let expected_diff = "
@@ -432,10 +496,10 @@ Hello World
         let expected_diff = "
 ---- expected: A
 ++++ actual:   B
-   1    1 | <text>
-   2      - Hello Moon
-        2 + Hello World
-   3    3 | </text>
+   2    2 | <text>
+   3      - Hello Moon
+        3 + Hello World
+   4    4 | </text>
 ";
 
         assert_eq!(expected_diff, actual_diff);
