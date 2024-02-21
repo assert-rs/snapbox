@@ -374,9 +374,9 @@ impl Data {
             DataInner::Binary(_) => None,
             DataInner::Text(_) => None,
             #[cfg(feature = "json")]
-            DataInner::Json(data) => None,
+            DataInner::Json(_) => None,
             #[cfg(feature = "term-svg")]
-            DataInner::TermSvg(data) => text_elem(&data),
+            DataInner::TermSvg(data) => text_elem(data),
         }
     }
 }
