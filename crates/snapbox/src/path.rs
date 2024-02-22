@@ -191,7 +191,7 @@ impl PathDiff {
                         crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
                     actual = actual
-                        .coerce_to(expected.format())
+                        .coerce_to(expected.intended_format())
                         .normalize(NormalizeNewlines);
 
                     if expected != actual {
@@ -268,7 +268,7 @@ impl PathDiff {
                         crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
                     actual = actual
-                        .coerce_to(expected.format())
+                        .coerce_to(expected.intended_format())
                         .normalize(NormalizePaths)
                         .normalize(NormalizeNewlines)
                         .normalize(NormalizeMatches::new(substitutions, &expected));

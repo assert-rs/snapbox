@@ -9,7 +9,7 @@ pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
         let mut new = match data.inner {
-            DataInner::Error(err) => Data::error(err),
+            DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_lines(&text);
@@ -36,7 +36,7 @@ pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
         let mut new = match data.inner {
-            DataInner::Error(err) => Data::error(err),
+            DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_paths(&text);
@@ -76,7 +76,7 @@ impl<'a> NormalizeMatches<'a> {
 impl Normalize for NormalizeMatches<'_> {
     fn normalize(&self, data: Data) -> Data {
         let mut new = match data.inner {
-            DataInner::Error(err) => Data::error(err),
+            DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
                 let lines = self

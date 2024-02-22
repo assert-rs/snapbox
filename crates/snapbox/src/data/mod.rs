@@ -110,7 +110,7 @@ pub struct Data {
 
 #[derive(Clone, Debug)]
 pub(crate) enum DataInner {
-    Error(crate::Error),
+    Error(DataError),
     Binary(Vec<u8>),
     Text(String),
     #[cfg(feature = "json")]
@@ -135,8 +135,12 @@ impl Data {
         DataInner::Json(raw.into()).into()
     }
 
-    fn error(raw: impl Into<crate::Error>) -> Self {
-        DataInner::Error(raw.into()).into()
+    fn error(raw: impl Into<crate::Error>, intended: DataFormat) -> Self {
+        DataError {
+            error: raw.into(),
+            intended,
+        }
+        .into()
     }
 
     /// Empty test data
@@ -157,7 +161,7 @@ impl Data {
     pub fn read_from(path: &std::path::Path, data_format: Option<DataFormat>) -> Self {
         match Self::try_read_from(path, data_format) {
             Ok(data) => data,
-            Err(err) => Self::error(err).with_path(path),
+            Err(err) => Self::error(err, data_format.unwrap_or_default()).with_path(path),
         }
     }
 
@@ -250,7 +254,7 @@ impl Data {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, crate::Error> {
         match &self.inner {
-            DataInner::Error(err) => Err(err.clone()),
+            DataInner::Error(err) => Err(err.error.clone()),
             DataInner::Binary(data) => Ok(data.clone()),
             DataInner::Text(data) => Ok(data.clone().into_bytes()),
             #[cfg(feature = "json")]
@@ -268,7 +272,7 @@ impl Data {
     pub fn is(self, format: DataFormat) -> Self {
         match self.try_is(format) {
             Ok(new) => new,
-            Err(err) => Self::error(err),
+            Err(err) => Self::error(err, format),
         }
     }
 
@@ -318,7 +322,7 @@ impl Data {
     /// This is generally used on `actual` data to make it match `expected`
     pub fn coerce_to(self, format: DataFormat) -> Self {
         let mut data = match (self.inner, format) {
-            (DataInner::Error(inner), _) => Self::error(inner),
+            (DataInner::Error(inner), _) => inner.into(),
             (inner, DataFormat::Error) => inner.into(),
             (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
@@ -399,6 +403,18 @@ impl Data {
         }
     }
 
+    pub(crate) fn intended_format(&self) -> DataFormat {
+        match &self.inner {
+            DataInner::Error(DataError { intended, .. }) => *intended,
+            DataInner::Binary(_) => DataFormat::Binary,
+            DataInner::Text(_) => DataFormat::Text,
+            #[cfg(feature = "json")]
+            DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(_) => DataFormat::TermSvg,
+        }
+    }
+
     pub(crate) fn relevant(&self) -> Option<&str> {
         match &self.inner {
             DataInner::Error(_) => None,
@@ -421,10 +437,19 @@ impl From<DataInner> for Data {
     }
 }
 
+impl From<DataError> for Data {
+    fn from(inner: DataError) -> Self {
+        Data {
+            inner: DataInner::Error(inner),
+            source: None,
+        }
+    }
+}
+
 impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.inner {
-            DataInner::Error(err) => err.fmt(f),
+            DataInner::Error(data) => data.fmt(f),
             DataInner::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
@@ -452,6 +477,18 @@ impl PartialEq for Data {
             }
             (_, _) => false,
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct DataError {
+    error: crate::Error,
+    intended: DataFormat,
+}
+
+impl std::fmt::Display for DataError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.error.fmt(f)
     }
 }
 
