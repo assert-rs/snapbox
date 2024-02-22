@@ -23,3 +23,23 @@ impl DataFormat {
         }
     }
 }
+
+impl From<&std::path::Path> for DataFormat {
+    fn from(path: &std::path::Path) -> Self {
+        let file_name = path
+            .file_name()
+            .and_then(|e| e.to_str())
+            .unwrap_or_default();
+        let (file_stem, mut ext) = file_name.split_once('.').unwrap_or((file_name, ""));
+        if file_stem.is_empty() {
+            (_, ext) = file_stem.split_once('.').unwrap_or((file_name, ""));
+        }
+        match ext {
+            #[cfg(feature = "json")]
+            "json" => DataFormat::Json,
+            #[cfg(feature = "term-svg")]
+            "term.svg" => Self::TermSvg,
+            _ => DataFormat::Text,
+        }
+    }
+}

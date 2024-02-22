@@ -176,25 +176,14 @@ impl Data {
         let data = match data_format {
             Some(df) => data.is(df),
             None => {
-                let file_name = path
-                    .file_name()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or_default();
-                let (file_stem, mut ext) = file_name.split_once('.').unwrap_or((file_name, ""));
-                if file_stem.is_empty() {
-                    (_, ext) = file_stem.split_once('.').unwrap_or((file_name, ""));
-                }
-                match ext {
+                let inferred_format = DataFormat::from(path);
+                match inferred_format {
                     #[cfg(feature = "json")]
-                    "json" => data.coerce_to(DataFormat::Json),
+                    DataFormat::Json => data.coerce_to(inferred_format),
                     #[cfg(feature = "term-svg")]
-                    "term.svg" => {
+                    DataFormat::TermSvg => {
                         let data = data.coerce_to(DataFormat::Text);
-                        let inner = match data.inner {
-                            DataInner::Text(text) => DataInner::TermSvg(text),
-                            other => other,
-                        };
-                        inner.into()
+                        data.is(inferred_format)
                     }
                     _ => data.coerce_to(DataFormat::Text),
                 }
