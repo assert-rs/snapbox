@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- *(term-svg)* Correctly coerce "actual" to this type on when the snapshot doesn't yet exist
+- *(term-svg)* Ignore irrelevant details when checking for failuress
+- *(term-svg)* Don't show irrelevant details in the diff
+
 ## [0.5.2] - 2024-02-19
 
 ### Features
