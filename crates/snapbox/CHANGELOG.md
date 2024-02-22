@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.6] - 2024-02-22
+
 ### Fixes
 
 - *(term-svg)* Reduce noise in SVG snapshots
@@ -282,7 +284,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.5...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.6...HEAD
+[0.5.6]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.5...snapbox-v0.5.6
 [0.5.5]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.4...snapbox-v0.5.5
 [0.5.4]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.3...snapbox-v0.5.4
 [0.5.3]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.2...snapbox-v0.5.3
