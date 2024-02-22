@@ -79,10 +79,12 @@ impl Normalize for NormalizeMatches<'_> {
             DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
-                let lines = self
-                    .substitutions
-                    .normalize(&text, &self.pattern.render().unwrap());
-                Data::text(lines)
+                if let Some(pattern) = self.pattern.render() {
+                    let lines = self.substitutions.normalize(&text, &pattern);
+                    Data::text(lines)
+                } else {
+                    DataInner::Text(text).into()
+                }
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
@@ -94,10 +96,12 @@ impl Normalize for NormalizeMatches<'_> {
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                let lines = self
-                    .substitutions
-                    .normalize(&text, &self.pattern.render().unwrap());
-                DataInner::TermSvg(lines).into()
+                if let Some(pattern) = self.pattern.render() {
+                    let lines = self.substitutions.normalize(&text, &pattern);
+                    DataInner::TermSvg(lines).into()
+                } else {
+                    DataInner::TermSvg(text).into()
+                }
             }
         };
         new.source = data.source;

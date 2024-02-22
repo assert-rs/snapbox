@@ -161,7 +161,8 @@ impl Data {
     pub fn read_from(path: &std::path::Path, data_format: Option<DataFormat>) -> Self {
         match Self::try_read_from(path, data_format) {
             Ok(data) => data,
-            Err(err) => Self::error(err, data_format.unwrap_or_default()).with_path(path),
+            Err(err) => Self::error(err, data_format.unwrap_or_else(|| DataFormat::from(path)))
+                .with_path(path),
         }
     }
 
