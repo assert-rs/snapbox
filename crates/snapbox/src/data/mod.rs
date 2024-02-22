@@ -77,6 +77,8 @@ macro_rules! file {
 /// ```
 ///
 /// Leading indentation is stripped.
+///
+/// See [`Inline::is`] for declaring the data to be of a certain format.
 #[macro_export]
 macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
@@ -108,7 +110,7 @@ pub struct Data {
 
 #[derive(Clone, Debug)]
 pub(crate) enum DataInner {
-    Error(crate::Error),
+    Error(DataError),
     Binary(Vec<u8>),
     Text(String),
     #[cfg(feature = "json")]
@@ -133,8 +135,12 @@ impl Data {
         DataInner::Json(raw.into()).into()
     }
 
-    fn error(raw: impl Into<crate::Error>) -> Self {
-        DataInner::Error(raw.into()).into()
+    fn error(raw: impl Into<crate::Error>, intended: DataFormat) -> Self {
+        DataError {
+            error: raw.into(),
+            intended,
+        }
+        .into()
     }
 
     /// Empty test data
@@ -151,50 +157,25 @@ impl Data {
         self.with_source(path.into())
     }
 
-    /// Load test data from a file
+    /// Load `expected` data from a file
     pub fn read_from(path: &std::path::Path, data_format: Option<DataFormat>) -> Self {
         match Self::try_read_from(path, data_format) {
             Ok(data) => data,
-            Err(err) => Self::error(err).with_path(path),
+            Err(err) => Self::error(err, data_format.unwrap_or_default()).with_path(path),
         }
     }
 
-    /// Load test data from a file
+    /// Load `expected` data from a file
     pub fn try_read_from(
         path: &std::path::Path,
         data_format: Option<DataFormat>,
     ) -> Result<Self, crate::Error> {
+        let data =
+            std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
+        let data = Self::binary(data);
         let data = match data_format {
-            Some(df) => match df {
-                DataFormat::Error => Self::error("unknown error"),
-                DataFormat::Binary => {
-                    let data = std::fs::read(path)
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    Self::binary(data)
-                }
-                DataFormat::Text => {
-                    let data = std::fs::read_to_string(path)
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    Self::text(data)
-                }
-                #[cfg(feature = "json")]
-                DataFormat::Json => {
-                    let data = std::fs::read_to_string(path)
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    Self::json(serde_json::from_str::<serde_json::Value>(&data).unwrap())
-                }
-                #[cfg(feature = "term-svg")]
-                DataFormat::TermSvg => {
-                    let data = std::fs::read_to_string(path)
-                        .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    Self::from(DataInner::TermSvg(data))
-                }
-            },
+            Some(df) => data.is(df),
             None => {
-                let data = std::fs::read(path)
-                    .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let data = Self::binary(data);
-
                 let file_name = path
                     .file_name()
                     .and_then(|e| e.to_str())
@@ -273,7 +254,7 @@ impl Data {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, crate::Error> {
         match &self.inner {
-            DataInner::Error(err) => Err(err.clone()),
+            DataInner::Error(err) => Err(err.error.clone()),
             DataInner::Binary(data) => Ok(data.clone()),
             DataInner::Text(data) => Ok(data.clone().into_bytes()),
             #[cfg(feature = "json")]
@@ -285,9 +266,63 @@ impl Data {
         }
     }
 
+    /// Initialize `Self` as [`format`][DataFormat] or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    pub fn is(self, format: DataFormat) -> Self {
+        match self.try_is(format) {
+            Ok(new) => new,
+            Err(err) => Self::error(err, format),
+        }
+    }
+
+    fn try_is(self, format: DataFormat) -> Result<Self, crate::Error> {
+        let original = self.format();
+        let source = self.source;
+        let inner = match (self.inner, format) {
+            (DataInner::Error(inner), _) => DataInner::Error(inner),
+            (DataInner::Binary(inner), DataFormat::Binary) => DataInner::Binary(inner),
+            (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
+            #[cfg(feature = "json")]
+            (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
+            #[cfg(feature = "term-svg")]
+            (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
+            (DataInner::Binary(inner), _) => {
+                let inner = String::from_utf8(inner).map_err(|_err| "invalid UTF-8".to_owned())?;
+                Self::text(inner).try_is(format)?.inner
+            }
+            #[cfg(feature = "json")]
+            (DataInner::Text(inner), DataFormat::Json) => {
+                let inner = serde_json::from_str::<serde_json::Value>(&inner)
+                    .map_err(|err| err.to_string())?;
+                DataInner::Json(inner)
+            }
+            #[cfg(feature = "term-svg")]
+            (DataInner::Text(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
+            (inner, DataFormat::Binary) => {
+                let remake: Self = inner.into();
+                DataInner::Binary(remake.to_bytes().expect("error case handled"))
+            }
+            // This variant is already covered unless structured data is enabled
+            #[cfg(feature = "structured-data")]
+            (inner, DataFormat::Text) => {
+                if let Some(str) = Data::from(inner).render() {
+                    DataInner::Text(str)
+                } else {
+                    return Err(format!("cannot convert {original:?} to {format:?}").into());
+                }
+            }
+            (_, _) => return Err(format!("cannot convert {original:?} to {format:?}").into()),
+        };
+        Ok(Self { inner, source })
+    }
+
+    /// Convert `Self` to [`format`][DataFormat] if possible
+    ///
+    /// This is generally used on `actual` data to make it match `expected`
     pub fn coerce_to(self, format: DataFormat) -> Self {
         let mut data = match (self.inner, format) {
-            (DataInner::Error(inner), _) => Self::error(inner),
+            (DataInner::Error(inner), _) => inner.into(),
             (inner, DataFormat::Error) => inner.into(),
             (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
             (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
@@ -368,6 +403,18 @@ impl Data {
         }
     }
 
+    pub(crate) fn intended_format(&self) -> DataFormat {
+        match &self.inner {
+            DataInner::Error(DataError { intended, .. }) => *intended,
+            DataInner::Binary(_) => DataFormat::Binary,
+            DataInner::Text(_) => DataFormat::Text,
+            #[cfg(feature = "json")]
+            DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(_) => DataFormat::TermSvg,
+        }
+    }
+
     pub(crate) fn relevant(&self) -> Option<&str> {
         match &self.inner {
             DataInner::Error(_) => None,
@@ -390,10 +437,19 @@ impl From<DataInner> for Data {
     }
 }
 
+impl From<DataError> for Data {
+    fn from(inner: DataError) -> Self {
+        Data {
+            inner: DataInner::Error(inner),
+            source: None,
+        }
+    }
+}
+
 impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.inner {
-            DataInner::Error(err) => err.fmt(f),
+            DataInner::Error(data) => data.fmt(f),
             DataInner::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
@@ -421,6 +477,18 @@ impl PartialEq for Data {
             }
             (_, _) => false,
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct DataError {
+    error: crate::Error,
+    intended: DataFormat,
+}
+
+impl std::fmt::Display for DataError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.error.fmt(f)
     }
 }
 

@@ -86,6 +86,16 @@ impl Inline {
         self
     }
 
+    /// Initialize `Self` as [`format`][crate::data::DataFormat] or [`Error`][crate::data::DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    pub fn is(self, format: super::DataFormat) -> super::Data {
+        let data: super::Data = self.into();
+        data.is(format)
+    }
+
+    /// Deprecated, replaced with [`Inline::is`]
+    #[deprecated(since = "0.5.2", note = "Replaced with `Inline::is`")]
     pub fn coerce_to(self, format: super::DataFormat) -> super::Data {
         let data: super::Data = self.into();
         data.coerce_to(format)

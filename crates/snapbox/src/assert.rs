@@ -133,7 +133,7 @@ impl Assert {
     ) -> (crate::Data, crate::Data) {
         let expected = expected.normalize(NormalizeNewlines);
         // On `expected` being an error, make a best guess
-        let format = expected.format();
+        let format = expected.intended_format();
 
         actual = actual.coerce_to(format).normalize(NormalizeNewlines);
 
@@ -147,7 +147,7 @@ impl Assert {
     ) -> (crate::Data, crate::Data) {
         let expected = expected.normalize(NormalizeNewlines);
         // On `expected` being an error, make a best guess
-        let format = expected.format();
+        let format = expected.intended_format();
         actual = actual.coerce_to(format);
 
         if self.normalize_paths {
