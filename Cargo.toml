@@ -65,7 +65,7 @@ name = "trycmd-schema"
 required-features = ["schema"]
 
 [dependencies]
-snapbox = { path = "crates/snapbox", version = "0.5.3", default-features = false, features = ["cmd"] }
+snapbox = { path = "crates/snapbox", version = "0.5.4", default-features = false, features = ["cmd"] }
 anstream = { version = "0.6.7", optional = true }
 
 glob = "0.3.0"
