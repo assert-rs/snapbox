@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- *(term-svg)* Reduce noise in SVG snapshots
+
 ## [0.5.5] - 2024-02-22
 
 ## [0.5.4] - 2024-02-22
