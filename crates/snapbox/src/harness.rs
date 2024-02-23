@@ -1,5 +1,8 @@
 //! [`Harness`] for discovering test inputs and asserting against snapshot files
 //!
+//! This is a custom test harness and should be put in its own test binary with
+//! [`test.harness = false`](https://doc.rust-lang.org/stable/cargo/reference/cargo-targets.html#the-harness-field).
+//!
 //! # Examples
 //!
 //! ```rust,no_run
@@ -37,6 +40,9 @@ use crate::Action;
 
 use libtest_mimic::Trial;
 
+/// [`Harness`] for discovering test inputs and asserting against snapshot files
+///
+/// See [`harness`][crate::harness] for more details
 pub struct Harness<S, T> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
@@ -52,9 +58,15 @@ where
     S: Fn(std::path::PathBuf) -> Case + Send + Sync + 'static,
     T: Fn(&std::path::Path) -> Result<I, E> + Send + Sync + 'static + Clone,
 {
-    pub fn new(root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
+    /// Specify where the test scenarios
+    ///
+    /// - `input_root`: where to find the files.  See [`Self::select`] for restricting what files
+    ///   are considered
+    /// - `setup`: Given a path, choose the test name and the output location
+    /// - `test`: Given a path, return the actual output value
+    pub fn new(input_root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
         Self {
-            root: root.into(),
+            root: input_root.into(),
             overrides: None,
             setup,
             test,
@@ -207,8 +219,14 @@ impl Default for Verifier {
     }
 }
 
+/// A test case enumerated by the [`Harness`] with data from the `setup` function
+///
+/// See [`harness`][crate::harness] for more details
 pub struct Case {
+    /// Display name
     pub name: String,
+    /// Input for the test
     pub fixture: std::path::PathBuf,
+    /// What the actual output should be compared against or updated
     pub expected: std::path::PathBuf,
 }
