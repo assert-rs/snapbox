@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.7] - 2024-02-27
+
 ### Fixes
 
 - Respect `Assert::normalize_paths(false)` when running `subset_matches`
@@ -288,7 +290,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.6...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.7...HEAD
+[0.5.7]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.6...snapbox-v0.5.7
 [0.5.6]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.5...snapbox-v0.5.6
 [0.5.5]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.4...snapbox-v0.5.5
 [0.5.4]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.3...snapbox-v0.5.4
