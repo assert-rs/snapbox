@@ -288,6 +288,7 @@ impl Assert {
             expected_root,
             actual_root,
             &self.substitutions,
+            self.normalize_paths,
         )
         .collect();
         self.verify(checks);

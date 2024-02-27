@@ -9,6 +9,7 @@ pub use crate::current_rs;
 
 #[cfg(feature = "path")]
 use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
+
 /// Working directory for tests
 #[derive(Debug)]
 pub struct PathFixture(PathFixtureInner);
@@ -221,7 +222,7 @@ impl PathDiff {
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let pattern_root = pattern_root.into();
         let actual_root = actual_root.into();
-        Self::subset_matches_iter_inner(pattern_root, actual_root, substitutions)
+        Self::subset_matches_iter_inner(pattern_root, actual_root, substitutions, true)
     }
 
     #[cfg(feature = "path")]
@@ -229,6 +230,7 @@ impl PathDiff {
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
         substitutions: &crate::Substitutions,
+        normalize_paths: bool,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let walker = Walk::new(&expected_root);
         walker.map(move |r| {
@@ -267,9 +269,11 @@ impl PathDiff {
                     let expected =
                         crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
 
+                    actual = actual.coerce_to(expected.intended_format());
+                    if normalize_paths {
+                        actual = actual.normalize(NormalizePaths);
+                    }
                     actual = actual
-                        .coerce_to(expected.intended_format())
-                        .normalize(NormalizePaths)
                         .normalize(NormalizeNewlines)
                         .normalize(NormalizeMatches::new(substitutions, &expected));
 
