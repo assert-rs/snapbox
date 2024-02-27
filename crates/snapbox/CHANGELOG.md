@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Respect `Assert::normalize_paths(false)` when running `subset_matches`
+
 ## [0.5.6] - 2024-02-22
 
 ### Fixes
