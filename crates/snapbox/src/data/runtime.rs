@@ -10,12 +10,29 @@ pub(crate) fn get() -> std::sync::MutexGuard<'static, Runtime> {
 #[derive(Default)]
 pub(crate) struct Runtime {
     per_file: Vec<SourceFileRuntime>,
+    path_count: Vec<PathRuntime>,
 }
 
 impl Runtime {
     const fn new() -> Self {
         Self {
             per_file: Vec::new(),
+            path_count: Vec::new(),
+        }
+    }
+
+    pub(crate) fn count(&mut self, path_prefix: &str) -> usize {
+        if let Some(entry) = self
+            .path_count
+            .iter_mut()
+            .find(|entry| entry.is(path_prefix))
+        {
+            entry.next()
+        } else {
+            let entry = PathRuntime::new(path_prefix);
+            let next = entry.count();
+            self.path_count.push(entry);
+            next
         }
     }
 
@@ -321,6 +338,34 @@ impl StrLitKind {
                 Ok(())
             }
         }
+    }
+}
+
+#[derive(Clone)]
+struct PathRuntime {
+    path_prefix: String,
+    count: usize,
+}
+
+impl PathRuntime {
+    fn new(path_prefix: &str) -> Self {
+        Self {
+            path_prefix: path_prefix.to_owned(),
+            count: 0,
+        }
+    }
+
+    fn is(&self, path_prefix: &str) -> bool {
+        self.path_prefix == path_prefix
+    }
+
+    fn next(&mut self) -> usize {
+        self.count += 1;
+        self.count
+    }
+
+    fn count(&self) -> usize {
+        self.count
     }
 }
 

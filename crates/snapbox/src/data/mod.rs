@@ -40,18 +40,12 @@ impl<D: std::fmt::Debug> ToDebug for D {
 #[macro_export]
 macro_rules! file {
     [_] => {{
-        let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
-        let rel_path = ::std::format!("snapshots/{}-{}.txt", stem.to_str().unwrap(), line!());
-        let mut path = $crate::current_dir!();
-        path.push(rel_path);
+        let path = $crate::data::generate_snapshot_path($crate::fn_path!(), None);
         $crate::Data::read_from(&path, None)
     }};
     [_ : $type:ident] => {{
-        let stem = ::std::path::Path::new(::std::file!()).file_stem().unwrap();
-        let ext = $crate::data::DataFormat:: $type.ext();
-        let rel_path = ::std::format!("snapshots/{}-{}.{ext}", stem.to_str().unwrap(), line!());
-        let mut path = $crate::current_dir!();
-        path.push(rel_path);
+        let format = $crate::data::DataFormat:: $type;
+        let path = $crate::data::generate_snapshot_path($crate::fn_path!(), Some(format));
         $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
     [$path:literal] => {{
@@ -567,4 +561,19 @@ fn is_binary(data: &[u8]) -> bool {
 #[cfg(not(feature = "detect-encoding"))]
 fn is_binary(_data: &[u8]) -> bool {
     false
+}
+
+#[doc(hidden)]
+pub fn generate_snapshot_path(fn_path: &str, format: Option<DataFormat>) -> std::path::PathBuf {
+    use std::fmt::Write as _;
+
+    let fn_path_normalized = fn_path.replace("::", "__");
+    let mut path = format!("tests/snapshots/{fn_path_normalized}");
+    let count = runtime::get().count(&path);
+    if 0 < count {
+        write!(&mut path, "@{count}").unwrap();
+    }
+    path.push('.');
+    path.push_str(format.unwrap_or(DataFormat::Text).ext());
+    path.into()
 }
