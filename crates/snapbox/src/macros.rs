@@ -39,3 +39,46 @@ macro_rules! cargo_rustc_current_dir {
         }
     }};
 }
+
+/// Path to the current function
+///
+/// Closures are ignored
+#[doc(hidden)]
+#[macro_export]
+macro_rules! fn_path {
+    () => {{
+        fn f() {}
+        fn type_name_of_val<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        let mut name = type_name_of_val(f).strip_suffix("::f").unwrap_or("");
+        while let Some(rest) = name.strip_suffix("::{{closure}}") {
+            name = rest;
+        }
+        name
+    }};
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn direct_fn_path() {
+        assert_eq!(fn_path!(), "snapbox::macros::test::direct_fn_path");
+    }
+
+    #[test]
+    #[allow(clippy::redundant_closure_call)]
+    fn closure_fn_path() {
+        (|| {
+            assert_eq!(fn_path!(), "snapbox::macros::test::closure_fn_path");
+        })()
+    }
+
+    #[test]
+    fn nested_fn_path() {
+        fn nested() {
+            assert_eq!(fn_path!(), "snapbox::macros::test::nested_fn_path::nested");
+        }
+        nested()
+    }
+}
