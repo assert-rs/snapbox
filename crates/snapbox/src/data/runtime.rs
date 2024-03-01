@@ -9,7 +9,7 @@ pub(crate) fn get() -> std::sync::MutexGuard<'static, Runtime> {
 
 #[derive(Default)]
 pub(crate) struct Runtime {
-    per_file: Vec<FileRuntime>,
+    per_file: Vec<SourceFileRuntime>,
 }
 
 impl Runtime {
@@ -28,7 +28,7 @@ impl Runtime {
         {
             entry.update(&actual, inline)?;
         } else {
-            let mut entry = FileRuntime::new(inline)?;
+            let mut entry = SourceFileRuntime::new(inline)?;
             entry.update(&actual, inline)?;
             self.per_file.push(entry);
         }
@@ -37,18 +37,18 @@ impl Runtime {
     }
 }
 
-struct FileRuntime {
+struct SourceFileRuntime {
     path: std::path::PathBuf,
     original_text: String,
     patchwork: Patchwork,
 }
 
-impl FileRuntime {
-    fn new(inline: &Inline) -> std::io::Result<FileRuntime> {
+impl SourceFileRuntime {
+    fn new(inline: &Inline) -> std::io::Result<SourceFileRuntime> {
         let path = inline.position.file.clone();
         let original_text = std::fs::read_to_string(&path)?;
         let patchwork = Patchwork::new(original_text.clone());
-        Ok(FileRuntime {
+        Ok(SourceFileRuntime {
             path,
             original_text,
             patchwork,
