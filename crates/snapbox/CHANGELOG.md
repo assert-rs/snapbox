@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Make auto-path snapshots more deterministic
+
 ## [0.5.7] - 2024-02-27
 
 ### Fixes
