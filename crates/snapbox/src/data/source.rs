@@ -102,17 +102,20 @@ impl Inline {
     }
 
     fn trimmed(&self) -> String {
-        if !self.data.contains('\n') {
-            return self.data.to_string();
+        let mut data = self.data;
+        if data.contains('\n') {
+            if data.starts_with('\n') {
+                data = &data[1..]
+            }
+            if self.indent {
+                return trim_indent(data);
+            }
         }
-        trim_indent(self.data)
+        data.to_owned()
     }
 }
 
-fn trim_indent(mut text: &str) -> String {
-    if text.starts_with('\n') {
-        text = &text[1..];
-    }
+fn trim_indent(text: &str) -> String {
     let indent = text
         .lines()
         .filter(|it| !it.trim().is_empty())
