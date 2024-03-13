@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Don't strip on `str![].indent(false)` to work with lines with indentation
+
 ## [0.5.8] - 2024-03-01
 
 ### Fixes
