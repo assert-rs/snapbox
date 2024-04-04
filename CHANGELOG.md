@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Overwrite of `.stdout`/`.stderr` files works again
+
 ## [0.15.0] - 2024-02-14
 
 ### Breaking Change
