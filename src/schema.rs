@@ -341,8 +341,9 @@ fn overwrite_toml_output(
     output_field: &str,
 ) -> Result<(), crate::Error> {
     if let Some(output) = output {
-        if let Some(source) = output.source() {
-            output.write_to(source)?;
+        let output_path = path.with_extension(output_ext);
+        if output_path.exists() {
+            output.write_to_path(&output_path)?;
         } else if let Some(output) = output.render() {
             let raw = std::fs::read_to_string(path)
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
@@ -355,7 +356,6 @@ fn overwrite_toml_output(
             std::fs::write(path, doc.to_string())
                 .map_err(|e| format!("Failed to write {}: {}", path.display(), e))?;
         } else {
-            let output_path = path.with_extension(output_ext);
             output.write_to_path(&output_path)?;
 
             let raw = std::fs::read_to_string(path)
