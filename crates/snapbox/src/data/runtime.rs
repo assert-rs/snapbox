@@ -143,6 +143,9 @@ fn format_patch(patch: &str) -> String {
         buf.push('\n');
     }
     buf.push_str(patch);
+    if is_multiline {
+        buf.push('\n');
+    }
     lit_kind.write_end(&mut buf).unwrap();
     if matches!(lit_kind, StrLitKind::Raw(_)) {
         buf.push(']');
@@ -359,7 +362,9 @@ mod tests {
 [r#"
 hello
 world
-"#]"##]],
+
+"#]
+"##]],
         );
 
         let patch = format_patch(r"hello\tworld");
@@ -395,6 +400,7 @@ Patchwork {
         ),
     ],
 }
+
 "#]],
         );
     }

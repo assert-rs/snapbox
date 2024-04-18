@@ -17,6 +17,7 @@ line1
         str![[r#"
 line1
   line2
+
 "#]],
     );
 }

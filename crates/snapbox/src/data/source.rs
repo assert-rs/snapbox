@@ -81,8 +81,9 @@ pub struct Inline {
 impl Inline {
     pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
-        if data.contains('\n') && data.starts_with('\n') {
-            data = &data[1..]
+        if data.contains('\n') {
+            data = data.strip_prefix('\n').unwrap_or(data);
+            data = data.strip_suffix('\n').unwrap_or(data);
         }
         data.to_owned()
     }
