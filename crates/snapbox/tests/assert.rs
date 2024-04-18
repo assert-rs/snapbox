@@ -13,6 +13,7 @@ fn smoke_test_indent() {
         str![[r#"
 line1
   line2
+
 "#]],
         "\
 line1
