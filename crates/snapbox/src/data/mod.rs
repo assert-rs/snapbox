@@ -85,7 +85,6 @@ macro_rules! str {
         let inline = $crate::data::Inline {
             position,
             data: $data,
-            indent: true,
         };
         inline
     }};
