@@ -76,48 +76,16 @@ pub struct Inline {
     pub position: Position,
     #[doc(hidden)]
     pub data: &'static str,
-    #[doc(hidden)]
-    pub indent: bool,
 }
 
 impl Inline {
-    /// Indent to quote-level when overwriting the string literal (default)
-    pub fn indent(mut self, yes: bool) -> Self {
-        self.indent = yes;
-        self
-    }
-
     pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
-        if data.contains('\n') {
-            if data.starts_with('\n') {
-                data = &data[1..]
-            }
-            if self.indent {
-                return trim_indent(data);
-            }
+        if data.contains('\n') && data.starts_with('\n') {
+            data = &data[1..]
         }
         data.to_owned()
     }
-}
-
-fn trim_indent(text: &str) -> String {
-    let indent = text
-        .lines()
-        .filter(|it| !it.trim().is_empty())
-        .map(|it| it.len() - it.trim_start().len())
-        .min()
-        .unwrap_or(0);
-
-    crate::utils::LinesWithTerminator::new(text)
-        .map(|line| {
-            if line.len() <= indent {
-                line.trim_start_matches(' ')
-            } else {
-                &line[indent..]
-            }
-        })
-        .collect()
 }
 
 impl std::fmt::Display for Inline {

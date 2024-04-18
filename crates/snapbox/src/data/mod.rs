@@ -162,8 +162,6 @@ macro_rules! file {
 /// "]];
 /// str![r#"{"Foo": 92}"#];
 /// ```
-///
-/// Leading indentation is stripped.
 #[macro_export]
 macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
@@ -176,7 +174,6 @@ macro_rules! str {
         let inline = $crate::data::Inline {
             position,
             data: $data,
-            indent: true,
         };
         inline
     }};
