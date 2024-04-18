@@ -11,22 +11,9 @@ fn test_trivial_assert() {
 fn smoke_test_indent() {
     assert_eq(
         str![[r#"
-            line1
-              line2
-        "#]]
-        .indent(true),
-        "\
 line1
   line2
-",
-    );
-
-    assert_eq(
-        str![[r#"
-line1
-  line2
-"#]]
-        .indent(false),
+"#]],
         "\
 line1
   line2

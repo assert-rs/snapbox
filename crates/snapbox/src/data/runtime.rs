@@ -73,12 +73,7 @@ impl SourceFileRuntime {
     }
     fn update(&mut self, actual: &str, inline: &Inline) -> std::io::Result<()> {
         let span = Span::from_pos(&inline.position, &self.original_text);
-        let desired_indent = if inline.indent {
-            Some(span.line_indent)
-        } else {
-            None
-        };
-        let patch = format_patch(desired_indent, actual);
+        let patch = format_patch(actual);
         self.patchwork.patch(span.literal_range, &patch);
         std::fs::write(&inline.position.file, &self.patchwork.text)
     }
@@ -135,9 +130,8 @@ fn lit_kind_for_patch(patch: &str) -> StrLitKind {
     StrLitKind::Raw(max_hashes + 1)
 }
 
-fn format_patch(desired_indent: Option<usize>, patch: &str) -> String {
+fn format_patch(patch: &str) -> String {
     let lit_kind = lit_kind_for_patch(patch);
-    let indent = desired_indent.map(|it| " ".repeat(it));
     let is_multiline = patch.contains('\n');
 
     let mut buf = String::new();
@@ -148,22 +142,7 @@ fn format_patch(desired_indent: Option<usize>, patch: &str) -> String {
     if is_multiline {
         buf.push('\n');
     }
-    let mut final_newline = false;
-    for line in crate::utils::LinesWithTerminator::new(patch) {
-        if is_multiline && !line.trim().is_empty() {
-            if let Some(indent) = &indent {
-                buf.push_str(indent);
-                buf.push_str("    ");
-            }
-        }
-        buf.push_str(line);
-        final_newline = line.ends_with('\n');
-    }
-    if final_newline {
-        if let Some(indent) = &indent {
-            buf.push_str(indent);
-        }
-    }
+    buf.push_str(patch);
     lit_kind.write_end(&mut buf).unwrap();
     if matches!(lit_kind, StrLitKind::Raw(_)) {
         buf.push(']');
@@ -173,8 +152,6 @@ fn format_patch(desired_indent: Option<usize>, patch: &str) -> String {
 
 #[derive(Clone, Debug)]
 struct Span {
-    line_indent: usize,
-
     /// The byte range of the argument to `expect!`, including the inner `[]` if it exists.
     literal_range: std::ops::Range<usize>,
 }
@@ -207,13 +184,12 @@ impl Span {
                     .0;
 
                 let literal_start = line_start + byte_offset;
-                let indent = line.chars().take_while(|&it| it == ' ').count();
-                target_line = Some((literal_start, indent));
+                target_line = Some(literal_start);
                 break;
             }
             line_start += line.len();
         }
-        let (literal_start, line_indent) = target_line.unwrap();
+        let literal_start = target_line.unwrap();
 
         let lit_to_eof = &file[literal_start..];
         let lit_to_eof_trimmed = lit_to_eof.trim_start();
@@ -223,10 +199,7 @@ impl Span {
         let literal_len =
             locate_end(lit_to_eof_trimmed).expect("Couldn't find closing delimiter for `expect!`.");
         let literal_range = literal_start..literal_start + literal_len;
-        Span {
-            line_indent,
-            literal_range,
-        }
+        Span { literal_range }
     }
 }
 
@@ -378,35 +351,22 @@ mod tests {
 
     #[test]
     fn test_format_patch() {
-        let patch = format_patch(None, "hello\nworld\n");
+        let patch = format_patch("hello\nworld\n");
 
         assert_eq(
             str![[r##"
-            [r#"
-            hello
-            world
-            "#]"##]],
+[r#"
+hello
+world
+"#]"##]],
             patch,
         );
 
-        let patch = format_patch(None, r"hello\tworld");
+        let patch = format_patch(r"hello\tworld");
         assert_eq(str![[r##"[r#"hello\tworld"#]"##]], patch);
 
-        let patch = format_patch(None, "{\"foo\": 42}");
+        let patch = format_patch("{\"foo\": 42}");
         assert_eq(str![[r##"[r#"{"foo": 42}"#]"##]], patch);
-
-        let patch = format_patch(Some(0), "hello\nworld\n");
-        assert_eq(
-            str![[r##"
-            [r#"
-                hello
-                world
-            "#]"##]],
-            patch,
-        );
-
-        let patch = format_patch(Some(4), "single line");
-        assert_eq(str![[r#""single line""#]], patch);
     }
 
     #[test]
@@ -417,24 +377,24 @@ mod tests {
         patchwork.patch(8..13, "3");
         assert_eq(
             str![[r#"
-            Patchwork {
-                text: "один zwei 3",
-                indels: [
-                    (
-                        0..3,
-                        8,
-                    ),
-                    (
-                        4..7,
-                        4,
-                    ),
-                    (
-                        8..13,
-                        1,
-                    ),
-                ],
-            }
-        "#]],
+Patchwork {
+    text: "один zwei 3",
+    indels: [
+        (
+            0..3,
+            8,
+        ),
+        (
+            4..7,
+            4,
+        ),
+        (
+            8..13,
+            1,
+        ),
+    ],
+}
+"#]],
             patchwork.to_debug(),
         );
     }
