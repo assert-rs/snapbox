@@ -136,17 +136,18 @@ fn normalize_value_matches(
     substitutions: &crate::Substitutions,
 ) {
     use serde_json::Value::*;
+
+    const VALUE_WILDCARD: &str = "{...}";
+
     match (actual, expected) {
-        // "{...}" is a wildcard
-        (act, String(exp)) if exp == "{...}" => {
-            *act = serde_json::json!("{...}");
+        (act, String(exp)) if exp == VALUE_WILDCARD => {
+            *act = serde_json::json!(VALUE_WILDCARD);
         }
         (String(act), String(exp)) => {
             *act = substitutions.normalize(act, exp);
         }
         (Array(act), Array(exp)) => {
-            let wildcard = String("{...}".to_string());
-            let mut sections = exp.split(|e| e == &wildcard).peekable();
+            let mut sections = exp.split(|e| e == VALUE_WILDCARD).peekable();
             let mut processed = 0;
             while let Some(expected_subset) = sections.next() {
                 // Process all values in the current section
@@ -162,14 +163,14 @@ fn normalize_value_matches(
                     // If the next section has nothing in it, replace from processed to end with
                     // a single "{...}"
                     if next_section.is_empty() {
-                        act.splice(processed.., vec![wildcard.clone()]);
+                        act.splice(processed.., vec![String(VALUE_WILDCARD.to_owned())]);
                         processed += 1;
                     } else {
                         let first = next_section.first().unwrap();
                         // Replace everything up until the value we are looking for with
                         // a single "{...}".
                         if let Some(index) = act.iter().position(|v| v == first) {
-                            act.splice(processed..index, vec![wildcard.clone()]);
+                            act.splice(processed..index, vec![String(VALUE_WILDCARD.to_owned())]);
                             processed += 1;
                         } else {
                             // If we cannot find the value we are looking for return early
