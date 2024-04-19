@@ -22,7 +22,7 @@ use crate::Action;
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
-    action: Action,
+    pub(crate) action: Action,
     action_var: Option<String>,
     normalize_paths: bool,
     substitutions: crate::Substitutions,

@@ -36,7 +36,7 @@
 //! }
 //! ```
 
-use crate::data::{DataFormat, NormalizeNewlines};
+use crate::data::DataFormat;
 use crate::Action;
 
 use libtest_mimic::Trial;
@@ -49,7 +49,7 @@ pub struct Harness<S, T> {
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
-    action: Action,
+    config: crate::Assert,
 }
 
 impl<S, T, I, E> Harness<S, T>
@@ -71,7 +71,7 @@ where
             overrides: None,
             setup,
             test,
-            action: Action::Verify,
+            config: crate::Assert::new().action_env(crate::DEFAULT_ACTION_ENV),
         }
     }
 
@@ -89,14 +89,19 @@ where
 
     /// Read the failure action from an environment variable
     pub fn action_env(mut self, var_name: &str) -> Self {
-        let action = Action::with_env_var(var_name);
-        self.action = action.unwrap_or(self.action);
+        self.config = self.config.action_env(var_name);
         self
     }
 
     /// Override the failure action
     pub fn action(mut self, action: Action) -> Self {
-        self.action = action;
+        self.config = self.config.action(action);
+        self
+    }
+
+    /// Customize the assertion behavior
+    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+        self.config = config;
         self
     }
 
@@ -118,108 +123,27 @@ where
             }
         });
 
+        let shared_config = std::sync::Arc::new(self.config);
         let tests: Vec<_> = tests
             .into_iter()
             .map(|path| {
                 let case = (self.setup)(path);
                 let test = self.test.clone();
+                let config = shared_config.clone();
                 Trial::test(case.name.clone(), move || {
+                    let expected = crate::Data::read_from(&case.expected, case.format);
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
-                    let mut actual = crate::Data::text(actual).normalize(NormalizeNewlines);
-                    if let Some(format) = case.format {
-                        actual = actual.coerce_to(format);
-                    }
-                    #[allow(deprecated)]
-                    let verify = Verifier::new()
-                        .palette(crate::report::Palette::auto())
-                        .action(self.action);
-                    verify.verify(&case.expected, actual)?;
+                    let actual = crate::Data::text(actual);
+                    config.try_eq(expected, actual, Some(&case.name))?;
                     Ok(())
                 })
-                .with_ignored_flag(self.action == Action::Ignore)
+                .with_ignored_flag(shared_config.action == Action::Ignore)
             })
             .collect();
 
         let args = libtest_mimic::Arguments::from_args();
         libtest_mimic::run(&args, tests).exit()
-    }
-}
-
-struct Verifier {
-    palette: crate::report::Palette,
-    action: Action,
-}
-
-impl Verifier {
-    fn new() -> Self {
-        Default::default()
-    }
-
-    fn palette(mut self, palette: crate::report::Palette) -> Self {
-        self.palette = palette;
-        self
-    }
-
-    fn action(mut self, action: Action) -> Self {
-        self.action = action;
-        self
-    }
-
-    fn verify(&self, expected_path: &std::path::Path, actual: crate::Data) -> crate::Result<()> {
-        match self.action {
-            Action::Skip => Ok(()),
-            Action::Ignore => {
-                let _ = self.try_verify(expected_path, actual);
-                Ok(())
-            }
-            Action::Verify => self.try_verify(expected_path, actual),
-            Action::Overwrite => self.try_overwrite(expected_path, actual),
-        }
-    }
-
-    fn try_overwrite(
-        &self,
-        expected_path: &std::path::Path,
-        actual: crate::Data,
-    ) -> crate::Result<()> {
-        actual.write_to_path(expected_path)?;
-        Ok(())
-    }
-
-    fn try_verify(
-        &self,
-        expected_path: &std::path::Path,
-        actual: crate::Data,
-    ) -> crate::Result<()> {
-        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))
-            .normalize(NormalizeNewlines);
-
-        if expected != actual {
-            let mut buf = String::new();
-            crate::report::write_diff(
-                &mut buf,
-                &expected,
-                &actual,
-                Some(&expected_path.display()),
-                None,
-                self.palette,
-            )
-            .map_err(|e| e.to_string())?;
-            Err(buf.into())
-        } else {
-            Ok(())
-        }
-    }
-}
-
-impl Default for Verifier {
-    fn default() -> Self {
-        Self {
-            #[allow(deprecated)]
-            palette: crate::report::Palette::auto(),
-            action: Action::Verify,
-        }
     }
 }
 
