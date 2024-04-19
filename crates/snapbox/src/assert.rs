@@ -170,39 +170,40 @@ impl Assert {
         actual_name: Option<&dyn std::fmt::Display>,
     ) {
         let result = self.try_verify(&expected, &actual, actual_name);
-        if let Err(err) = result {
-            match self.action {
-                Action::Skip => unreachable!("Bailed out earlier"),
-                Action::Ignore => {
-                    use std::io::Write;
+        let Err(err) = result else {
+            return;
+        };
+        match self.action {
+            Action::Skip => unreachable!("Bailed out earlier"),
+            Action::Ignore => {
+                use std::io::Write;
 
-                    let _ = writeln!(
-                        stderr(),
-                        "{}: {}",
-                        self.palette.warn("Ignoring failure"),
-                        err
-                    );
-                }
-                Action::Verify => {
-                    let message = if expected.source().is_none() {
-                        crate::report::Styled::new(String::new(), Default::default())
-                    } else if let Some(action_var) = self.action_var.as_deref() {
-                        self.palette
-                            .hint(format!("Update with {}=overwrite", action_var))
-                    } else {
-                        crate::report::Styled::new(String::new(), Default::default())
-                    };
-                    panic!("{err}{message}");
-                }
-                Action::Overwrite => {
-                    use std::io::Write;
+                let _ = writeln!(
+                    stderr(),
+                    "{}: {}",
+                    self.palette.warn("Ignoring failure"),
+                    err
+                );
+            }
+            Action::Verify => {
+                let message = if expected.source().is_none() {
+                    crate::report::Styled::new(String::new(), Default::default())
+                } else if let Some(action_var) = self.action_var.as_deref() {
+                    self.palette
+                        .hint(format!("Update with {}=overwrite", action_var))
+                } else {
+                    crate::report::Styled::new(String::new(), Default::default())
+                };
+                panic!("{err}{message}");
+            }
+            Action::Overwrite => {
+                use std::io::Write;
 
-                    if let Some(source) = expected.source() {
-                        let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
-                        actual.write_to(source).unwrap();
-                    } else {
-                        panic!("{err}");
-                    }
+                if let Some(source) = expected.source() {
+                    let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
+                    actual.write_to(source).unwrap();
+                } else {
+                    panic!("{err}");
                 }
             }
         }
