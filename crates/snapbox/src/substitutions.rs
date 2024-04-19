@@ -96,12 +96,12 @@ impl Substitutions {
     }
 
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
-        if pattern.contains('[') {
-            let mut pattern = Cow::Borrowed(pattern);
+        if !self.unused.is_empty() && pattern.contains('[') {
+            let mut pattern = pattern.to_owned();
             for var in self.unused.iter() {
-                pattern = Cow::Owned(pattern.replace(var, ""));
+                pattern = pattern.replace(var, "");
             }
-            pattern
+            Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
         }
