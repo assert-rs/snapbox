@@ -1,4 +1,5 @@
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
+#[non_exhaustive]
 pub enum DataFormat {
     Error,
     Binary,
