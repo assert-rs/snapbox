@@ -198,6 +198,9 @@ pub(crate) enum DataInner {
     Text(String),
     #[cfg(feature = "json")]
     Json(serde_json::Value),
+    // Always a `Value::Array` but using `Value` for easier bookkeeping
+    #[cfg(feature = "json")]
+    JsonLines(serde_json::Value),
     #[cfg(feature = "term-svg")]
     TermSvg(String),
 }
@@ -225,6 +228,11 @@ impl Data {
     #[cfg(feature = "json")]
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
         Self::with_inner(DataInner::Json(raw.into()))
+    }
+
+    #[cfg(feature = "json")]
+    pub fn jsonlines(raw: impl Into<Vec<serde_json::Value>>) -> Self {
+        Self::with_inner(DataInner::JsonLines(serde_json::Value::Array(raw.into())))
     }
 
     fn error(raw: impl Into<crate::assert::Error>, intended: DataFormat) -> Self {
@@ -290,7 +298,7 @@ impl Data {
                 let inferred_format = DataFormat::from(path);
                 match inferred_format {
                     #[cfg(feature = "json")]
-                    DataFormat::Json => data.coerce_to(inferred_format),
+                    DataFormat::Json | DataFormat::JsonLines => data.coerce_to(inferred_format),
                     #[cfg(feature = "term-svg")]
                     DataFormat::TermSvg => {
                         let data = data.coerce_to(DataFormat::Text);
@@ -334,7 +342,9 @@ impl Data {
             DataInner::Binary(_) => None,
             DataInner::Text(data) => Some(data.to_owned()),
             #[cfg(feature = "json")]
-            DataInner::Json(value) => Some(serde_json::to_string_pretty(value).unwrap()),
+            DataInner::Json(_) => Some(self.to_string()),
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => Some(self.to_string()),
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => Some(data.to_owned()),
         }
@@ -346,9 +356,9 @@ impl Data {
             DataInner::Binary(data) => Ok(data.clone()),
             DataInner::Text(data) => Ok(data.clone().into_bytes()),
             #[cfg(feature = "json")]
-            DataInner::Json(value) => {
-                serde_json::to_vec_pretty(value).map_err(|err| format!("{err}").into())
-            }
+            DataInner::Json(_) => Ok(self.to_string().into_bytes()),
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => Ok(self.to_string().into_bytes()),
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => Ok(data.clone().into_bytes()),
         }
@@ -374,6 +384,8 @@ impl Data {
             (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
             #[cfg(feature = "json")]
             (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
@@ -385,6 +397,11 @@ impl Data {
                 let inner = serde_json::from_str::<serde_json::Value>(&inner)
                     .map_err(|err| err.to_string())?;
                 DataInner::Json(inner)
+            }
+            #[cfg(feature = "json")]
+            (DataInner::Text(inner), DataFormat::JsonLines) => {
+                let inner = parse_jsonlines(&inner).map_err(|err| err.to_string())?;
+                DataInner::JsonLines(serde_json::Value::Array(inner))
             }
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
@@ -423,6 +440,8 @@ impl Data {
             (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
             #[cfg(feature = "json")]
             (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
@@ -456,6 +475,14 @@ impl Data {
                     DataInner::Text(inner)
                 }
             }
+            #[cfg(feature = "json")]
+            (DataInner::Text(inner), DataFormat::JsonLines) => {
+                if let Ok(jsonlines) = parse_jsonlines(&inner) {
+                    DataInner::JsonLines(serde_json::Value::Array(jsonlines))
+                } else {
+                    DataInner::Text(inner)
+                }
+            }
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => {
                 DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner))
@@ -478,6 +505,10 @@ impl Data {
             #[allow(unreachable_patterns)]
             #[cfg(feature = "json")]
             (inner, DataFormat::Json) => inner,
+            // reachable if more than one structured data format is enabled
+            #[allow(unreachable_patterns)]
+            #[cfg(feature = "json")]
+            (inner, DataFormat::JsonLines) => inner,
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "term-svg")]
@@ -503,6 +534,8 @@ impl Data {
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
             DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => DataFormat::JsonLines,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
@@ -515,6 +548,8 @@ impl Data {
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
             DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => DataFormat::JsonLines,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
@@ -527,6 +562,8 @@ impl Data {
             DataInner::Text(_) => None,
             #[cfg(feature = "json")]
             DataInner::Json(_) => None,
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => None,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => text_elem(data),
         }
@@ -541,6 +578,14 @@ impl std::fmt::Display for Data {
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
             DataInner::Json(data) => serde_json::to_string_pretty(data).unwrap().fmt(f),
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(data) => {
+                let array = data.as_array().expect("jsonlines is always an array");
+                for value in array {
+                    writeln!(f, "{}", serde_json::to_string(value).unwrap())?;
+                }
+                Ok(())
+            }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => data.fmt(f),
         }
@@ -555,6 +600,8 @@ impl PartialEq for Data {
             (DataInner::Text(left), DataInner::Text(right)) => left == right,
             #[cfg(feature = "json")]
             (DataInner::Json(left), DataInner::Json(right)) => left == right,
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(left), DataInner::JsonLines(right)) => left == right,
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(left), DataInner::TermSvg(right)) => {
                 // HACK: avoid including `width` and `height` in the comparison
@@ -577,6 +624,20 @@ impl std::fmt::Display for DataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.error.fmt(f)
     }
+}
+
+#[cfg(feature = "json")]
+fn parse_jsonlines(text: &str) -> Result<Vec<serde_json::Value>, serde_json::Error> {
+    let mut lines = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let json = serde_json::from_str::<serde_json::Value>(line)?;
+        lines.push(json);
+    }
+    Ok(lines)
 }
 
 #[cfg(feature = "term-svg")]

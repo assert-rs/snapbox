@@ -10,6 +10,9 @@ pub enum DataFormat {
     Text,
     #[cfg(feature = "json")]
     Json,
+    /// Streamed JSON output according to <https://jsonlines.org/>
+    #[cfg(feature = "json")]
+    JsonLines,
     /// [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code#DOS_and_Windows)
     /// rendered as [svg](https://docs.rs/anstyle-svg)
     #[cfg(feature = "term-svg")]
@@ -25,6 +28,8 @@ impl DataFormat {
             Self::Text => "txt",
             #[cfg(feature = "json")]
             Self::Json => "json",
+            #[cfg(feature = "json")]
+            Self::JsonLines => "jsonl",
             #[cfg(feature = "term-svg")]
             Self::TermSvg => "term.svg",
         }
@@ -44,6 +49,8 @@ impl From<&std::path::Path> for DataFormat {
         match ext {
             #[cfg(feature = "json")]
             "json" => DataFormat::Json,
+            #[cfg(feature = "json")]
+            "jsonl" => DataFormat::JsonLines,
             #[cfg(feature = "term-svg")]
             "term.svg" => Self::TermSvg,
             _ => DataFormat::Text,

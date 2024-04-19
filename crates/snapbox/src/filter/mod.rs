@@ -36,6 +36,12 @@ impl Filter for FilterNewlines {
                 normalize_value(&mut value, normalize_lines);
                 DataInner::Json(value)
             }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_value(&mut value, normalize_lines);
+                DataInner::JsonLines(value)
+            }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 let lines = normalize_lines(&text);
@@ -76,6 +82,12 @@ impl Filter for FilterPaths {
                 let mut value = value;
                 normalize_value(&mut value, normalize_paths);
                 DataInner::Json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_value(&mut value, normalize_paths);
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
@@ -141,6 +153,14 @@ impl Filter for FilterRedactions<'_> {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
                 DataInner::Json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                if let DataInner::Json(exp) = &self.pattern.inner {
+                    normalize_value_matches(&mut value, exp, self.substitutions);
+                }
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
