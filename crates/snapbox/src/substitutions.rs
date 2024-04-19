@@ -89,7 +89,7 @@ impl Substitutions {
         replace_many(
             &mut input,
             self.vars.iter().flat_map(|(var, replaces)| {
-                replaces.iter().map(|replace| (*var, replace.as_ref()))
+                replaces.iter().map(|replace| (replace.as_ref(), *var))
             }),
         );
         input
@@ -106,6 +106,7 @@ impl Substitutions {
     }
 }
 
+/// Replacements is `(from, to)`
 fn replace_many<'a>(
     buffer: &mut String,
     replacements: impl IntoIterator<Item = (&'a str, &'a str)>,
@@ -149,7 +150,9 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
     'outer: while let Some(pattern_line) = pattern_lines.next() {
         if is_line_elide(pattern_line) {
             if let Some(next_pattern_line) = pattern_lines.peek() {
-                for (index_offset, next_input_line) in input_lines[input_index..].iter().copied().enumerate() {
+                for (index_offset, next_input_line) in
+                    input_lines[input_index..].iter().copied().enumerate()
+                {
                     if line_matches(next_input_line, next_pattern_line, substitutions) {
                         normalized.push(pattern_line);
                         input_index += index_offset;
@@ -403,6 +406,6 @@ mod test {
         let mut sub = Substitutions::new();
         sub.insert("[OBJECT]", "world").unwrap();
         let actual = normalize(input, pattern, &sub);
-        assert_eq!(actual, input);
+        assert_eq!(actual, pattern);
     }
 }
