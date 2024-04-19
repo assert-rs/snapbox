@@ -28,21 +28,8 @@ impl Palette {
         Self::default()
     }
 
-    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::color")]
-    pub fn always() -> Self {
-        Self::color()
-    }
-
-    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::plain")]
-    pub fn never() -> Self {
-        Self::plain()
-    }
-
-    #[deprecated(
-        since = "0.4.9",
-        note = "Use `Palette::always`, `auto` behavior is now implicit"
-    )]
-    pub fn auto() -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn auto() -> Self {
         if is_colored() {
             Self::color()
         } else {
