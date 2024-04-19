@@ -57,24 +57,25 @@ impl Assert {
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
-        self.eq_inner(expected, actual);
+        if let Err(err) = self.eq_inner(expected, actual) {
+            err.panic();
+        }
     }
 
-    #[track_caller]
-    fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
+    fn eq_inner(&self, expected: crate::Data, actual: crate::Data) -> Result<(), crate::Error> {
         if expected.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
         match self.action {
             Action::Skip => {
-                return;
+                return Ok(());
             }
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
         let (expected, actual) = self.normalize_eq(expected, actual);
 
-        self.do_action(expected, actual, Some(&"In-memory"));
+        self.do_action(expected, actual, Some(&"In-memory"))
     }
 
     /// Check if a value matches a pattern
@@ -106,24 +107,25 @@ impl Assert {
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
         let actual = actual.into();
-        self.matches_inner(pattern, actual);
+        if let Err(err) = self.matches_inner(pattern, actual) {
+            err.panic();
+        }
     }
 
-    #[track_caller]
-    fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
+    fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) -> Result<(), crate::Error> {
         if pattern.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
         match self.action {
             Action::Skip => {
-                return;
+                return Ok(());
             }
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
         let (expected, actual) = self.normalize_match(pattern, actual);
 
-        self.do_action(expected, actual, Some(&"In-memory"));
+        self.do_action(expected, actual, Some(&"In-memory"))
     }
 
     pub(crate) fn normalize_eq(
@@ -162,16 +164,15 @@ impl Assert {
         (expected, actual)
     }
 
-    #[track_caller]
     pub(crate) fn do_action(
         &self,
         expected: crate::Data,
         actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) {
+    ) -> Result<(), crate::Error> {
         let result = self.try_verify(&expected, &actual, actual_name);
         let Err(err) = result else {
-            return;
+            return Ok(());
         };
         match self.action {
             Action::Skip => unreachable!("Bailed out earlier"),
@@ -184,6 +185,7 @@ impl Assert {
                     self.palette.warn("Ignoring failure"),
                     err
                 );
+                Ok(())
             }
             Action::Verify => {
                 let message = if expected.source().is_none() {
@@ -194,7 +196,7 @@ impl Assert {
                 } else {
                     crate::report::Styled::new(String::new(), Default::default())
                 };
-                panic!("{err}{message}");
+                Err(crate::Error::new(format_args!("{err}{message}")))
             }
             Action::Overwrite => {
                 use std::io::Write;
@@ -202,8 +204,9 @@ impl Assert {
                 if let Some(source) = expected.source() {
                     let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
                     actual.write_to(source).unwrap();
+                    Ok(())
                 } else {
-                    panic!("{err}");
+                    Err(crate::Error::new(format_args!("{err}")))
                 }
             }
         }
