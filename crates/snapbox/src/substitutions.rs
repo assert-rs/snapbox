@@ -315,6 +315,15 @@ mod test {
     }
 
     #[test]
+    fn elide_delimited_with_sub() {
+        let input = "Hello World\nHow are you?\nGoodbye World";
+        let pattern = "Hello [..]\n...\nGoodbye [..]";
+        let expected = "Hello [..]\nHow are you?\nGoodbye World";
+        let actual = normalize(input, pattern, &Substitutions::new());
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn leading_elide() {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
