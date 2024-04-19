@@ -437,4 +437,14 @@ mod test {
             assert_eq!(expected, actual, "placeholder={:?}", placeholder);
         }
     }
+
+    #[test]
+    fn substitute_literal() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Redactions::new();
+        sub.insert("[OBJECT]", "world").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
 }
