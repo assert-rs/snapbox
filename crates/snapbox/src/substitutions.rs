@@ -35,6 +35,17 @@ impl Substitutions {
     /// let mut subst = snapbox::Substitutions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
+    ///
+    /// With the `regex` feature, you can define patterns using regexes.
+    /// You can choose to replace a subset of the regex by giving it the named capture group
+    /// `replace`.
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "regex")] {
+    /// let mut subst = snapbox::Substitutions::new();
+    /// subst.insert("[OBJECT]", regex::Regex::new("(?<replace>(world|moon))").unwrap());
+    /// # }
+    /// ```
     pub fn insert(
         &mut self,
         key: &'static str,
@@ -111,10 +122,12 @@ pub struct SubstitutionValue {
     inner: Option<SubstitutionValueInner>,
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 enum SubstitutionValueInner {
     Str(&'static str),
     String(String),
+    #[cfg(feature = "regex")]
+    Regex(regex::Regex),
 }
 
 impl SubstitutionValueInner {
@@ -122,6 +135,21 @@ impl SubstitutionValueInner {
         match self {
             Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
             Self::String(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            #[cfg(feature = "regex")]
+            Self::Regex(r) => {
+                let captures = r.captures(buffer)?;
+                let m = captures.name("replace").or_else(|| captures.get(0))?;
+                Some(m.range())
+            }
+        }
+    }
+
+    fn as_cmp(&self) -> &str {
+        match self {
+            Self::Str(s) => s,
+            Self::String(s) => s,
+            #[cfg(feature = "regex")]
+            Self::Regex(s) => s.as_str(),
         }
     }
 }
@@ -168,6 +196,42 @@ impl From<Cow<'static, str>> for SubstitutionValue {
         }
     }
 }
+
+#[cfg(feature = "regex")]
+impl From<regex::Regex> for SubstitutionValue {
+    fn from(inner: regex::Regex) -> Self {
+        Self {
+            inner: Some(SubstitutionValueInner::Regex(inner)),
+        }
+    }
+}
+
+#[cfg(feature = "regex")]
+impl From<&'_ regex::Regex> for SubstitutionValue {
+    fn from(inner: &'_ regex::Regex) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl PartialOrd for SubstitutionValueInner {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.as_cmp().partial_cmp(other.as_cmp())
+    }
+}
+
+impl Ord for SubstitutionValueInner {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_cmp().cmp(other.as_cmp())
+    }
+}
+
+impl PartialEq for SubstitutionValueInner {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_cmp().eq(other.as_cmp())
+    }
+}
+
+impl Eq for SubstitutionValueInner {}
 
 /// Replacements is `(from, to)`
 fn replace_many<'a>(
@@ -477,6 +541,30 @@ mod test {
         let input = "cargo";
         let pattern = "cargo[EXE]";
         let sub = Substitutions::with_exe();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    #[cfg(feature = "regex")]
+    fn substitute_regex_unnamed() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Substitutions::new();
+        sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
+            .unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    #[cfg(feature = "regex")]
+    fn substitute_regex_named() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Substitutions::new();
+        sub.insert("[OBJECT]", regex::Regex::new("(?<replace>world)!").unwrap())
+            .unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
