@@ -5,10 +5,13 @@ use std::borrow::Cow;
 /// Built-in expressions:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug)]
 pub struct Substitutions {
-    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<Cow<'static, str>>>,
-    unused: std::collections::BTreeSet<&'static str>,
+    vars: std::collections::BTreeMap<
+        &'static str,
+        std::collections::BTreeSet<SubstitutionValueInner>,
+    >,
+    unused: std::collections::BTreeSet<SubstitutionValueInner>,
 }
 
 impl Substitutions {
@@ -35,17 +38,14 @@ impl Substitutions {
     pub fn insert(
         &mut self,
         key: &'static str,
-        value: impl Into<Cow<'static, str>>,
+        value: impl Into<SubstitutionValue>,
     ) -> Result<(), crate::Error> {
         let key = validate_key(key)?;
         let value = value.into();
-        if value.is_empty() {
-            self.unused.insert(key);
+        if let Some(inner) = value.inner {
+            self.vars.entry(key).or_default().insert(inner);
         } else {
-            self.vars
-                .entry(key)
-                .or_default()
-                .insert(crate::utils::normalize_text(value.as_ref()).into());
+            self.unused.insert(SubstitutionValueInner::Str(key));
         }
         Ok(())
     }
@@ -55,7 +55,7 @@ impl Substitutions {
     /// keys must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
-        vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<SubstitutionValue>)>,
     ) -> Result<(), crate::Error> {
         for (key, value) in vars {
             self.insert(key, value)?;
@@ -88,9 +88,9 @@ impl Substitutions {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
-            self.vars.iter().flat_map(|(var, replaces)| {
-                replaces.iter().map(|replace| (replace.as_ref(), *var))
-            }),
+            self.vars
+                .iter()
+                .flat_map(|(var, replaces)| replaces.iter().map(|replace| (replace, *var))),
         );
         input
     }
@@ -98,7 +98,7 @@ impl Substitutions {
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
         if !self.unused.is_empty() && pattern.contains('[') {
             let mut pattern = pattern.to_owned();
-            replace_many(&mut pattern, self.unused.iter().map(|var| (*var, "")));
+            replace_many(&mut pattern, self.unused.iter().map(|var| (var, "")));
             Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
@@ -106,17 +106,80 @@ impl Substitutions {
     }
 }
 
+#[derive(Clone)]
+pub struct SubstitutionValue {
+    inner: Option<SubstitutionValueInner>,
+}
+
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+enum SubstitutionValueInner {
+    Str(&'static str),
+    String(String),
+}
+
+impl SubstitutionValueInner {
+    fn find_in(&self, buffer: &str) -> Option<std::ops::Range<usize>> {
+        match self {
+            Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            Self::String(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+        }
+    }
+}
+
+impl From<&'static str> for SubstitutionValue {
+    fn from(inner: &'static str) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(SubstitutionValueInner::String(
+                    crate::utils::normalize_text(inner),
+                )),
+            }
+        }
+    }
+}
+
+impl From<String> for SubstitutionValue {
+    fn from(inner: String) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(SubstitutionValueInner::String(
+                    crate::utils::normalize_text(&inner),
+                )),
+            }
+        }
+    }
+}
+
+impl From<&'_ String> for SubstitutionValue {
+    fn from(inner: &'_ String) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl From<Cow<'static, str>> for SubstitutionValue {
+    fn from(inner: Cow<'static, str>) -> Self {
+        match inner {
+            Cow::Borrowed(s) => s.into(),
+            Cow::Owned(s) => s.into(),
+        }
+    }
+}
+
 /// Replacements is `(from, to)`
 fn replace_many<'a>(
     buffer: &mut String,
-    replacements: impl IntoIterator<Item = (&'a str, &'a str)>,
+    replacements: impl IntoIterator<Item = (&'a SubstitutionValueInner, &'a str)>,
 ) {
     for (var, replace) in replacements {
         let mut index = 0;
-        while let Some(offset) = buffer[index..].find(var) {
-            let old_range = (index + offset)..(index + offset + var.len());
+        while let Some(offset) = var.find_in(&buffer[index..]) {
+            let old_range = (index + offset.start)..(index + offset.end);
             buffer.replace_range(old_range, replace);
-            index += offset + replace.len();
+            index += offset.start + replace.len();
         }
     }
 }
