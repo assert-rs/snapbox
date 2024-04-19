@@ -17,6 +17,11 @@ impl Error {
             backtrace: Backtrace::new(),
         }
     }
+
+    #[track_caller]
+    pub(crate) fn panic(self) -> ! {
+        panic!("{self}")
+    }
 }
 
 impl PartialEq for Error {

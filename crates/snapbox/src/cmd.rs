@@ -621,7 +621,9 @@ impl OutputAssert {
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
         let (pattern, actual) = self.config.normalize_eq(expected, actual);
-        self.config.do_action(pattern, actual, Some(&"stdout"));
+        if let Err(err) = self.config.do_action(pattern, actual, Some(&"stdout")) {
+            err.panic();
+        }
 
         self
     }
@@ -661,7 +663,9 @@ impl OutputAssert {
     fn stdout_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
         let (pattern, actual) = self.config.normalize_match(expected, actual);
-        self.config.do_action(pattern, actual, Some(&"stdout"));
+        if let Err(err) = self.config.do_action(pattern, actual, Some(&"stdout")) {
+            err.panic();
+        }
 
         self
     }
@@ -701,7 +705,9 @@ impl OutputAssert {
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
         let (pattern, actual) = self.config.normalize_eq(expected, actual);
-        self.config.do_action(pattern, actual, Some(&"stderr"));
+        if let Err(err) = self.config.do_action(pattern, actual, Some(&"stderr")) {
+            err.panic();
+        }
 
         self
     }
@@ -741,7 +747,9 @@ impl OutputAssert {
     fn stderr_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
         let (pattern, actual) = self.config.normalize_match(expected, actual);
-        self.config.do_action(pattern, actual, Some(&"stderr"));
+        if let Err(err) = self.config.do_action(pattern, actual, Some(&"stderr")) {
+            err.panic();
+        }
 
         self
     }
