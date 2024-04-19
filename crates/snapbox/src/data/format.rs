@@ -1,5 +1,6 @@
 /// Describes the structure of [`Data`][crate::Data]
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
+#[non_exhaustive]
 pub enum DataFormat {
     /// Processing of the [`Data`][crate::Data] failed
     Error,
