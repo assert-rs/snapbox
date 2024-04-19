@@ -57,12 +57,17 @@ impl Assert {
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
-        if let Err(err) = self.eq_inner(expected, actual) {
+        if let Err(err) = self.eq_inner(expected, actual, Some(&"In-memory")) {
             err.panic();
         }
     }
 
-    fn eq_inner(&self, expected: crate::Data, actual: crate::Data) -> Result<(), crate::Error> {
+    fn eq_inner(
+        &self,
+        expected: crate::Data,
+        actual: crate::Data,
+        actual_name: Option<&dyn std::fmt::Display>,
+    ) -> Result<(), crate::Error> {
         if expected.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
@@ -75,7 +80,7 @@ impl Assert {
 
         let (expected, actual) = self.normalize_eq(expected, actual);
 
-        self.do_action(expected, actual, Some(&"In-memory"))
+        self.do_action(expected, actual, actual_name)
     }
 
     /// Check if a value matches a pattern
@@ -107,12 +112,17 @@ impl Assert {
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
         let actual = actual.into();
-        if let Err(err) = self.matches_inner(pattern, actual) {
+        if let Err(err) = self.matches_inner(pattern, actual, Some(&"In-memory")) {
             err.panic();
         }
     }
 
-    fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) -> Result<(), crate::Error> {
+    fn matches_inner(
+        &self,
+        pattern: crate::Data,
+        actual: crate::Data,
+        actual_name: Option<&dyn std::fmt::Display>,
+    ) -> Result<(), crate::Error> {
         if pattern.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
@@ -125,7 +135,7 @@ impl Assert {
 
         let (expected, actual) = self.normalize_match(pattern, actual);
 
-        self.do_action(expected, actual, Some(&"In-memory"))
+        self.do_action(expected, actual, actual_name)
     }
 
     pub(crate) fn normalize_eq(
