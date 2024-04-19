@@ -6,6 +6,8 @@ pub enum DataFormat {
     Text,
     #[cfg(feature = "json")]
     Json,
+    #[cfg(feature = "json")]
+    JsonLines,
     #[cfg(feature = "term-svg")]
     TermSvg,
 }
@@ -18,6 +20,8 @@ impl DataFormat {
             Self::Text => "txt",
             #[cfg(feature = "json")]
             Self::Json => "json",
+            #[cfg(feature = "json")]
+            Self::JsonLines => "jsonl",
             #[cfg(feature = "term-svg")]
             Self::TermSvg => "term.svg",
         }
@@ -37,6 +41,8 @@ impl From<&std::path::Path> for DataFormat {
         match ext {
             #[cfg(feature = "json")]
             "json" => DataFormat::Json,
+            #[cfg(feature = "json")]
+            "jsonl" => DataFormat::JsonLines,
             #[cfg(feature = "term-svg")]
             "term.svg" => Self::TermSvg,
             _ => DataFormat::Text,
