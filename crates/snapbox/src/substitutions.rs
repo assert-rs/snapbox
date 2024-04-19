@@ -128,97 +128,48 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
         return input.to_owned();
     }
 
-    let mut normalized: Vec<Cow<str>> = Vec::new();
-    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(input).collect();
-    let pattern_lines: Vec<_> = crate::utils::LinesWithTerminator::new(pattern).collect();
+    let input = substitutions.substitute(input);
 
+    let mut normalized: Vec<&str> = Vec::new();
     let mut input_index = 0;
-    let mut pattern_index = 0;
-    'outer: loop {
-        let pattern_line = if let Some(pattern_line) = pattern_lines.get(pattern_index) {
-            *pattern_line
-        } else {
-            normalized.extend(
-                input_lines[input_index..]
-                    .iter()
-                    .copied()
-                    .map(|s| substitutions.substitute(s)),
-            );
-            break 'outer;
-        };
-        let next_pattern_index = pattern_index + 1;
-
-        let input_line = if let Some(input_line) = input_lines.get(input_index) {
-            *input_line
-        } else {
-            break 'outer;
-        };
-        let next_input_index = input_index + 1;
-
-        if line_matches(input_line, pattern_line, substitutions) {
-            pattern_index = next_pattern_index;
-            input_index = next_input_index;
-            normalized.push(Cow::Borrowed(pattern_line));
-            continue 'outer;
-        } else if is_line_elide(pattern_line) {
-            let next_pattern_line: &str =
-                if let Some(pattern_line) = pattern_lines.get(next_pattern_index) {
-                    pattern_line
-                } else {
-                    normalized.push(Cow::Borrowed(pattern_line));
-                    break 'outer;
-                };
-            if let Some(future_input_index) = input_lines[input_index..]
-                .iter()
-                .enumerate()
-                .find(|(_, l)| **l == next_pattern_line)
-                .map(|(i, _)| input_index + i)
-            {
-                normalized.push(Cow::Borrowed(pattern_line));
-                pattern_index = next_pattern_index;
-                input_index = future_input_index;
-                continue 'outer;
-            } else {
-                normalized.extend(
-                    input_lines[input_index..]
-                        .iter()
-                        .copied()
-                        .map(|s| substitutions.substitute(s)),
-                );
-                break 'outer;
-            }
-        } else {
-            // Find where we can pick back up for normalizing
-            for future_input_index in next_input_index..input_lines.len() {
-                let future_input_line = input_lines[future_input_index];
-                if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
-                    .iter()
-                    .enumerate()
-                    .find(|(_, l)| **l == future_input_line || is_line_elide(l))
-                    .map(|(i, _)| next_pattern_index + i)
-                {
-                    normalized.extend(
-                        input_lines[input_index..future_input_index]
-                            .iter()
-                            .copied()
-                            .map(|s| substitutions.substitute(s)),
-                    );
-                    pattern_index = future_pattern_index;
-                    input_index = future_input_index;
-                    continue 'outer;
+    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(&input).collect();
+    let mut pattern_lines = crate::utils::LinesWithTerminator::new(pattern).peekable();
+    'outer: while let Some(pattern_line) = pattern_lines.next() {
+        if is_line_elide(pattern_line) {
+            if let Some(next_pattern_line) = pattern_lines.peek() {
+                for (index_offset, next_input_line) in input_lines[input_index..].iter().copied().enumerate() {
+                    if line_matches(next_input_line, next_pattern_line, substitutions) {
+                        normalized.push(pattern_line);
+                        input_index += index_offset;
+                        continue 'outer;
+                    }
                 }
+                // Give up doing further normalization
+                break;
+            } else {
+                // Give up doing further normalization
+                normalized.push(pattern_line);
+                // captured rest so don't copy remaining lines over
+                input_index = input_lines.len();
+                break;
             }
+        } else {
+            let Some(input_line) = input_lines.get(input_index) else {
+                // Give up doing further normalization
+                break;
+            };
 
-            normalized.extend(
-                input_lines[input_index..]
-                    .iter()
-                    .copied()
-                    .map(|s| substitutions.substitute(s)),
-            );
-            break 'outer;
+            if line_matches(input_line, pattern_line, substitutions) {
+                input_index += 1;
+                normalized.push(pattern_line);
+            } else {
+                // Give up doing further normalization
+                break;
+            }
         }
     }
 
+    normalized.extend(input_lines[input_index..].iter().copied());
     normalized.join("")
 }
 
@@ -226,24 +177,20 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(line: &str, pattern: &str, substitutions: &Substitutions) -> bool {
-    if line == pattern {
+fn line_matches(mut input: &str, pattern: &str, substitutions: &Substitutions) -> bool {
+    if input == pattern {
         return true;
     }
 
-    let subbed = substitutions.substitute(line);
-    let mut line = subbed.as_ref();
-
     let pattern = substitutions.clear(pattern);
-
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
-        if let Some(remainder) = line.strip_prefix(section) {
+        if let Some(remainder) = input.strip_prefix(section) {
             if let Some(next_section) = sections.peek() {
                 if next_section.is_empty() {
-                    line = "";
+                    input = "";
                 } else if let Some(restart_index) = remainder.find(next_section) {
-                    line = &remainder[restart_index..];
+                    input = &remainder[restart_index..];
                 }
             } else {
                 return remainder.is_empty();
@@ -318,7 +265,7 @@ mod test {
     fn elide_delimited_with_sub() {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
-        let expected = "Hello [..]\nHow are you?\nGoodbye World";
+        let expected = "Hello [..]\n...\nGoodbye [..]";
         let actual = normalize(input, pattern, &Substitutions::new());
         assert_eq!(expected, actual);
     }
@@ -363,7 +310,7 @@ mod test {
     fn post_diverge_elide() {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
-        let expected = "Hello\nWorld\nGoodbye\n...";
+        let expected = "Hello\nWorld\nGoodbye\nSir";
         let actual = normalize(input, pattern, &Substitutions::new());
         assert_eq!(expected, actual);
     }
