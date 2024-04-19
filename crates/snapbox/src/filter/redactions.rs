@@ -447,4 +447,14 @@ mod test {
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
+
+    #[test]
+    fn substitute_disabled() {
+        let input = "cargo";
+        let pattern = "cargo[EXE]";
+        let mut sub = Redactions::new();
+        sub.insert("[EXE]", "").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
 }
