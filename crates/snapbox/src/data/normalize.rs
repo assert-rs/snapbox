@@ -21,6 +21,12 @@ impl Normalize for NormalizeNewlines {
                 normalize_value(&mut value, crate::utils::normalize_lines);
                 Data::json(value)
             }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_value(&mut value, crate::utils::normalize_lines);
+                DataInner::JsonLines(value).into()
+            }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 let lines = crate::utils::normalize_lines(&text);
@@ -47,6 +53,12 @@ impl Normalize for NormalizePaths {
                 let mut value = value;
                 normalize_value(&mut value, crate::utils::normalize_paths);
                 Data::json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_value(&mut value, crate::utils::normalize_paths);
+                DataInner::JsonLines(value).into()
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
@@ -93,6 +105,14 @@ impl Normalize for NormalizeMatches<'_> {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
                 Data::json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                if let DataInner::Json(exp) = &self.pattern.inner {
+                    normalize_value_matches(&mut value, exp, self.substitutions);
+                }
+                DataInner::JsonLines(value).into()
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
