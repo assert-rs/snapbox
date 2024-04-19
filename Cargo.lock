@@ -808,6 +808,7 @@ dependencies = [
  "libc",
  "normalize-line-endings",
  "os_pipe",
+ "regex",
  "serde",
  "serde_json",
  "similar",
