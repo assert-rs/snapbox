@@ -408,4 +408,13 @@ mod test {
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
+
+    #[test]
+    fn substitute_disabled() {
+        let input = "cargo";
+        let pattern = "cargo[EXE]";
+        let sub = Substitutions::with_exe();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
 }
