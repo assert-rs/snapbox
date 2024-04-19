@@ -11,6 +11,7 @@ mod test;
 use crate::data::DataInner;
 use crate::Data;
 
+pub use redactions::RedactedValue;
 pub use redactions::Redactions;
 
 pub trait Filter {

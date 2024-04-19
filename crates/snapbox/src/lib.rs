@@ -114,6 +114,7 @@ pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
+pub use filter::RedactedValue;
 pub use filter::Redactions;
 #[doc(hidden)]
 pub use snapbox_macros::debug;
