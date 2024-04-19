@@ -76,6 +76,7 @@
 //!         name,
 //!         fixture: input_path,
 //!         expected,
+//!         format: None,
 //!     }
 //! }
 //!

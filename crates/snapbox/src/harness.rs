@@ -22,6 +22,7 @@
 //!         name,
 //!         fixture: input_path,
 //!         expected,
+//!         format: None,
 //!     }
 //! }
 //!
@@ -125,7 +126,10 @@ where
                 Trial::test(case.name.clone(), move || {
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
-                    let actual = crate::Data::text(actual).normalize(NormalizeNewlines);
+                    let mut actual = crate::Data::text(actual).normalize(NormalizeNewlines);
+                    if let Some(format) = case.format {
+                        actual = actual.coerce_to(format);
+                    }
                     #[allow(deprecated)]
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
@@ -229,4 +233,6 @@ pub struct Case {
     pub fixture: std::path::PathBuf,
     /// What the actual output should be compared against or updated
     pub expected: std::path::PathBuf,
+    /// Explicitly specify what format `expected` is stored in
+    pub format: Option<DataFormat>,
 }
