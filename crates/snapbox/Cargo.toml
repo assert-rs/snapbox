@@ -42,6 +42,8 @@ path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:file
 cmd = ["dep:os_pipe", "dep:wait-timeout", "dep:libc", "dep:windows-sys"]
 ## Building of examples for snapshotting
 examples = ["dep:escargot"]
+## Regex text substitutions
+regex = ["dep:regex"]
 
 ## Snapshotting of json
 json = ["structured-data", "dep:serde_json"]
@@ -94,6 +96,7 @@ document-features = { version = "0.2.6", optional = true }
 
 serde_json = { version = "1.0.85", optional = true}
 anstyle-svg = { version = "0.1.3", optional = true }
+regex = { version = "1.10.4", optional = true, default-features = false, features = ["std"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52.0", features = ["Win32_Foundation"], optional = true }

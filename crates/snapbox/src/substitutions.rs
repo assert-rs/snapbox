@@ -5,10 +5,13 @@ use std::borrow::Cow;
 /// Built-in expressions:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug)]
 pub struct Substitutions {
-    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<Cow<'static, str>>>,
-    unused: std::collections::BTreeSet<&'static str>,
+    vars: std::collections::BTreeMap<
+        &'static str,
+        std::collections::BTreeSet<SubstitutionValueInner>,
+    >,
+    unused: std::collections::BTreeSet<SubstitutionValueInner>,
 }
 
 impl Substitutions {
@@ -32,20 +35,28 @@ impl Substitutions {
     /// let mut subst = snapbox::Substitutions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
+    ///
+    /// With the `regex` feature, you can define patterns using regexes.
+    /// You can choose to replace a subset of the regex by giving it the named capture group
+    /// `replace`.
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "regex")] {
+    /// let mut subst = snapbox::Substitutions::new();
+    /// subst.insert("[OBJECT]", regex::Regex::new("(?<replace>(world|moon))").unwrap());
+    /// # }
+    /// ```
     pub fn insert(
         &mut self,
         key: &'static str,
-        value: impl Into<Cow<'static, str>>,
+        value: impl Into<SubstitutionValue>,
     ) -> Result<(), crate::Error> {
         let key = validate_key(key)?;
         let value = value.into();
-        if value.is_empty() {
-            self.unused.insert(key);
+        if let Some(inner) = value.inner {
+            self.vars.entry(key).or_default().insert(inner);
         } else {
-            self.vars
-                .entry(key)
-                .or_default()
-                .insert(crate::utils::normalize_text(value.as_ref()).into());
+            self.unused.insert(SubstitutionValueInner::Str(key));
         }
         Ok(())
     }
@@ -55,7 +66,7 @@ impl Substitutions {
     /// keys must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
-        vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<SubstitutionValue>)>,
     ) -> Result<(), crate::Error> {
         for (key, value) in vars {
             self.insert(key, value)?;
@@ -88,9 +99,9 @@ impl Substitutions {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
-            self.vars.iter().flat_map(|(var, replaces)| {
-                replaces.iter().map(|replace| (replace.as_ref(), *var))
-            }),
+            self.vars
+                .iter()
+                .flat_map(|(var, replaces)| replaces.iter().map(|replace| (replace, *var))),
         );
         input
     }
@@ -98,7 +109,7 @@ impl Substitutions {
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
         if !self.unused.is_empty() && pattern.contains('[') {
             let mut pattern = pattern.to_owned();
-            replace_many(&mut pattern, self.unused.iter().map(|var| (*var, "")));
+            replace_many(&mut pattern, self.unused.iter().map(|var| (var, "")));
             Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
@@ -106,17 +117,133 @@ impl Substitutions {
     }
 }
 
+#[derive(Clone)]
+pub struct SubstitutionValue {
+    inner: Option<SubstitutionValueInner>,
+}
+
+#[derive(Clone, Debug)]
+enum SubstitutionValueInner {
+    Str(&'static str),
+    String(String),
+    #[cfg(feature = "regex")]
+    Regex(regex::Regex),
+}
+
+impl SubstitutionValueInner {
+    fn find_in(&self, buffer: &str) -> Option<std::ops::Range<usize>> {
+        match self {
+            Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            Self::String(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            #[cfg(feature = "regex")]
+            Self::Regex(r) => {
+                let captures = r.captures(buffer)?;
+                let m = captures.name("replace").or_else(|| captures.get(0))?;
+                Some(m.range())
+            }
+        }
+    }
+
+    fn as_cmp(&self) -> &str {
+        match self {
+            Self::Str(s) => s,
+            Self::String(s) => s,
+            #[cfg(feature = "regex")]
+            Self::Regex(s) => s.as_str(),
+        }
+    }
+}
+
+impl From<&'static str> for SubstitutionValue {
+    fn from(inner: &'static str) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(SubstitutionValueInner::String(
+                    crate::utils::normalize_text(inner),
+                )),
+            }
+        }
+    }
+}
+
+impl From<String> for SubstitutionValue {
+    fn from(inner: String) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(SubstitutionValueInner::String(
+                    crate::utils::normalize_text(&inner),
+                )),
+            }
+        }
+    }
+}
+
+impl From<&'_ String> for SubstitutionValue {
+    fn from(inner: &'_ String) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl From<Cow<'static, str>> for SubstitutionValue {
+    fn from(inner: Cow<'static, str>) -> Self {
+        match inner {
+            Cow::Borrowed(s) => s.into(),
+            Cow::Owned(s) => s.into(),
+        }
+    }
+}
+
+#[cfg(feature = "regex")]
+impl From<regex::Regex> for SubstitutionValue {
+    fn from(inner: regex::Regex) -> Self {
+        Self {
+            inner: Some(SubstitutionValueInner::Regex(inner)),
+        }
+    }
+}
+
+#[cfg(feature = "regex")]
+impl From<&'_ regex::Regex> for SubstitutionValue {
+    fn from(inner: &'_ regex::Regex) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl PartialOrd for SubstitutionValueInner {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.as_cmp().partial_cmp(other.as_cmp())
+    }
+}
+
+impl Ord for SubstitutionValueInner {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_cmp().cmp(other.as_cmp())
+    }
+}
+
+impl PartialEq for SubstitutionValueInner {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_cmp().eq(other.as_cmp())
+    }
+}
+
+impl Eq for SubstitutionValueInner {}
+
 /// Replacements is `(from, to)`
 fn replace_many<'a>(
     buffer: &mut String,
-    replacements: impl IntoIterator<Item = (&'a str, &'a str)>,
+    replacements: impl IntoIterator<Item = (&'a SubstitutionValueInner, &'a str)>,
 ) {
     for (var, replace) in replacements {
         let mut index = 0;
-        while let Some(offset) = buffer[index..].find(var) {
-            let old_range = (index + offset)..(index + offset + var.len());
+        while let Some(offset) = var.find_in(&buffer[index..]) {
+            let old_range = (index + offset.start)..(index + offset.end);
             buffer.replace_range(old_range, replace);
-            index += offset + replace.len();
+            index += offset.start + replace.len();
         }
     }
 }
@@ -413,7 +540,32 @@ mod test {
     fn substitute_disabled() {
         let input = "cargo";
         let pattern = "cargo[EXE]";
-        let sub = Substitutions::with_exe();
+        let mut sub = Substitutions::new();
+        sub.insert("[EXE]", "").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    #[cfg(feature = "regex")]
+    fn substitute_regex_unnamed() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Substitutions::new();
+        sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
+            .unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    #[cfg(feature = "regex")]
+    fn substitute_regex_named() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Substitutions::new();
+        sub.insert("[OBJECT]", regex::Regex::new("(?<replace>world)!").unwrap())
+            .unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }

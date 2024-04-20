@@ -116,6 +116,7 @@ pub use data::Data;
 pub use data::ToDebug;
 pub use error::Error;
 pub use snapbox_macros::debug;
+pub use substitutions::SubstitutionValue;
 pub use substitutions::Substitutions;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

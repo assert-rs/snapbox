@@ -137,7 +137,7 @@ impl TestCases {
         var: &'static str,
         value: impl Into<Cow<'static, str>>,
     ) -> Result<&Self, crate::Error> {
-        self.substitutions.borrow_mut().insert(var, value)?;
+        self.substitutions.borrow_mut().insert(var, value.into())?;
         Ok(self)
     }
 
@@ -148,7 +148,9 @@ impl TestCases {
         &self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
     ) -> Result<&Self, crate::Error> {
-        self.substitutions.borrow_mut().extend(vars)?;
+        self.substitutions
+            .borrow_mut()
+            .extend(vars.into_iter().map(|(v, r)| (v, r.into())))?;
         Ok(self)
     }
 
