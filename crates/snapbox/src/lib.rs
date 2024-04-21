@@ -71,12 +71,11 @@
 //!
 //! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
 //!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = input_path.with_extension("out");
+//!     let expected = snapbox::Data::read_from(&input_path.with_extension("out"), None);
 //!     snapbox::harness::Case {
 //!         name,
 //!         fixture: input_path,
 //!         expected,
-//!         format: None,
 //!     }
 //! }
 //!

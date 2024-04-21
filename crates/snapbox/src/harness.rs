@@ -17,12 +17,11 @@
 //!
 //! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
 //!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = input_path.with_extension("out");
+//!     let expected = snapbox::Data::read_from(&input_path.with_extension("out"), None);
 //!     snapbox::harness::Case {
 //!         name,
 //!         fixture: input_path,
 //!         expected,
-//!         format: None,
 //!     }
 //! }
 //!
@@ -36,28 +35,30 @@
 //! }
 //! ```
 
-use crate::data::DataFormat;
 use crate::Action;
+use crate::Data;
 
 use libtest_mimic::Trial;
 
 /// [`Harness`] for discovering test inputs and asserting against snapshot files
 ///
 /// See [`harness`][crate::harness] for more details
-pub struct Harness<S, T> {
+pub struct Harness<S, T, I, E> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
     config: crate::Assert,
+    test_output: std::marker::PhantomData<I>,
+    test_error: std::marker::PhantomData<E>,
 }
 
-impl<S, T, I, E> Harness<S, T>
+impl<S, T, I, E> Harness<S, T, I, E>
 where
+    S: Setup + Send + Sync + 'static,
+    T: Test<I, E> + Clone + Send + Sync + 'static,
     I: std::fmt::Display,
     E: std::fmt::Display,
-    S: Fn(std::path::PathBuf) -> Case + Send + Sync + 'static,
-    T: Fn(&std::path::Path) -> Result<I, E> + Send + Sync + 'static + Clone,
 {
     /// Specify where the test scenarios
     ///
@@ -72,6 +73,8 @@ where
             setup,
             test,
             config: crate::Assert::new().action_env(crate::DEFAULT_ACTION_ENV),
+            test_output: Default::default(),
+            test_error: Default::default(),
         }
     }
 
@@ -127,15 +130,18 @@ where
         let tests: Vec<_> = tests
             .into_iter()
             .map(|path| {
-                let case = (self.setup)(path);
+                let case = self.setup.setup(path);
+                assert!(
+                    case.expected.source().map(|s| s.is_path()).unwrap_or(false),
+                    "`Case::expected` must be from a file"
+                );
                 let test = self.test.clone();
                 let config = shared_config.clone();
                 Trial::test(case.name.clone(), move || {
-                    let expected = crate::Data::read_from(&case.expected, case.format);
-                    let actual = (test)(&case.fixture)?;
+                    let actual = test.run(&case.fixture)?;
                     let actual = actual.to_string();
                     let actual = crate::Data::text(actual);
-                    config.try_eq(expected, actual, Some(&case.name))?;
+                    config.try_eq(case.expected.clone(), actual, Some(&case.name))?;
                     Ok(())
                 })
                 .with_ignored_flag(shared_config.action == Action::Ignore)
@@ -144,6 +150,38 @@ where
 
         let args = libtest_mimic::Arguments::from_args();
         libtest_mimic::run(&args, tests).exit()
+    }
+}
+
+pub trait Setup {
+    fn setup(&self, fixture: std::path::PathBuf) -> Case;
+}
+
+impl<F> Setup for F
+where
+    F: Fn(std::path::PathBuf) -> Case,
+{
+    fn setup(&self, fixture: std::path::PathBuf) -> Case {
+        (self)(fixture)
+    }
+}
+
+pub trait Test<S, E>
+where
+    S: std::fmt::Display,
+    E: std::fmt::Display,
+{
+    fn run(&self, fixture: &std::path::Path) -> Result<S, E>;
+}
+
+impl<F, S, E> Test<S, E> for F
+where
+    F: Fn(&std::path::Path) -> Result<S, E>,
+    S: std::fmt::Display,
+    E: std::fmt::Display,
+{
+    fn run(&self, fixture: &std::path::Path) -> Result<S, E> {
+        (self)(fixture)
     }
 }
 
@@ -156,7 +194,7 @@ pub struct Case {
     /// Input for the test
     pub fixture: std::path::PathBuf,
     /// What the actual output should be compared against or updated
-    pub expected: std::path::PathBuf,
-    /// Explicitly specify what format `expected` is stored in
-    pub format: Option<DataFormat>,
+    ///
+    /// Generally derived from `fixture` and loaded with [`Data::read_from`]
+    pub expected: Data,
 }
