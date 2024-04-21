@@ -2,7 +2,7 @@ mod substitutions;
 
 #[cfg(feature = "regex")]
 pub use regex::Regex;
-pub use substitutions::SubstitutionValue;
+pub use substitutions::SubstitutedValue;
 pub use substitutions::Substitutions;
 
 /// Normalize line endings
