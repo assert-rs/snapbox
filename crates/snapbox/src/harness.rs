@@ -17,12 +17,11 @@
 //!
 //! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
 //!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = input_path.with_extension("out");
+//!     let expected = snapbox::Data::read_from(&input_path.with_extension("out"), None);
 //!     snapbox::harness::Case {
 //!         name,
 //!         fixture: input_path,
 //!         expected,
-//!         format: None,
 //!     }
 //! }
 //!
@@ -36,8 +35,8 @@
 //! }
 //! ```
 
-use crate::data::DataFormat;
 use crate::Action;
+use crate::Data;
 
 use libtest_mimic::Trial;
 
@@ -132,14 +131,17 @@ where
             .into_iter()
             .map(|path| {
                 let case = self.setup.setup(path);
+                assert!(
+                    case.expected.source().map(|s| s.is_path()).unwrap_or(false),
+                    "`Case::expected` must be from a file"
+                );
                 let test = self.test.clone();
                 let config = shared_config.clone();
                 Trial::test(case.name.clone(), move || {
-                    let expected = crate::Data::read_from(&case.expected, case.format);
                     let actual = test.run(&case.fixture)?;
                     let actual = actual.to_string();
                     let actual = crate::Data::text(actual);
-                    config.try_eq(expected, actual, Some(&case.name))?;
+                    config.try_eq(case.expected.clone(), actual, Some(&case.name))?;
                     Ok(())
                 })
                 .with_ignored_flag(shared_config.action == Action::Ignore)
@@ -192,7 +194,7 @@ pub struct Case {
     /// Input for the test
     pub fixture: std::path::PathBuf,
     /// What the actual output should be compared against or updated
-    pub expected: std::path::PathBuf,
-    /// Explicitly specify what format `expected` is stored in
-    pub format: Option<DataFormat>,
+    ///
+    /// Generally derived from `fixture` and loaded with [`Data::read_from`]
+    pub expected: Data,
 }
