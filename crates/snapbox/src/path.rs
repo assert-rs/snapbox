@@ -8,7 +8,7 @@ pub use crate::current_dir;
 pub use crate::current_rs;
 
 #[cfg(feature = "path")]
-use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
+use crate::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 /// Working directory for tests
 #[derive(Debug)]
@@ -189,11 +189,9 @@ impl PathDiff {
                         crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected =
-                        crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
+                        FilterNewlines.filter(crate::Data::read_from(&expected_path, None));
 
-                    actual = actual
-                        .coerce_to(expected.intended_format())
-                        .normalize(NormalizeNewlines);
+                    actual = FilterNewlines.filter(actual.coerce_to(expected.intended_format()));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {
@@ -267,15 +265,14 @@ impl PathDiff {
                         crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected =
-                        crate::Data::read_from(&expected_path, None).normalize(NormalizeNewlines);
+                        FilterNewlines.filter(crate::Data::read_from(&expected_path, None));
 
                     actual = actual.coerce_to(expected.intended_format());
                     if normalize_paths {
-                        actual = actual.normalize(NormalizePaths);
+                        actual = FilterPaths.filter(actual);
                     }
-                    actual = actual
-                        .normalize(NormalizeNewlines)
-                        .normalize(NormalizeMatches::new(substitutions, &expected));
+                    actual = FilterRedactions::new(substitutions, &expected)
+                        .filter(FilterNewlines.filter(actual));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {

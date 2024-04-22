@@ -1,15 +1,10 @@
 mod format;
-mod normalize;
 mod runtime;
 mod source;
 #[cfg(test)]
 mod tests;
 
 pub use format::DataFormat;
-pub use normalize::Normalize;
-pub use normalize::NormalizeMatches;
-pub use normalize::NormalizeNewlines;
-pub use normalize::NormalizePaths;
 pub use source::DataSource;
 pub use source::Inline;
 pub use source::Position;
@@ -97,8 +92,8 @@ macro_rules! str {
 /// This provides conveniences for tracking the intended format (binary vs text).
 #[derive(Clone, Debug)]
 pub struct Data {
-    inner: DataInner,
-    source: Option<DataSource>,
+    pub(crate) inner: DataInner,
+    pub(crate) source: Option<DataSource>,
 }
 
 #[derive(Clone, Debug)]
@@ -219,13 +214,6 @@ impl Data {
         let bytes = self.to_bytes()?;
         std::fs::write(path, bytes)
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
-    }
-
-    /// Post-process text
-    ///
-    /// See [utils][crate::utils]
-    pub fn normalize(self, op: impl Normalize) -> Self {
-        op.normalize(self)
     }
 
     /// Return the underlying `String`
