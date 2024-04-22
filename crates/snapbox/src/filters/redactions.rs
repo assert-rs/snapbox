@@ -35,12 +35,12 @@ impl Redactions {
     ///
     /// With the `regex` feature, you can define patterns using regexes.
     /// You can choose to replace a subset of the regex by giving it the named capture group
-    /// `replace`.
+    /// `redacted`.
     ///
     /// ```rust
     /// # #[cfg(feature = "regex")] {
     /// let mut subst = snapbox::Redactions::new();
-    /// subst.insert("[OBJECT]", regex::Regex::new("(?<replace>(world|moon))").unwrap());
+    /// subst.insert("[OBJECT]", regex::Regex::new("(?<redacted>(world|moon))").unwrap());
     /// # }
     /// ```
     pub fn insert(
@@ -135,7 +135,7 @@ impl RedactedValueInner {
             #[cfg(feature = "regex")]
             Self::Regex(r) => {
                 let captures = r.captures(buffer)?;
-                let m = captures.name("replace").or_else(|| captures.get(0))?;
+                let m = captures.name("redacted").or_else(|| captures.get(0))?;
                 Some(m.range())
             }
         }
@@ -561,8 +561,11 @@ mod test {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
-        sub.insert("[OBJECT]", regex::Regex::new("(?<replace>world)!").unwrap())
-            .unwrap();
+        sub.insert(
+            "[OBJECT]",
+            regex::Regex::new("(?<redacted>world)!").unwrap(),
+        )
+        .unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
