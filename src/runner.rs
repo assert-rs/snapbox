@@ -35,7 +35,7 @@ impl Runner {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) {
         let palette = snapbox::report::Palette::color();
 
@@ -139,7 +139,7 @@ impl Case {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -308,7 +308,7 @@ impl Case {
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -406,7 +406,7 @@ impl Case {
         &self,
         mut output: Output,
         step: &crate::schema::Step,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Output {
         output.stdout = self.validate_stream(
             output.stdout,
@@ -429,7 +429,7 @@ impl Case {
         stream: Option<Stream>,
         expected_content: Option<&crate::Data>,
         binary: bool,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Option<Stream> {
         let mut stream = stream?;
 
@@ -500,7 +500,7 @@ impl Case {
         actual_root: &std::path::Path,
         mut fs: Filesystem,
         mode: &Mode,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 

@@ -1,28 +1,28 @@
 use std::borrow::Cow;
 
-/// Match pattern expressions, see [`Assert`][crate::Assert]
+/// Replace data with placeholders
 ///
 /// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug)]
-pub struct Substitutions {
+pub struct Redactions {
     vars:
         std::collections::BTreeMap<&'static str, std::collections::BTreeSet<SubstitutedValueInner>>,
     unused: std::collections::BTreeSet<SubstitutedValueInner>,
 }
 
-impl Substitutions {
+impl Redactions {
     pub fn new() -> Self {
         Default::default()
     }
 
     pub(crate) fn with_exe() -> Self {
-        let mut substitutions = Self::new();
-        substitutions
+        let mut redactions = Self::new();
+        redactions
             .insert("[EXE]", std::env::consts::EXE_SUFFIX)
             .unwrap();
-        substitutions
+        redactions
     }
 
     /// Insert an additional match pattern
@@ -30,7 +30,7 @@ impl Substitutions {
     /// `placeholder` must be enclosed in `[` and `]`.
     ///
     /// ```rust
-    /// let mut subst = snapbox::Substitutions::new();
+    /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
     ///
@@ -40,7 +40,7 @@ impl Substitutions {
     ///
     /// ```rust
     /// # #[cfg(feature = "regex")] {
-    /// let mut subst = snapbox::Substitutions::new();
+    /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[OBJECT]", regex::Regex::new("(?<replace>(world|moon))").unwrap());
     /// # }
     /// ```
@@ -85,7 +85,7 @@ impl Substitutions {
     /// Otherwise, `input`, with as many patterns replaced as possible, will be returned.
     ///
     /// ```rust
-    /// let subst = snapbox::Substitutions::new();
+    /// let subst = snapbox::Redactions::new();
     /// let output = subst.normalize("Hello World!", "Hello [..]!");
     /// assert_eq!(output, "Hello [..]!");
     /// ```
@@ -261,12 +261,12 @@ fn validate_placeholder(placeholder: &'static str) -> Result<&'static str, crate
     Ok(placeholder)
 }
 
-fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
+fn normalize(input: &str, pattern: &str, redactions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
 
-    let input = substitutions.substitute(input);
+    let input = redactions.substitute(input);
 
     let mut normalized: Vec<&str> = Vec::new();
     let mut input_index = 0;
@@ -278,7 +278,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
                 for (index_offset, next_input_line) in
                     input_lines[input_index..].iter().copied().enumerate()
                 {
-                    if line_matches(next_input_line, next_pattern_line, substitutions) {
+                    if line_matches(next_input_line, next_pattern_line, redactions) {
                         normalized.push(pattern_line);
                         input_index += index_offset;
                         continue 'outer;
@@ -299,7 +299,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
                 break;
             };
 
-            if line_matches(input_line, pattern_line, substitutions) {
+            if line_matches(input_line, pattern_line, redactions) {
                 input_index += 1;
                 normalized.push(pattern_line);
             } else {
@@ -317,12 +317,12 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(mut input: &str, pattern: &str, substitutions: &Substitutions) -> bool {
+fn line_matches(mut input: &str, pattern: &str, redactions: &Redactions) -> bool {
     if input == pattern {
         return true;
     }
 
-    let pattern = substitutions.clear(pattern);
+    let pattern = redactions.clear(pattern);
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
         if let Some(remainder) = input.strip_prefix(section) {
@@ -352,7 +352,7 @@ mod test {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -361,7 +361,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -370,7 +370,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -379,7 +379,7 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -388,7 +388,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -397,7 +397,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -406,7 +406,7 @@ mod test {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
         let expected = "Hello [..]\n...\nGoodbye [..]";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -415,7 +415,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -424,7 +424,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -433,7 +433,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -442,7 +442,7 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -451,7 +451,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\nSir";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -460,7 +460,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -504,7 +504,7 @@ mod test {
             ("hello world, goodbye moon", "hello [..], [..] world", false),
         ];
         for (line, pattern, expected) in cases {
-            let actual = line_matches(line, pattern, &Substitutions::new());
+            let actual = line_matches(line, pattern, &Redactions::new());
             assert_eq!(expected, actual, "line={:?}  pattern={:?}", line, pattern);
         }
     }
@@ -528,7 +528,7 @@ mod test {
     fn substitute_literal() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[OBJECT]", "world").unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
@@ -538,7 +538,7 @@ mod test {
     fn substitute_disabled() {
         let input = "cargo";
         let pattern = "cargo[EXE]";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[EXE]", "").unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
@@ -549,7 +549,7 @@ mod test {
     fn substitute_regex_unnamed() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
             .unwrap();
         let actual = normalize(input, pattern, &sub);
@@ -561,7 +561,7 @@ mod test {
     fn substitute_regex_named() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[OBJECT]", regex::Regex::new("(?<replace>world)!").unwrap())
             .unwrap();
         let actual = normalize(input, pattern, &sub);

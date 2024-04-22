@@ -114,7 +114,7 @@ pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
 pub use error::Error;
-pub use filters::Substitutions;
+pub use filters::Redactions;
 pub use snapbox_macros::debug;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

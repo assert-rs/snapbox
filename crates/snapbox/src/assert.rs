@@ -25,7 +25,7 @@ pub struct Assert {
     pub(crate) action: Action,
     action_var: Option<String>,
     normalize_paths: bool,
-    substitutions: crate::Substitutions,
+    substitutions: crate::Redactions,
     pub(crate) palette: crate::report::Palette,
 }
 
@@ -432,8 +432,8 @@ impl Assert {
         self
     }
 
-    /// Override the default [`Substitutions`][crate::Substitutions]
-    pub fn substitutions(mut self, substitutions: crate::Substitutions) -> Self {
+    /// Override the default [`Redactions`][crate::Redactions]
+    pub fn substitutions(mut self, substitutions: crate::Redactions) -> Self {
         self.substitutions = substitutions;
         self
     }
@@ -456,6 +456,6 @@ impl Default for Assert {
             substitutions: Default::default(),
             palette: crate::report::Palette::color(),
         }
-        .substitutions(crate::Substitutions::with_exe())
+        .substitutions(crate::Redactions::with_exe())
     }
 }
