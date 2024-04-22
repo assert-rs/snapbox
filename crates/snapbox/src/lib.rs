@@ -25,7 +25,7 @@
 //! ## Getting Started
 //!
 //! Testing Functions:
-//! - [`assert_eq`][crate::assert_eq()] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
+//! - [`assert_eq`][crate::assert_eq()] for quick and dirty snapshotting
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Testing Commands:
@@ -44,9 +44,9 @@
 //!
 //! # Examples
 //!
-//! [`assert_matches`]
+//! [`assert_eq`][crate::assert_eq()]
 //! ```rust
-//! snapbox::assert_matches("Hello [..] people!", "Hello many people!");
+//! snapbox::assert_eq("Hello [..] people!", "Hello many people!");
 //! ```
 //!
 //! [`Assert`]
@@ -54,7 +54,7 @@
 //! let actual = "...";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOTS")
-//!     .matches(snapbox::file!["help_output_is_clean.txt"], actual);
+//!     .eq(snapbox::file!["help_output_is_clean.txt"], actual);
 //! ```
 //!
 //! [`harness::Harness`]
@@ -121,12 +121,19 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Check if a value is the same as an expected value
 ///
-/// When the content is text, newlines are normalized.
+/// By default [`filters`] are applied, including:
+/// - `...` is a line-wildcard when on a line by itself
+/// - `[..]` is a character-wildcard when inside a line
+/// - `[EXE]` matches `.exe` on Windows
+/// - `\` to `/`
+/// - Newlines
+///
+/// To limit this to newline normalization for text, call [`Data::raw`] on `expected`.
 ///
 /// ```rust
 /// # use snapbox::assert_eq;
 /// let output = "something";
-/// let expected = "something";
+/// let expected = "so[..]g";
 /// assert_eq(expected, output);
 /// ```
 ///
@@ -142,38 +149,6 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
     Assert::new()
         .action_env(DEFAULT_ACTION_ENV)
         .eq(expected, actual);
-}
-
-/// Check if a value matches a pattern
-///
-/// Pattern syntax:
-/// - `...` is a line-wildcard when on a line by itself
-/// - `[..]` is a character-wildcard when inside a line
-/// - `[EXE]` matches `.exe` on Windows
-///
-/// Normalization:
-/// - Newlines
-/// - `\` to `/`
-///
-/// ```rust
-/// # use snapbox::assert_matches;
-/// let output = "something";
-/// let expected = "so[..]g";
-/// assert_matches(expected, output);
-/// ```
-///
-/// Can combine this with [`file!`]
-/// ```rust,no_run
-/// # use snapbox::assert_matches;
-/// # use snapbox::file;
-/// let actual = "something";
-/// assert_matches(file!["output.txt"], actual);
-/// ```
-#[track_caller]
-pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-    Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
-        .matches(pattern, actual);
 }
 
 /// Check if a path matches the content of another path, recursively

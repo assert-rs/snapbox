@@ -18,7 +18,7 @@ use crate::Action;
 /// # use snapbox::Assert;
 /// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().matches(file!["output.txt"], actual);
+/// Assert::new().eq(file!["output.txt"], actual);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -37,12 +37,19 @@ impl Assert {
 
     /// Check if a value is the same as an expected value
     ///
-    /// When the content is text, newlines are normalized.
+    /// By default [`filters`][crate::filters] are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, call [`Data::raw`][crate::Data::raw] on `expected`.
     ///
     /// ```rust
     /// # use snapbox::Assert;
     /// let actual = "something";
-    /// let expected = "something";
+    /// let expected = "so[..]g";
     /// Assert::new().eq(expected, actual);
     /// ```
     ///
@@ -57,41 +64,7 @@ impl Assert {
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
-        if let Err(err) = self.try_eq(expected.raw(), actual, Some(&"In-memory")) {
-            err.panic();
-        }
-    }
-
-    /// Check if a value matches a pattern
-    ///
-    /// Pattern syntax:
-    /// - `...` is a line-wildcard when on a line by itself
-    /// - `[..]` is a character-wildcard when inside a line
-    /// - `[EXE]` matches `.exe` on Windows
-    ///
-    /// Normalization:
-    /// - Newlines
-    /// - `\` to `/`
-    ///
-    /// ```rust
-    /// # use snapbox::Assert;
-    /// let actual = "something";
-    /// let expected = "so[..]g";
-    /// Assert::new().matches(expected, actual);
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// # use snapbox::Assert;
-    /// # use snapbox::file;
-    /// let actual = "something";
-    /// Assert::new().matches(file!["output.txt"], actual);
-    /// ```
-    #[track_caller]
-    pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-        let pattern = pattern.into();
-        let actual = actual.into();
-        if let Err(err) = self.try_eq(pattern, actual, Some(&"In-memory")) {
+        if let Err(err) = self.try_eq(expected, actual, Some(&"In-memory")) {
             err.panic();
         }
     }
