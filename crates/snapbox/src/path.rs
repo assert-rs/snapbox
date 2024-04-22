@@ -8,7 +8,7 @@ pub use crate::current_dir;
 pub use crate::current_rs;
 
 #[cfg(feature = "path")]
-use crate::data::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
+use crate::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 /// Working directory for tests
 #[derive(Debug)]

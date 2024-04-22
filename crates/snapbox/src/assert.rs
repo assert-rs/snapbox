@@ -5,7 +5,7 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::data::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
+use crate::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 use crate::Action;
 
 /// Snapshot assertion against a file's contents

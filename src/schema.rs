@@ -2,7 +2,7 @@
 //!
 //! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
-use snapbox::data::{Filter as _, FilterNewlines, FilterPaths};
+use snapbox::filters::{Filter as _, FilterNewlines, FilterPaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 

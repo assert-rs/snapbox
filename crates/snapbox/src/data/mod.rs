@@ -1,15 +1,10 @@
 mod format;
-mod normalize;
 mod runtime;
 mod source;
 #[cfg(test)]
 mod tests;
 
 pub use format::DataFormat;
-pub use normalize::Filter;
-pub use normalize::FilterNewlines;
-pub use normalize::FilterPaths;
-pub use normalize::FilterRedactions;
 pub use source::DataSource;
 pub use source::Inline;
 pub use source::Position;
@@ -97,8 +92,8 @@ macro_rules! str {
 /// This provides conveniences for tracking the intended format (binary vs text).
 #[derive(Clone, Debug)]
 pub struct Data {
-    inner: DataInner,
-    source: Option<DataSource>,
+    pub(crate) inner: DataInner,
+    pub(crate) source: Option<DataSource>,
 }
 
 #[derive(Clone, Debug)]
