@@ -97,13 +97,6 @@ impl Inline {
         data.is(format)
     }
 
-    /// Remove default [`filters`][crate::filters] from this `expected` result
-    pub fn raw(self) -> super::Data {
-        let mut data: super::Data = self.into();
-        data.filters = super::FilterSet::empty().newlines();
-        data
-    }
-
     fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {

@@ -349,8 +349,8 @@ impl PathRuntime {
 mod tests {
     use super::*;
     use crate::assert_eq;
+    use crate::prelude::*;
     use crate::str;
-    use crate::ToDebug as _;
 
     #[test]
     fn test_format_patch() {
