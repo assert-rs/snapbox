@@ -7,9 +7,8 @@ use std::borrow::Cow;
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug)]
 pub struct Redactions {
-    vars:
-        std::collections::BTreeMap<&'static str, std::collections::BTreeSet<SubstitutedValueInner>>,
-    unused: std::collections::BTreeSet<SubstitutedValueInner>,
+    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<RedactedValueInner>>,
+    unused: std::collections::BTreeSet<RedactedValueInner>,
 }
 
 impl Redactions {
@@ -47,14 +46,14 @@ impl Redactions {
     pub fn insert(
         &mut self,
         placeholder: &'static str,
-        value: impl Into<SubstitutedValue>,
+        value: impl Into<RedactedValue>,
     ) -> Result<(), crate::Error> {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if let Some(inner) = value.inner {
             self.vars.entry(placeholder).or_default().insert(inner);
         } else {
-            self.unused.insert(SubstitutedValueInner::Str(placeholder));
+            self.unused.insert(RedactedValueInner::Str(placeholder));
         }
         Ok(())
     }
@@ -64,7 +63,7 @@ impl Redactions {
     /// Placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
-        vars: impl IntoIterator<Item = (&'static str, impl Into<SubstitutedValue>)>,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<RedactedValue>)>,
     ) -> Result<(), crate::Error> {
         for (placeholder, value) in vars {
             self.insert(placeholder, value)?;
@@ -116,19 +115,19 @@ impl Redactions {
 }
 
 #[derive(Clone)]
-pub struct SubstitutedValue {
-    inner: Option<SubstitutedValueInner>,
+pub struct RedactedValue {
+    inner: Option<RedactedValueInner>,
 }
 
 #[derive(Clone, Debug)]
-enum SubstitutedValueInner {
+enum RedactedValueInner {
     Str(&'static str),
     String(String),
     #[cfg(feature = "regex")]
     Regex(regex::Regex),
 }
 
-impl SubstitutedValueInner {
+impl RedactedValueInner {
     fn find_in(&self, buffer: &str) -> Option<std::ops::Range<usize>> {
         match self {
             Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
@@ -152,41 +151,41 @@ impl SubstitutedValueInner {
     }
 }
 
-impl From<&'static str> for SubstitutedValue {
+impl From<&'static str> for RedactedValue {
     fn from(inner: &'static str) -> Self {
         if inner.is_empty() {
             Self { inner: None }
         } else {
             Self {
-                inner: Some(SubstitutedValueInner::String(
-                    crate::filters::normalize_text(inner),
-                )),
+                inner: Some(RedactedValueInner::String(crate::filters::normalize_text(
+                    inner,
+                ))),
             }
         }
     }
 }
 
-impl From<String> for SubstitutedValue {
+impl From<String> for RedactedValue {
     fn from(inner: String) -> Self {
         if inner.is_empty() {
             Self { inner: None }
         } else {
             Self {
-                inner: Some(SubstitutedValueInner::String(
-                    crate::filters::normalize_text(&inner),
-                )),
+                inner: Some(RedactedValueInner::String(crate::filters::normalize_text(
+                    &inner,
+                ))),
             }
         }
     }
 }
 
-impl From<&'_ String> for SubstitutedValue {
+impl From<&'_ String> for RedactedValue {
     fn from(inner: &'_ String) -> Self {
         inner.clone().into()
     }
 }
 
-impl From<Cow<'static, str>> for SubstitutedValue {
+impl From<Cow<'static, str>> for RedactedValue {
     fn from(inner: Cow<'static, str>) -> Self {
         match inner {
             Cow::Borrowed(s) => s.into(),
@@ -196,45 +195,45 @@ impl From<Cow<'static, str>> for SubstitutedValue {
 }
 
 #[cfg(feature = "regex")]
-impl From<regex::Regex> for SubstitutedValue {
+impl From<regex::Regex> for RedactedValue {
     fn from(inner: regex::Regex) -> Self {
         Self {
-            inner: Some(SubstitutedValueInner::Regex(inner)),
+            inner: Some(RedactedValueInner::Regex(inner)),
         }
     }
 }
 
 #[cfg(feature = "regex")]
-impl From<&'_ regex::Regex> for SubstitutedValue {
+impl From<&'_ regex::Regex> for RedactedValue {
     fn from(inner: &'_ regex::Regex) -> Self {
         inner.clone().into()
     }
 }
 
-impl PartialOrd for SubstitutedValueInner {
+impl PartialOrd for RedactedValueInner {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.as_cmp().partial_cmp(other.as_cmp())
     }
 }
 
-impl Ord for SubstitutedValueInner {
+impl Ord for RedactedValueInner {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.as_cmp().cmp(other.as_cmp())
     }
 }
 
-impl PartialEq for SubstitutedValueInner {
+impl PartialEq for RedactedValueInner {
     fn eq(&self, other: &Self) -> bool {
         self.as_cmp().eq(other.as_cmp())
     }
 }
 
-impl Eq for SubstitutedValueInner {}
+impl Eq for RedactedValueInner {}
 
 /// Replacements is `(from, to)`
 fn replace_many<'a>(
     buffer: &mut String,
-    replacements: impl IntoIterator<Item = (&'a SubstitutedValueInner, &'a str)>,
+    replacements: impl IntoIterator<Item = (&'a RedactedValueInner, &'a str)>,
 ) {
     for (var, replace) in replacements {
         let mut index = 0;

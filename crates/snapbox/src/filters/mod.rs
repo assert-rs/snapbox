@@ -6,8 +6,8 @@
 
 mod redactions;
 
+pub use redactions::RedactedValue;
 pub use redactions::Redactions;
-pub use redactions::SubstitutedValue;
 #[cfg(feature = "regex")]
 pub use regex::Regex;
 
