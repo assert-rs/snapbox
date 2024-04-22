@@ -221,9 +221,9 @@ fn json_to_text_coerce_equals_render() {
 fn json_normalize_paths_and_lines() {
     let json = json!({"name": "John\\Doe\r\n"});
     let data = Data::json(json);
-    let data = data.normalize(NormalizePaths);
+    let data = NormalizePaths.normalize(data);
     assert_eq!(Data::json(json!({"name": "John/Doe\r\n"})), data);
-    let data = data.normalize(NormalizeNewlines);
+    let data = NormalizeNewlines.normalize(data);
     assert_eq!(Data::json(json!({"name": "John/Doe\n"})), data);
 }
 
@@ -237,7 +237,7 @@ fn json_normalize_obj_paths_and_lines() {
         }
     });
     let data = Data::json(json);
-    let data = data.normalize(NormalizePaths);
+    let data = NormalizePaths.normalize(data);
     let assert = json!({
         "person": {
             "name": "John/Doe\r\n",
@@ -245,7 +245,7 @@ fn json_normalize_obj_paths_and_lines() {
         }
     });
     assert_eq!(Data::json(assert), data);
-    let data = data.normalize(NormalizeNewlines);
+    let data = NormalizeNewlines.normalize(data);
     let assert = json!({
         "person": {
             "name": "John/Doe\n",
@@ -260,10 +260,10 @@ fn json_normalize_obj_paths_and_lines() {
 fn json_normalize_array_paths_and_lines() {
     let json = json!({"people": ["John\\Doe\r\n", "Jo\\hn\r\n"]});
     let data = Data::json(json);
-    let data = data.normalize(NormalizePaths);
+    let data = NormalizePaths.normalize(data);
     let paths = json!({"people": ["John/Doe\r\n", "Jo/hn\r\n"]});
     assert_eq!(Data::json(paths), data);
-    let data = data.normalize(NormalizeNewlines);
+    let data = NormalizeNewlines.normalize(data);
     let new_lines = json!({"people": ["John/Doe\n", "Jo/hn\n"]});
     assert_eq!(Data::json(new_lines), data);
 }
@@ -280,7 +280,7 @@ fn json_normalize_array_obj_paths_and_lines() {
         ]
     });
     let data = Data::json(json);
-    let data = data.normalize(NormalizePaths);
+    let data = NormalizePaths.normalize(data);
     let paths = json!({
         "people": [
             {
@@ -290,7 +290,7 @@ fn json_normalize_array_obj_paths_and_lines() {
         ]
     });
     assert_eq!(Data::json(paths), data);
-    let data = data.normalize(NormalizeNewlines);
+    let data = NormalizeNewlines.normalize(data);
     let new_lines = json!({
         "people": [
             {
@@ -309,7 +309,7 @@ fn json_normalize_matches_string() {
     let expected = Data::json(exp);
     let actual = json!({"name": "JohnDoe"});
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -329,7 +329,7 @@ fn json_normalize_matches_array() {
         ]
     });
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -347,7 +347,7 @@ fn json_normalize_matches_obj() {
         }
     });
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -364,7 +364,7 @@ fn json_normalize_matches_diff_order_array() {
         "people": ["Jane", "John"]
     });
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_ne!(exp, act);
     }
@@ -400,7 +400,7 @@ fn json_normalize_wildcard_object_first() {
         ]
     });
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -432,7 +432,7 @@ fn json_normalize_wildcard_array_first() {
         }
     ]);
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -469,7 +469,7 @@ fn json_normalize_wildcard_array_first_last() {
         }
     ]);
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -514,7 +514,7 @@ fn json_normalize_wildcard_array_middle_last() {
         }
     ]);
     let actual =
-        Data::json(actual).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -555,7 +555,7 @@ fn json_normalize_wildcard_array_middle_last_early_return() {
         }
     ]);
     let actual_normalized =
-        Data::json(actual.clone()).normalize(NormalizeMatches::new(&Default::default(), &expected));
+        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual.clone()));
     if let DataInner::Json(act) = actual_normalized.inner {
         assert_eq!(act, actual);
     }

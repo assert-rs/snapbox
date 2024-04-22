@@ -12,7 +12,7 @@ use std::eprintln;
 use std::io::stderr;
 
 use rayon::prelude::*;
-use snapbox::data::{DataFormat, NormalizeNewlines, NormalizePaths};
+use snapbox::data::{DataFormat, Normalize as _, NormalizeNewlines, NormalizePaths};
 use snapbox::path::FileType;
 
 #[derive(Debug)]
@@ -437,12 +437,8 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            stream.content = stream
-                .content
-                .normalize(snapbox::data::NormalizeMatches::new(
-                    substitutions,
-                    expected_content,
-                ));
+            stream.content = snapbox::data::NormalizeMatches::new(substitutions, expected_content)
+                .normalize(stream.content);
 
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -736,9 +732,7 @@ impl Stream {
         if content.format() != DataFormat::Text {
             self.status = StreamStatus::Failure("Unable to convert underlying Data to Text".into());
         }
-        self.content = content
-            .normalize(NormalizePaths)
-            .normalize(NormalizeNewlines);
+        self.content = NormalizeNewlines.normalize(NormalizePaths.normalize(content));
         self
     }
 

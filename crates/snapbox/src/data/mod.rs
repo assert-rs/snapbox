@@ -221,13 +221,6 @@ impl Data {
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
-    /// Post-process text
-    ///
-    /// See [utils][crate::utils]
-    pub fn normalize(self, op: impl Normalize) -> Self {
-        op.normalize(self)
-    }
-
     /// Return the underlying `String`
     ///
     /// Note: this will not inspect binary data for being a valid `String`.
