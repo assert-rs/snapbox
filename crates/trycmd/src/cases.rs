@@ -137,7 +137,9 @@ impl TestCases {
         var: &'static str,
         value: impl Into<Cow<'static, str>>,
     ) -> Result<&Self, crate::Error> {
-        self.substitutions.borrow_mut().insert(var, value.into())?;
+        let value = value.into();
+        let value = snapbox::filter::normalize_paths(&snapbox::filter::normalize_lines(&value));
+        self.substitutions.borrow_mut().insert(var, value)?;
         Ok(self)
     }
 
@@ -150,7 +152,12 @@ impl TestCases {
     ) -> Result<&Self, crate::Error> {
         self.substitutions
             .borrow_mut()
-            .extend(vars.into_iter().map(|(p, v)| (p, v.into())))?;
+            .extend(vars.into_iter().map(|(var, value)| {
+                let value = value.into();
+                let value =
+                    snapbox::filter::normalize_paths(&snapbox::filter::normalize_lines(&value));
+                (var, value)
+            }))?;
         Ok(self)
     }
 
