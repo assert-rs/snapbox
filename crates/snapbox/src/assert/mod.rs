@@ -69,27 +69,6 @@ impl Assert {
         }
     }
 
-    pub(crate) fn try_eq(
-        &self,
-        expected: crate::Data,
-        actual: crate::Data,
-        actual_name: Option<&dyn std::fmt::Display>,
-    ) -> Result<()> {
-        if expected.source().is_none() && actual.source().is_some() {
-            panic!("received `(actual, expected)`, expected `(expected, actual)`");
-        }
-        match self.action {
-            Action::Skip => {
-                return Ok(());
-            }
-            Action::Ignore | Action::Verify | Action::Overwrite => {}
-        }
-
-        let (expected, actual) = self.normalize_eq(expected, actual);
-
-        self.do_action(expected, actual, actual_name)
-    }
-
     /// Check if a value matches a pattern
     ///
     /// Pattern syntax:
@@ -122,6 +101,27 @@ impl Assert {
         if let Err(err) = self.try_matches(pattern, actual, Some(&"In-memory")) {
             err.panic();
         }
+    }
+
+    pub(crate) fn try_eq(
+        &self,
+        expected: crate::Data,
+        actual: crate::Data,
+        actual_name: Option<&dyn std::fmt::Display>,
+    ) -> Result<()> {
+        if expected.source().is_none() && actual.source().is_some() {
+            panic!("received `(actual, expected)`, expected `(expected, actual)`");
+        }
+        match self.action {
+            Action::Skip => {
+                return Ok(());
+            }
+            Action::Ignore | Action::Verify | Action::Overwrite => {}
+        }
+
+        let (expected, actual) = self.normalize_eq(expected, actual);
+
+        self.do_action(expected, actual, actual_name)
     }
 
     pub(crate) fn try_matches(
