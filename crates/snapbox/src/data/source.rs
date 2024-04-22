@@ -79,7 +79,7 @@ pub struct Inline {
 }
 
 impl Inline {
-    fn trimmed(&self) -> String {
+    pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
             data = data.strip_prefix('\n').unwrap_or(data);
@@ -92,13 +92,6 @@ impl Inline {
 impl std::fmt::Display for Inline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.position.fmt(f)
-    }
-}
-
-impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
     }
 }
 
