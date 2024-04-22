@@ -4,12 +4,12 @@
 //! - Making snapshots consistent across platforms or conditional compilation
 //! - Focusing snapshots on the characteristics of the data being tested
 
-mod substitutions;
+mod redactions;
 
+pub use redactions::SubstitutedValue;
+pub use redactions::Substitutions;
 #[cfg(feature = "regex")]
 pub use regex::Regex;
-pub use substitutions::SubstitutedValue;
-pub use substitutions::Substitutions;
 
 /// Normalize line endings
 pub fn normalize_lines(data: &str) -> String {
