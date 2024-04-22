@@ -55,66 +55,66 @@ pub trait Filter {
 pub struct FilterNewlines;
 impl Filter for FilterNewlines {
     fn filter(&self, data: Data) -> Data {
-        let mut new = match data.inner {
-            DataInner::Error(err) => err.into(),
-            DataInner::Binary(bin) => Data::binary(bin),
+        let source = data.source;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::filters::normalize_lines(&text);
-                Data::text(lines)
+                DataInner::Text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
                 normalize_value(&mut value, crate::filters::normalize_lines);
-                Data::json(value)
+                DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
                 normalize_value(&mut value, crate::filters::normalize_lines);
-                DataInner::JsonLines(value).into()
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 let lines = crate::filters::normalize_lines(&text);
-                DataInner::TermSvg(lines).into()
+                DataInner::TermSvg(lines)
             }
         };
-        new.source = data.source;
-        new
+        Data { inner, source }
     }
 }
 
 pub struct FilterPaths;
 impl Filter for FilterPaths {
     fn filter(&self, data: Data) -> Data {
-        let mut new = match data.inner {
-            DataInner::Error(err) => err.into(),
-            DataInner::Binary(bin) => Data::binary(bin),
+        let source = data.source;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::filters::normalize_paths(&text);
-                Data::text(lines)
+                DataInner::Text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
                 normalize_value(&mut value, crate::filters::normalize_paths);
-                Data::json(value)
+                DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
                 normalize_value(&mut value, crate::filters::normalize_paths);
-                DataInner::JsonLines(value).into()
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 let lines = crate::filters::normalize_paths(&text);
-                DataInner::TermSvg(lines).into()
+                DataInner::TermSvg(lines)
             }
         };
-        new.source = data.source;
-        new
+        Data { inner, source }
     }
 }
 
@@ -134,15 +134,16 @@ impl<'a> FilterRedactions<'a> {
 
 impl Filter for FilterRedactions<'_> {
     fn filter(&self, data: Data) -> Data {
-        let mut new = match data.inner {
-            DataInner::Error(err) => err.into(),
-            DataInner::Binary(bin) => Data::binary(bin),
+        let source = data.source;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 if let Some(pattern) = self.pattern.render() {
                     let lines = self.substitutions.normalize(&text, &pattern);
-                    Data::text(lines)
+                    DataInner::Text(lines)
                 } else {
-                    DataInner::Text(text).into()
+                    DataInner::Text(text)
                 }
             }
             #[cfg(feature = "json")]
@@ -151,7 +152,7 @@ impl Filter for FilterRedactions<'_> {
                 if let DataInner::Json(exp) = &self.pattern.inner {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
-                Data::json(value)
+                DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
@@ -159,20 +160,19 @@ impl Filter for FilterRedactions<'_> {
                 if let DataInner::Json(exp) = &self.pattern.inner {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
-                DataInner::JsonLines(value).into()
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 if let Some(pattern) = self.pattern.render() {
                     let lines = self.substitutions.normalize(&text, &pattern);
-                    DataInner::TermSvg(lines).into()
+                    DataInner::TermSvg(lines)
                 } else {
-                    DataInner::TermSvg(text).into()
+                    DataInner::TermSvg(text)
                 }
             }
         };
-        new.source = data.source;
-        new
+        Data { inner, source }
     }
 }
 
