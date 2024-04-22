@@ -8,7 +8,7 @@ pub use crate::current_dir;
 pub use crate::current_rs;
 
 #[cfg(feature = "path")]
-use crate::data::{Normalize as _, NormalizeMatches, NormalizeNewlines, NormalizePaths};
+use crate::data::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 /// Working directory for tests
 #[derive(Debug)]
@@ -189,10 +189,9 @@ impl PathDiff {
                         crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected =
-                        NormalizeNewlines.normalize(crate::Data::read_from(&expected_path, None));
+                        FilterNewlines.filter(crate::Data::read_from(&expected_path, None));
 
-                    actual =
-                        NormalizeNewlines.normalize(actual.coerce_to(expected.intended_format()));
+                    actual = FilterNewlines.filter(actual.coerce_to(expected.intended_format()));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {
@@ -266,14 +265,14 @@ impl PathDiff {
                         crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected =
-                        NormalizeNewlines.normalize(crate::Data::read_from(&expected_path, None));
+                        FilterNewlines.filter(crate::Data::read_from(&expected_path, None));
 
                     actual = actual.coerce_to(expected.intended_format());
                     if normalize_paths {
-                        actual = NormalizePaths.normalize(actual);
+                        actual = FilterPaths.filter(actual);
                     }
-                    actual = NormalizeMatches::new(substitutions, &expected)
-                        .normalize(NormalizeNewlines.normalize(actual));
+                    actual = FilterRedactions::new(substitutions, &expected)
+                        .filter(FilterNewlines.filter(actual));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {

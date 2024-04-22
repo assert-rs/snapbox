@@ -5,7 +5,7 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::data::{Normalize as _, NormalizeMatches, NormalizeNewlines, NormalizePaths};
+use crate::data::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 use crate::Action;
 
 /// Snapshot assertion against a file's contents
@@ -143,11 +143,11 @@ impl Assert {
         expected: crate::Data,
         mut actual: crate::Data,
     ) -> (crate::Data, crate::Data) {
-        let expected = NormalizeNewlines.normalize(expected);
+        let expected = FilterNewlines.filter(expected);
         // On `expected` being an error, make a best guess
         let format = expected.intended_format();
 
-        actual = NormalizeNewlines.normalize(actual.coerce_to(format));
+        actual = FilterNewlines.filter(actual.coerce_to(format));
 
         (expected, actual)
     }
@@ -157,19 +157,19 @@ impl Assert {
         expected: crate::Data,
         mut actual: crate::Data,
     ) -> (crate::Data, crate::Data) {
-        let expected = NormalizeNewlines.normalize(expected);
+        let expected = FilterNewlines.filter(expected);
         // On `expected` being an error, make a best guess
         let format = expected.intended_format();
         actual = actual.coerce_to(format);
 
         if self.normalize_paths {
-            actual = NormalizePaths.normalize(actual);
+            actual = FilterPaths.filter(actual);
         }
         // Always normalize new lines
-        actual = NormalizeNewlines.normalize(actual);
+        actual = FilterNewlines.filter(actual);
 
         // If expected is not an error normalize matches
-        actual = NormalizeMatches::new(&self.substitutions, &expected).normalize(actual);
+        actual = FilterRedactions::new(&self.substitutions, &expected).filter(actual);
 
         (expected, actual)
     }

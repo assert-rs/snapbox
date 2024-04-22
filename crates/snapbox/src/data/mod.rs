@@ -6,10 +6,10 @@ mod source;
 mod tests;
 
 pub use format::DataFormat;
-pub use normalize::Normalize;
-pub use normalize::NormalizeMatches;
-pub use normalize::NormalizeNewlines;
-pub use normalize::NormalizePaths;
+pub use normalize::Filter;
+pub use normalize::FilterNewlines;
+pub use normalize::FilterPaths;
+pub use normalize::FilterRedactions;
 pub use source::DataSource;
 pub use source::Inline;
 pub use source::Position;

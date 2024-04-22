@@ -1,13 +1,13 @@
 use super::Data;
 use super::DataInner;
 
-pub trait Normalize {
-    fn normalize(&self, data: Data) -> Data;
+pub trait Filter {
+    fn filter(&self, data: Data) -> Data;
 }
 
-pub struct NormalizeNewlines;
-impl Normalize for NormalizeNewlines {
-    fn normalize(&self, data: Data) -> Data {
+pub struct FilterNewlines;
+impl Filter for FilterNewlines {
+    fn filter(&self, data: Data) -> Data {
         let mut new = match data.inner {
             DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
@@ -38,9 +38,9 @@ impl Normalize for NormalizeNewlines {
     }
 }
 
-pub struct NormalizePaths;
-impl Normalize for NormalizePaths {
-    fn normalize(&self, data: Data) -> Data {
+pub struct FilterPaths;
+impl Filter for FilterPaths {
+    fn filter(&self, data: Data) -> Data {
         let mut new = match data.inner {
             DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
@@ -71,22 +71,22 @@ impl Normalize for NormalizePaths {
     }
 }
 
-pub struct NormalizeMatches<'a> {
+pub struct FilterRedactions<'a> {
     substitutions: &'a crate::Redactions,
     pattern: &'a Data,
 }
 
-impl<'a> NormalizeMatches<'a> {
+impl<'a> FilterRedactions<'a> {
     pub fn new(substitutions: &'a crate::Redactions, pattern: &'a Data) -> Self {
-        NormalizeMatches {
+        FilterRedactions {
             substitutions,
             pattern,
         }
     }
 }
 
-impl Normalize for NormalizeMatches<'_> {
-    fn normalize(&self, data: Data) -> Data {
+impl Filter for FilterRedactions<'_> {
+    fn filter(&self, data: Data) -> Data {
         let mut new = match data.inner {
             DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
