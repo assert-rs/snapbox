@@ -1,5 +1,6 @@
 //! `actual` and `expected` [`Data`] for testing code
 
+mod filters;
 mod format;
 mod normalize;
 mod runtime;
@@ -19,6 +20,8 @@ pub use source::DataSource;
 pub use source::Inline;
 #[doc(hidden)]
 pub use source::Position;
+
+use filters::FilterSet;
 
 /// Capture the pretty debug representation of a value
 ///
@@ -123,6 +126,7 @@ macro_rules! str {
 pub struct Data {
     pub(crate) inner: DataInner,
     pub(crate) source: Option<DataSource>,
+    pub(crate) filters: FilterSet,
 }
 
 #[derive(Clone, Debug)]
@@ -179,6 +183,12 @@ impl Data {
                 .with_path(path),
         }
     }
+
+    /// Remove default [`filters`][crate::filters] from this `expected` result
+    pub(crate) fn raw(mut self) -> Self {
+        self.filters = FilterSet::empty().newlines();
+        self
+    }
 }
 
 /// # Assertion frameworks operations
@@ -189,6 +199,7 @@ impl Data {
         Self {
             inner,
             source: None,
+            filters: FilterSet::new(),
         }
     }
 
@@ -300,6 +311,7 @@ impl Data {
     fn try_is(self, format: DataFormat) -> crate::assert::Result<Self> {
         let original = self.format();
         let source = self.source;
+        let filters = self.filters;
         let inner = match (self.inner, format) {
             (DataInner::Error(inner), _) => DataInner::Error(inner),
             (DataInner::Binary(inner), DataFormat::Binary) => DataInner::Binary(inner),
@@ -335,7 +347,11 @@ impl Data {
             }
             (_, _) => return Err(format!("cannot convert {original:?} to {format:?}").into()),
         };
-        Ok(Self { inner, source })
+        Ok(Self {
+            inner,
+            source,
+            filters,
+        })
     }
 
     /// Convert `Self` to [`format`][DataFormat] if possible
@@ -343,6 +359,7 @@ impl Data {
     /// This is generally used on `actual` data to make it match `expected`
     pub fn coerce_to(self, format: DataFormat) -> Self {
         let source = self.source;
+        let filters = self.filters;
         let inner = match (self.inner, format) {
             (DataInner::Error(inner), _) => DataInner::Error(inner),
             (inner, DataFormat::Error) => inner,
@@ -410,7 +427,11 @@ impl Data {
             #[cfg(feature = "term-svg")]
             (inner, DataFormat::TermSvg) => inner,
         };
-        Self { inner, source }
+        Self {
+            inner,
+            source,
+            filters,
+        }
     }
 
     /// Location the data came from

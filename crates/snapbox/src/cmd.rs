@@ -614,17 +614,7 @@ impl OutputAssert {
     #[track_caller]
     pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stdout_eq_inner(expected)
-    }
-
-    #[track_caller]
-    fn stdout_eq_inner(self, expected: crate::Data) -> Self {
-        let actual = crate::Data::from(self.output.stdout.as_slice());
-        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stdout")) {
-            err.panic();
-        }
-
-        self
+        self.stdout_eq_inner(expected.raw())
     }
 
     /// Ensure the command wrote the expected data to `stdout`.
@@ -655,13 +645,13 @@ impl OutputAssert {
     #[track_caller]
     pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stdout_matches_inner(expected)
+        self.stdout_eq_inner(expected)
     }
 
     #[track_caller]
-    fn stdout_matches_inner(self, expected: crate::Data) -> Self {
+    fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        if let Err(err) = self.config.try_matches(expected, actual, Some(&"stdout")) {
+        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stdout")) {
             err.panic();
         }
 
@@ -696,17 +686,7 @@ impl OutputAssert {
     #[track_caller]
     pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stderr_eq_inner(expected)
-    }
-
-    #[track_caller]
-    fn stderr_eq_inner(self, expected: crate::Data) -> Self {
-        let actual = crate::Data::from(self.output.stderr.as_slice());
-        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stderr")) {
-            err.panic();
-        }
-
-        self
+        self.stderr_eq_inner(expected.raw())
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
@@ -737,13 +717,13 @@ impl OutputAssert {
     #[track_caller]
     pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stderr_matches_inner(expected)
+        self.stderr_eq_inner(expected)
     }
 
     #[track_caller]
-    fn stderr_matches_inner(self, expected: crate::Data) -> Self {
+    fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        if let Err(err) = self.config.try_matches(expected, actual, Some(&"stderr")) {
+        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stderr")) {
             err.panic();
         }
 
