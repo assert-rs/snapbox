@@ -100,7 +100,7 @@ mod macros;
 
 pub mod cmd;
 pub mod data;
-pub mod normalization;
+pub mod filters;
 pub mod path;
 pub mod report;
 pub mod utils;
@@ -114,7 +114,7 @@ pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
 pub use error::Error;
-pub use normalization::Substitutions;
+pub use filters::Substitutions;
 pub use snapbox_macros::debug;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

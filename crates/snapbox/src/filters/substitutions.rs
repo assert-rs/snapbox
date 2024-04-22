@@ -159,7 +159,7 @@ impl From<&'static str> for SubstitutedValue {
         } else {
             Self {
                 inner: Some(SubstitutedValueInner::String(
-                    crate::normalization::normalize_text(inner),
+                    crate::filters::normalize_text(inner),
                 )),
             }
         }
@@ -173,7 +173,7 @@ impl From<String> for SubstitutedValue {
         } else {
             Self {
                 inner: Some(SubstitutedValueInner::String(
-                    crate::normalization::normalize_text(&inner),
+                    crate::filters::normalize_text(&inner),
                 )),
             }
         }

@@ -12,24 +12,24 @@ impl Normalize for NormalizeNewlines {
             DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
-                let lines = crate::normalization::normalize_lines(&text);
+                let lines = crate::filters::normalize_lines(&text);
                 Data::text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, crate::normalization::normalize_lines);
+                normalize_value(&mut value, crate::filters::normalize_lines);
                 Data::json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                normalize_value(&mut value, crate::normalization::normalize_lines);
+                normalize_value(&mut value, crate::filters::normalize_lines);
                 DataInner::JsonLines(value).into()
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                let lines = crate::normalization::normalize_lines(&text);
+                let lines = crate::filters::normalize_lines(&text);
                 DataInner::TermSvg(lines).into()
             }
         };
@@ -45,24 +45,24 @@ impl Normalize for NormalizePaths {
             DataInner::Error(err) => err.into(),
             DataInner::Binary(bin) => Data::binary(bin),
             DataInner::Text(text) => {
-                let lines = crate::normalization::normalize_paths(&text);
+                let lines = crate::filters::normalize_paths(&text);
                 Data::text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, crate::normalization::normalize_paths);
+                normalize_value(&mut value, crate::filters::normalize_paths);
                 Data::json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                normalize_value(&mut value, crate::normalization::normalize_paths);
+                normalize_value(&mut value, crate::filters::normalize_paths);
                 DataInner::JsonLines(value).into()
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                let lines = crate::normalization::normalize_paths(&text);
+                let lines = crate::filters::normalize_paths(&text);
                 DataInner::TermSvg(lines).into()
             }
         };
