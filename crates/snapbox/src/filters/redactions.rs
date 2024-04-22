@@ -178,9 +178,7 @@ impl From<&'static str> for RedactedValue {
             Self { inner: None }
         } else {
             Self {
-                inner: Some(RedactedValueInner::String(crate::filters::normalize_text(
-                    inner,
-                ))),
+                inner: Some(RedactedValueInner::Str(inner)),
             }
         }
     }
@@ -192,9 +190,7 @@ impl From<String> for RedactedValue {
             Self { inner: None }
         } else {
             Self {
-                inner: Some(RedactedValueInner::String(crate::filters::normalize_text(
-                    &inner,
-                ))),
+                inner: Some(RedactedValueInner::String(inner)),
             }
         }
     }

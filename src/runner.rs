@@ -199,14 +199,10 @@ impl Case {
         };
         let mut substitutions = substitutions.clone();
         if let Some(root) = fs_context.path() {
-            substitutions
-                .insert("[ROOT]", root.display().to_string())
-                .unwrap();
+            substitutions.insert("[ROOT]", root.to_owned()).unwrap();
         }
         if let Some(cwd) = cwd.clone().or_else(|| std::env::current_dir().ok()) {
-            substitutions
-                .insert("[CWD]", cwd.display().to_string())
-                .unwrap();
+            substitutions.insert("[CWD]", cwd).unwrap();
         }
         substitutions
             .insert("[EXE]", std::env::consts::EXE_SUFFIX)
