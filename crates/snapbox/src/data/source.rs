@@ -1,3 +1,4 @@
+/// Origin of a snapshot so it can be updated
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DataSource {
     pub(crate) inner: DataSourceInner,
@@ -68,7 +69,7 @@ impl std::fmt::Display for DataSource {
     }
 }
 
-/// Data from within Rust source code
+/// Output of [`str!`][crate::str!]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Inline {
     #[doc(hidden)]
@@ -81,16 +82,19 @@ impl Inline {
     /// Initialize `Self` as [`format`][crate::data::DataFormat] or [`Error`][crate::data::DataFormat::Error]
     ///
     /// This is generally used for `expected` data
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .is(snapbox::data::DataFormat::Json);
+    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
+    /// # }
+    /// ```
     pub fn is(self, format: super::DataFormat) -> super::Data {
         let data: super::Data = self.into();
         data.is(format)
-    }
-
-    /// Deprecated, replaced with [`Inline::is`]
-    #[deprecated(since = "0.5.2", note = "Replaced with `Inline::is`")]
-    pub fn coerce_to(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.coerce_to(format)
     }
 
     fn trimmed(&self) -> String {
@@ -117,6 +121,7 @@ impl From<Inline> for super::Data {
 }
 
 /// Position within Rust source code, see [`Inline`]
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Position {
     #[doc(hidden)]

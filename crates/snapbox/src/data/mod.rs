@@ -1,3 +1,5 @@
+//! `actual` and `expected` [`Data`] for testing code
+
 mod format;
 mod runtime;
 mod source;
@@ -7,8 +9,26 @@ mod tests;
 pub use format::DataFormat;
 pub use source::DataSource;
 pub use source::Inline;
+#[doc(hidden)]
 pub use source::Position;
 
+/// Capture the pretty debug representation of a value
+///
+/// Note: this is fairly brittle as debug representations are not generally subject to semver
+/// guarantees.
+///
+/// ```rust,no_run
+/// use snapbox::ToDebug as _;
+///
+/// fn some_function() -> usize {
+///     // ...
+/// # 5
+/// }
+///
+/// let actual = some_function();
+/// let expected = snapbox::str![["5"]];
+/// snapbox::assert_eq(actual.to_debug(), expected);
+/// ```
 pub trait ToDebug {
     fn to_debug(&self) -> Data;
 }
@@ -110,14 +130,13 @@ pub(crate) enum DataInner {
     TermSvg(String),
 }
 
+/// # Constructors
+///
+/// See also
+/// - [`str!`] for inline snapshots
+/// - [`file!`] for external snapshots
+/// - [`ToDebug`] for verifying a debug representation
 impl Data {
-    pub(crate) fn with_inner(inner: DataInner) -> Self {
-        Self {
-            inner,
-            source: None,
-        }
-    }
-
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
         Self::with_inner(DataInner::Binary(raw.into()))
@@ -150,15 +169,6 @@ impl Data {
         Self::text("")
     }
 
-    fn with_source(mut self, source: impl Into<DataSource>) -> Self {
-        self.source = Some(source.into());
-        self
-    }
-
-    fn with_path(self, path: impl Into<std::path::PathBuf>) -> Self {
-        self.with_source(path.into())
-    }
-
     /// Load `expected` data from a file
     pub fn read_from(path: &std::path::Path, data_format: Option<DataFormat>) -> Self {
         match Self::try_read_from(path, data_format) {
@@ -166,6 +176,27 @@ impl Data {
             Err(err) => Self::error(err, data_format.unwrap_or_else(|| DataFormat::from(path)))
                 .with_path(path),
         }
+    }
+}
+
+/// # Assertion frameworks operations
+///
+/// For example, see [`OutputAssert`][crate::cmd::OutputAssert]
+impl Data {
+    pub(crate) fn with_inner(inner: DataInner) -> Self {
+        Self {
+            inner,
+            source: None,
+        }
+    }
+
+    fn with_source(mut self, source: impl Into<DataSource>) -> Self {
+        self.source = Some(source.into());
+        self
+    }
+
+    fn with_path(self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.with_source(path.into())
     }
 
     /// Load `expected` data from a file
@@ -193,11 +224,6 @@ impl Data {
             }
         };
         Ok(data.with_path(path))
-    }
-
-    /// Location the data came from
-    pub fn source(&self) -> Option<&DataSource> {
-        self.source.as_ref()
     }
 
     /// Overwrite a snapshot
@@ -398,6 +424,11 @@ impl Data {
             (inner, DataFormat::TermSvg) => inner,
         };
         Self { inner, source }
+    }
+
+    /// Location the data came from
+    pub fn source(&self) -> Option<&DataSource> {
+        self.source.as_ref()
     }
 
     /// Outputs the current `DataFormat` of the underlying data
