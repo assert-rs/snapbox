@@ -321,37 +321,37 @@ impl Data {
     ///
     /// This is generally used on `actual` data to make it match `expected`
     pub fn coerce_to(self, format: DataFormat) -> Self {
-        let mut data = match (self.inner, format) {
-            (DataInner::Error(inner), _) => inner.into(),
-            (inner, DataFormat::Error) => inner.into(),
-            (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
-            (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
+        let source = self.source;
+        let inner = match (self.inner, format) {
+            (DataInner::Error(inner), _) => DataInner::Error(inner),
+            (inner, DataFormat::Error) => inner,
+            (DataInner::Binary(inner), DataFormat::Binary) => DataInner::Binary(inner),
+            (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
             #[cfg(feature = "json")]
-            (DataInner::Json(inner), DataFormat::Json) => Self::json(inner),
+            (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
             #[cfg(feature = "json")]
-            (DataInner::JsonLines(inner), DataFormat::JsonLines) => {
-                DataInner::JsonLines(inner).into()
-            }
+            (DataInner::JsonLines(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
             #[cfg(feature = "term-svg")]
-            (DataInner::TermSvg(inner), DataFormat::TermSvg) => inner.into(),
+            (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
                 if is_binary(&inner) {
-                    Self::binary(inner)
+                    DataInner::Binary(inner)
                 } else {
                     match String::from_utf8(inner) {
                         Ok(str) => {
                             let coerced = Self::text(str).coerce_to(format);
                             // if the Text cannot be coerced into the correct format
                             // reset it back to Binary
-                            if coerced.format() != format {
+                            let coerced = if coerced.format() != format {
                                 coerced.coerce_to(DataFormat::Binary)
                             } else {
                                 coerced
-                            }
+                            };
+                            coerced.inner
                         }
                         Err(err) => {
                             let bin = err.into_bytes();
-                            Self::binary(bin)
+                            DataInner::Binary(bin)
                         }
                     }
                 }
@@ -359,52 +359,51 @@ impl Data {
             #[cfg(feature = "json")]
             (DataInner::Text(inner), DataFormat::Json) => {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&inner) {
-                    Self::json(json)
+                    DataInner::Json(json)
                 } else {
-                    Self::text(inner)
+                    DataInner::Text(inner)
                 }
             }
             #[cfg(feature = "json")]
             (DataInner::Text(inner), DataFormat::JsonLines) => {
                 if let Ok(jsonlines) = parse_jsonlines(&inner) {
-                    Self::jsonlines(jsonlines)
+                    DataInner::JsonLines(serde_json::Value::Array(jsonlines))
                 } else {
-                    Self::text(inner)
+                    DataInner::Text(inner)
                 }
             }
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => {
-                DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner)).into()
+                DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner))
             }
             (inner, DataFormat::Binary) => {
                 let remake: Self = inner.into();
-                Self::binary(remake.to_bytes().expect("error case handled"))
+                DataInner::Binary(remake.to_bytes().expect("error case handled"))
             }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
                 let remake: Self = inner.into();
                 if let Some(str) = remake.render() {
-                    Self::text(str)
+                    DataInner::Text(str)
                 } else {
-                    remake
+                    remake.inner
                 }
             }
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "json")]
-            (inner, DataFormat::Json) => inner.into(),
+            (inner, DataFormat::Json) => inner,
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "json")]
-            (inner, DataFormat::JsonLines) => inner.into(),
+            (inner, DataFormat::JsonLines) => inner,
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "term-svg")]
-            (inner, DataFormat::TermSvg) => inner.into(),
+            (inner, DataFormat::TermSvg) => inner,
         };
-        data.source = self.source;
-        data
+        Self { inner, source }
     }
 
     /// Outputs the current `DataFormat` of the underlying data
