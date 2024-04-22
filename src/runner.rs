@@ -15,6 +15,7 @@ use rayon::prelude::*;
 use snapbox::data::DataFormat;
 use snapbox::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 use snapbox::path::FileType;
+use snapbox::IntoData;
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -580,12 +581,12 @@ impl Output {
         self.spawn.status = SpawnStatus::Ok;
         self.stdout = Some(Stream {
             stream: Stdio::Stdout,
-            content: output.stdout.into(),
+            content: output.stdout.into_data(),
             status: StreamStatus::Ok,
         });
         self.stderr = Some(Stream {
             stream: Stdio::Stderr,
-            content: output.stderr.into(),
+            content: output.stderr.into_data(),
             status: StreamStatus::Ok,
         });
         self

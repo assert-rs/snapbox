@@ -91,7 +91,7 @@ impl IntoData for Vec<u8> {
 
 impl IntoData for &'_ [u8] {
     fn into_data(self) -> Data {
-        self.to_owned().into()
+        self.to_owned().into_data()
     }
 }
 
@@ -103,13 +103,13 @@ impl IntoData for String {
 
 impl IntoData for &'_ String {
     fn into_data(self) -> Data {
-        self.to_owned().into()
+        self.to_owned().into_data()
     }
 }
 
 impl IntoData for &'_ str {
     fn into_data(self) -> Data {
-        self.to_owned().into()
+        self.to_owned().into_data()
     }
 }
 
@@ -668,49 +668,6 @@ impl Eq for Data {}
 impl Default for Data {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl<'d> From<&'d Data> for Data {
-    fn from(other: &'d Data) -> Self {
-        other.clone()
-    }
-}
-
-impl From<Vec<u8>> for Data {
-    fn from(other: Vec<u8>) -> Self {
-        Self::binary(other)
-    }
-}
-
-impl<'b> From<&'b [u8]> for Data {
-    fn from(other: &'b [u8]) -> Self {
-        other.to_owned().into()
-    }
-}
-
-impl From<String> for Data {
-    fn from(other: String) -> Self {
-        Self::text(other)
-    }
-}
-
-impl<'s> From<&'s String> for Data {
-    fn from(other: &'s String) -> Self {
-        other.clone().into()
-    }
-}
-
-impl<'s> From<&'s str> for Data {
-    fn from(other: &'s str) -> Self {
-        other.to_owned().into()
-    }
-}
-
-impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
     }
 }
 
