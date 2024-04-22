@@ -184,8 +184,8 @@ impl Data {
         }
     }
 
-    /// Remove default [`filters`][crate::filters] from this `expected` result
-    pub(crate) fn raw(mut self) -> Self {
+    /// Remove default [`filters`][crate::filter] from this `expected` result
+    pub fn raw(mut self) -> Self {
         self.filters = FilterSet::empty().newlines();
         self
     }

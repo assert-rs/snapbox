@@ -25,7 +25,7 @@ pub use error::Result;
 /// # use snapbox::Assert;
 /// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().matches(file!["output.txt"], actual);
+/// Assert::new().eq_(actual, file!["output.txt"]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -40,6 +40,42 @@ pub struct Assert {
 impl Assert {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Check if a value is the same as an expected value
+    ///
+    /// By default [`filters`][crate::filter] are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, call [`Data::raw`][crate::Data::raw] on `expected`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use snapbox::Assert;
+    /// let actual = "something";
+    /// let expected = "so[..]g";
+    /// Assert::new().eq_(actual, expected);
+    /// ```
+    ///
+    /// Can combine this with [`file!`][crate::file]
+    /// ```rust,no_run
+    /// # use snapbox::Assert;
+    /// # use snapbox::file;
+    /// let actual = "something";
+    /// Assert::new().eq_(actual, file!["output.txt"]);
+    /// ```
+    #[track_caller]
+    pub fn eq_(&self, actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
+        let expected = expected.into();
+        let actual = actual.into();
+        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected) {
+            err.panic();
+        }
     }
 
     /// Check if a value is the same as an expected value
@@ -61,6 +97,10 @@ impl Assert {
     /// Assert::new().eq(file!["output.txt"], actual);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `Assert::eq_(actual, expected.raw())`"
+    )]
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
@@ -95,6 +135,10 @@ impl Assert {
     /// Assert::new().matches(file!["output.txt"], actual);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `Assert::eq_(actual, expected)`"
+    )]
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
         let actual = actual.into();
