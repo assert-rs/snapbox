@@ -1,80 +1,79 @@
 use std::borrow::Cow;
 
-/// Match pattern expressions, see [`Assert`][crate::Assert]
+/// Replace data with placeholders
 ///
-/// Built-in expressions:
+/// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug)]
-pub struct Substitutions {
-    vars:
-        std::collections::BTreeMap<&'static str, std::collections::BTreeSet<SubstitutedValueInner>>,
-    unused: std::collections::BTreeSet<SubstitutedValueInner>,
+pub struct Redactions {
+    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<RedactedValueInner>>,
+    unused: std::collections::BTreeSet<RedactedValueInner>,
 }
 
-impl Substitutions {
+impl Redactions {
     pub fn new() -> Self {
         Default::default()
     }
 
     pub(crate) fn with_exe() -> Self {
-        let mut substitutions = Self::new();
-        substitutions
+        let mut redactions = Self::new();
+        redactions
             .insert("[EXE]", std::env::consts::EXE_SUFFIX)
             .unwrap();
-        substitutions
+        redactions
     }
 
     /// Insert an additional match pattern
     ///
-    /// `key` must be enclosed in `[` and `]`.
+    /// `placeholder` must be enclosed in `[` and `]`.
     ///
     /// ```rust
-    /// let mut subst = snapbox::Substitutions::new();
+    /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
     ///
     /// With the `regex` feature, you can define patterns using regexes.
     /// You can choose to replace a subset of the regex by giving it the named capture group
-    /// `replace`.
+    /// `redacted`.
     ///
     /// ```rust
     /// # #[cfg(feature = "regex")] {
-    /// let mut subst = snapbox::Substitutions::new();
-    /// subst.insert("[OBJECT]", regex::Regex::new("(?<replace>(world|moon))").unwrap());
+    /// let mut subst = snapbox::Redactions::new();
+    /// subst.insert("[OBJECT]", regex::Regex::new("(?<redacted>(world|moon))").unwrap());
     /// # }
     /// ```
     pub fn insert(
         &mut self,
-        key: &'static str,
-        value: impl Into<SubstitutedValue>,
+        placeholder: &'static str,
+        value: impl Into<RedactedValue>,
     ) -> Result<(), crate::Error> {
-        let key = validate_key(key)?;
+        let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if let Some(inner) = value.inner {
-            self.vars.entry(key).or_default().insert(inner);
+            self.vars.entry(placeholder).or_default().insert(inner);
         } else {
-            self.unused.insert(SubstitutedValueInner::Str(key));
+            self.unused.insert(RedactedValueInner::Str(placeholder));
         }
         Ok(())
     }
 
     /// Insert additional match patterns
     ///
-    /// keys must be enclosed in `[` and `]`.
+    /// Placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
-        vars: impl IntoIterator<Item = (&'static str, impl Into<SubstitutedValue>)>,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<RedactedValue>)>,
     ) -> Result<(), crate::Error> {
-        for (key, value) in vars {
-            self.insert(key, value)?;
+        for (placeholder, value) in vars {
+            self.insert(placeholder, value)?;
         }
         Ok(())
     }
 
-    pub fn remove(&mut self, key: &'static str) -> Result<(), crate::Error> {
-        let key = validate_key(key)?;
-        self.vars.remove(key);
+    pub fn remove(&mut self, placeholder: &'static str) -> Result<(), crate::Error> {
+        let placeholder = validate_placeholder(placeholder)?;
+        self.vars.remove(placeholder);
         Ok(())
     }
 
@@ -85,7 +84,7 @@ impl Substitutions {
     /// Otherwise, `input`, with as many patterns replaced as possible, will be returned.
     ///
     /// ```rust
-    /// let subst = snapbox::Substitutions::new();
+    /// let subst = snapbox::Redactions::new();
     /// let output = subst.normalize("Hello World!", "Hello [..]!");
     /// assert_eq!(output, "Hello [..]!");
     /// ```
@@ -116,19 +115,19 @@ impl Substitutions {
 }
 
 #[derive(Clone)]
-pub struct SubstitutedValue {
-    inner: Option<SubstitutedValueInner>,
+pub struct RedactedValue {
+    inner: Option<RedactedValueInner>,
 }
 
 #[derive(Clone, Debug)]
-enum SubstitutedValueInner {
+enum RedactedValueInner {
     Str(&'static str),
     String(String),
     #[cfg(feature = "regex")]
     Regex(regex::Regex),
 }
 
-impl SubstitutedValueInner {
+impl RedactedValueInner {
     fn find_in(&self, buffer: &str) -> Option<std::ops::Range<usize>> {
         match self {
             Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
@@ -136,7 +135,7 @@ impl SubstitutedValueInner {
             #[cfg(feature = "regex")]
             Self::Regex(r) => {
                 let captures = r.captures(buffer)?;
-                let m = captures.name("replace").or_else(|| captures.get(0))?;
+                let m = captures.name("redacted").or_else(|| captures.get(0))?;
                 Some(m.range())
             }
         }
@@ -152,41 +151,41 @@ impl SubstitutedValueInner {
     }
 }
 
-impl From<&'static str> for SubstitutedValue {
+impl From<&'static str> for RedactedValue {
     fn from(inner: &'static str) -> Self {
         if inner.is_empty() {
             Self { inner: None }
         } else {
             Self {
-                inner: Some(SubstitutedValueInner::String(
-                    crate::normalization::normalize_text(inner),
-                )),
+                inner: Some(RedactedValueInner::String(crate::filters::normalize_text(
+                    inner,
+                ))),
             }
         }
     }
 }
 
-impl From<String> for SubstitutedValue {
+impl From<String> for RedactedValue {
     fn from(inner: String) -> Self {
         if inner.is_empty() {
             Self { inner: None }
         } else {
             Self {
-                inner: Some(SubstitutedValueInner::String(
-                    crate::normalization::normalize_text(&inner),
-                )),
+                inner: Some(RedactedValueInner::String(crate::filters::normalize_text(
+                    &inner,
+                ))),
             }
         }
     }
 }
 
-impl From<&'_ String> for SubstitutedValue {
+impl From<&'_ String> for RedactedValue {
     fn from(inner: &'_ String) -> Self {
         inner.clone().into()
     }
 }
 
-impl From<Cow<'static, str>> for SubstitutedValue {
+impl From<Cow<'static, str>> for RedactedValue {
     fn from(inner: Cow<'static, str>) -> Self {
         match inner {
             Cow::Borrowed(s) => s.into(),
@@ -196,45 +195,45 @@ impl From<Cow<'static, str>> for SubstitutedValue {
 }
 
 #[cfg(feature = "regex")]
-impl From<regex::Regex> for SubstitutedValue {
+impl From<regex::Regex> for RedactedValue {
     fn from(inner: regex::Regex) -> Self {
         Self {
-            inner: Some(SubstitutedValueInner::Regex(inner)),
+            inner: Some(RedactedValueInner::Regex(inner)),
         }
     }
 }
 
 #[cfg(feature = "regex")]
-impl From<&'_ regex::Regex> for SubstitutedValue {
+impl From<&'_ regex::Regex> for RedactedValue {
     fn from(inner: &'_ regex::Regex) -> Self {
         inner.clone().into()
     }
 }
 
-impl PartialOrd for SubstitutedValueInner {
+impl PartialOrd for RedactedValueInner {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.as_cmp().partial_cmp(other.as_cmp())
     }
 }
 
-impl Ord for SubstitutedValueInner {
+impl Ord for RedactedValueInner {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.as_cmp().cmp(other.as_cmp())
     }
 }
 
-impl PartialEq for SubstitutedValueInner {
+impl PartialEq for RedactedValueInner {
     fn eq(&self, other: &Self) -> bool {
         self.as_cmp().eq(other.as_cmp())
     }
 }
 
-impl Eq for SubstitutedValueInner {}
+impl Eq for RedactedValueInner {}
 
 /// Replacements is `(from, to)`
 fn replace_many<'a>(
     buffer: &mut String,
-    replacements: impl IntoIterator<Item = (&'a SubstitutedValueInner, &'a str)>,
+    replacements: impl IntoIterator<Item = (&'a RedactedValueInner, &'a str)>,
 ) {
     for (var, replace) in replacements {
         let mut index = 0;
@@ -246,27 +245,27 @@ fn replace_many<'a>(
     }
 }
 
-fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
-    if !key.starts_with('[') || !key.ends_with(']') {
-        return Err(format!("Key `{}` is not enclosed in []", key).into());
+fn validate_placeholder(placeholder: &'static str) -> Result<&'static str, crate::Error> {
+    if !placeholder.starts_with('[') || !placeholder.ends_with(']') {
+        return Err(format!("Key `{}` is not enclosed in []", placeholder).into());
     }
 
-    if key[1..(key.len() - 1)]
+    if placeholder[1..(placeholder.len() - 1)]
         .find(|c: char| !c.is_ascii_uppercase())
         .is_some()
     {
-        return Err(format!("Key `{}` can only be A-Z but ", key).into());
+        return Err(format!("Key `{}` can only be A-Z but ", placeholder).into());
     }
 
-    Ok(key)
+    Ok(placeholder)
 }
 
-fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
+fn normalize(input: &str, pattern: &str, redactions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
 
-    let input = substitutions.substitute(input);
+    let input = redactions.substitute(input);
 
     let mut normalized: Vec<&str> = Vec::new();
     let mut input_index = 0;
@@ -278,7 +277,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
                 for (index_offset, next_input_line) in
                     input_lines[input_index..].iter().copied().enumerate()
                 {
-                    if line_matches(next_input_line, next_pattern_line, substitutions) {
+                    if line_matches(next_input_line, next_pattern_line, redactions) {
                         normalized.push(pattern_line);
                         input_index += index_offset;
                         continue 'outer;
@@ -299,7 +298,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> Strin
                 break;
             };
 
-            if line_matches(input_line, pattern_line, substitutions) {
+            if line_matches(input_line, pattern_line, redactions) {
                 input_index += 1;
                 normalized.push(pattern_line);
             } else {
@@ -317,12 +316,12 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(mut input: &str, pattern: &str, substitutions: &Substitutions) -> bool {
+fn line_matches(mut input: &str, pattern: &str, redactions: &Redactions) -> bool {
     if input == pattern {
         return true;
     }
 
-    let pattern = substitutions.clear(pattern);
+    let pattern = redactions.clear(pattern);
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
         if let Some(remainder) = input.strip_prefix(section) {
@@ -352,7 +351,7 @@ mod test {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -361,7 +360,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -370,7 +369,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -379,7 +378,7 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -388,7 +387,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -397,7 +396,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -406,7 +405,7 @@ mod test {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
         let expected = "Hello [..]\n...\nGoodbye [..]";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -415,7 +414,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -424,7 +423,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -433,7 +432,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -442,7 +441,7 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -451,7 +450,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\nSir";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -460,7 +459,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -504,13 +503,13 @@ mod test {
             ("hello world, goodbye moon", "hello [..], [..] world", false),
         ];
         for (line, pattern, expected) in cases {
-            let actual = line_matches(line, pattern, &Substitutions::new());
+            let actual = line_matches(line, pattern, &Redactions::new());
             assert_eq!(expected, actual, "line={:?}  pattern={:?}", line, pattern);
         }
     }
 
     #[test]
-    fn test_validate_key() {
+    fn test_validate_placeholder() {
         let cases = [
             ("[HELLO", false),
             ("HELLO]", false),
@@ -518,9 +517,9 @@ mod test {
             ("[hello]", false),
             ("[HE  O]", false),
         ];
-        for (key, expected) in cases {
-            let actual = validate_key(key).is_ok();
-            assert_eq!(expected, actual, "key={:?}", key);
+        for (placeholder, expected) in cases {
+            let actual = validate_placeholder(placeholder).is_ok();
+            assert_eq!(expected, actual, "placeholder={:?}", placeholder);
         }
     }
 
@@ -528,7 +527,7 @@ mod test {
     fn substitute_literal() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[OBJECT]", "world").unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
@@ -538,7 +537,7 @@ mod test {
     fn substitute_disabled() {
         let input = "cargo";
         let pattern = "cargo[EXE]";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[EXE]", "").unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
@@ -549,7 +548,7 @@ mod test {
     fn substitute_regex_unnamed() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
-        let mut sub = Substitutions::new();
+        let mut sub = Redactions::new();
         sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
             .unwrap();
         let actual = normalize(input, pattern, &sub);
@@ -561,9 +560,12 @@ mod test {
     fn substitute_regex_named() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
-        let mut sub = Substitutions::new();
-        sub.insert("[OBJECT]", regex::Regex::new("(?<replace>world)!").unwrap())
-            .unwrap();
+        let mut sub = Redactions::new();
+        sub.insert(
+            "[OBJECT]",
+            regex::Regex::new("(?<redacted>world)!").unwrap(),
+        )
+        .unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }

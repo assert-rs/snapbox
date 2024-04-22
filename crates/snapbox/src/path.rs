@@ -218,7 +218,7 @@ impl PathDiff {
     pub fn subset_matches_iter(
         pattern_root: impl Into<std::path::PathBuf>,
         actual_root: impl Into<std::path::PathBuf>,
-        substitutions: &crate::Substitutions,
+        substitutions: &crate::Redactions,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let pattern_root = pattern_root.into();
         let actual_root = actual_root.into();
@@ -229,7 +229,7 @@ impl PathDiff {
     pub(crate) fn subset_matches_iter_inner(
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
-        substitutions: &crate::Substitutions,
+        substitutions: &crate::Redactions,
         normalize_paths: bool,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
         let walker = Walk::new(&expected_root);
