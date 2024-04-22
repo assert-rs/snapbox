@@ -130,6 +130,11 @@ pub type Result<T, E = assert::Error> = std::result::Result<T, E>;
 #[deprecated(since = "0.5.11", note = "Replaced with `assert::Error`")]
 pub type Error = assert::Error;
 
+/// Easier access to common traits
+pub mod prelude {
+    pub use crate::ToDebug;
+}
+
 /// Check if a value is the same as an expected value
 ///
 /// When the content is text, newlines are normalized.
