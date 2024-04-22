@@ -1,4 +1,6 @@
 use std::borrow::Cow;
+use std::path::Path;
+use std::path::PathBuf;
 
 /// Replace data with placeholders
 ///
@@ -123,6 +125,10 @@ pub struct RedactedValue {
 enum RedactedValueInner {
     Str(&'static str),
     String(String),
+    Path {
+        native: String,
+        normalized: String,
+    },
     #[cfg(feature = "regex")]
     Regex(regex::Regex),
 }
@@ -132,6 +138,20 @@ impl RedactedValueInner {
         match self {
             Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
             Self::String(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            Self::Path { native, normalized } => {
+                match (buffer.find(native), buffer.find(normalized)) {
+                    (Some(native_offset), Some(normalized_offset)) => {
+                        if native_offset <= normalized_offset {
+                            Some(native_offset..(native_offset + native.len()))
+                        } else {
+                            Some(normalized_offset..(normalized_offset + normalized.len()))
+                        }
+                    }
+                    (Some(offset), None) => Some(offset..(offset + native.len())),
+                    (None, Some(offset)) => Some(offset..(offset + normalized.len())),
+                    (None, None) => None,
+                }
+            }
             #[cfg(feature = "regex")]
             Self::Regex(r) => {
                 let captures = r.captures(buffer)?;
@@ -145,6 +165,7 @@ impl RedactedValueInner {
         match self {
             Self::Str(s) => s,
             Self::String(s) => s,
+            Self::Path { normalized, .. } => normalized,
             #[cfg(feature = "regex")]
             Self::Regex(s) => s.as_str(),
         }
@@ -191,6 +212,35 @@ impl From<Cow<'static, str>> for RedactedValue {
             Cow::Borrowed(s) => s.into(),
             Cow::Owned(s) => s.into(),
         }
+    }
+}
+
+impl From<&'static Path> for RedactedValue {
+    fn from(inner: &'static Path) -> Self {
+        inner.to_owned().into()
+    }
+}
+
+impl From<PathBuf> for RedactedValue {
+    fn from(inner: PathBuf) -> Self {
+        if inner.as_os_str().is_empty() {
+            Self { inner: None }
+        } else {
+            let native = match inner.into_os_string().into_string() {
+                Ok(s) => s,
+                Err(os) => PathBuf::from(os).display().to_string(),
+            };
+            let normalized = crate::filter::normalize_paths(&native);
+            Self {
+                inner: Some(RedactedValueInner::Path { native, normalized }),
+            }
+        }
+    }
+}
+
+impl From<&'_ PathBuf> for RedactedValue {
+    fn from(inner: &'_ PathBuf) -> Self {
+        inner.clone().into()
     }
 }
 
@@ -529,6 +579,18 @@ mod test {
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
         sub.insert("[OBJECT]", "world").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    fn substitute_path() {
+        let input = "input: /home/epage";
+        let pattern = "input: [HOME]";
+        let mut sub = Redactions::new();
+        let sep = std::path::MAIN_SEPARATOR.to_string();
+        let redacted = PathBuf::from(sep).join("home").join("epage");
+        sub.insert("[HOME]", redacted).unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
