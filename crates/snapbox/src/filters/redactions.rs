@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 /// Match pattern expressions, see [`Assert`][crate::Assert]
 ///
-/// Built-in expressions:
+/// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug)]
@@ -27,7 +27,7 @@ impl Substitutions {
 
     /// Insert an additional match pattern
     ///
-    /// `key` must be enclosed in `[` and `]`.
+    /// `placeholder` must be enclosed in `[` and `]`.
     ///
     /// ```rust
     /// let mut subst = snapbox::Substitutions::new();
@@ -46,35 +46,35 @@ impl Substitutions {
     /// ```
     pub fn insert(
         &mut self,
-        key: &'static str,
+        placeholder: &'static str,
         value: impl Into<SubstitutedValue>,
     ) -> Result<(), crate::Error> {
-        let key = validate_key(key)?;
+        let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if let Some(inner) = value.inner {
-            self.vars.entry(key).or_default().insert(inner);
+            self.vars.entry(placeholder).or_default().insert(inner);
         } else {
-            self.unused.insert(SubstitutedValueInner::Str(key));
+            self.unused.insert(SubstitutedValueInner::Str(placeholder));
         }
         Ok(())
     }
 
     /// Insert additional match patterns
     ///
-    /// keys must be enclosed in `[` and `]`.
+    /// Placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<SubstitutedValue>)>,
     ) -> Result<(), crate::Error> {
-        for (key, value) in vars {
-            self.insert(key, value)?;
+        for (placeholder, value) in vars {
+            self.insert(placeholder, value)?;
         }
         Ok(())
     }
 
-    pub fn remove(&mut self, key: &'static str) -> Result<(), crate::Error> {
-        let key = validate_key(key)?;
-        self.vars.remove(key);
+    pub fn remove(&mut self, placeholder: &'static str) -> Result<(), crate::Error> {
+        let placeholder = validate_placeholder(placeholder)?;
+        self.vars.remove(placeholder);
         Ok(())
     }
 
@@ -246,19 +246,19 @@ fn replace_many<'a>(
     }
 }
 
-fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
-    if !key.starts_with('[') || !key.ends_with(']') {
-        return Err(format!("Key `{}` is not enclosed in []", key).into());
+fn validate_placeholder(placeholder: &'static str) -> Result<&'static str, crate::Error> {
+    if !placeholder.starts_with('[') || !placeholder.ends_with(']') {
+        return Err(format!("Key `{}` is not enclosed in []", placeholder).into());
     }
 
-    if key[1..(key.len() - 1)]
+    if placeholder[1..(placeholder.len() - 1)]
         .find(|c: char| !c.is_ascii_uppercase())
         .is_some()
     {
-        return Err(format!("Key `{}` can only be A-Z but ", key).into());
+        return Err(format!("Key `{}` can only be A-Z but ", placeholder).into());
     }
 
-    Ok(key)
+    Ok(placeholder)
 }
 
 fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
@@ -510,7 +510,7 @@ mod test {
     }
 
     #[test]
-    fn test_validate_key() {
+    fn test_validate_placeholder() {
         let cases = [
             ("[HELLO", false),
             ("HELLO]", false),
@@ -518,9 +518,9 @@ mod test {
             ("[hello]", false),
             ("[HE  O]", false),
         ];
-        for (key, expected) in cases {
-            let actual = validate_key(key).is_ok();
-            assert_eq!(expected, actual, "key={:?}", key);
+        for (placeholder, expected) in cases {
+            let actual = validate_placeholder(placeholder).is_ok();
+            assert_eq!(expected, actual, "placeholder={:?}", placeholder);
         }
     }
 
