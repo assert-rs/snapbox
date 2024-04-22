@@ -368,10 +368,10 @@ world
         );
 
         let patch = format_patch(r"hello\tworld");
-        assert_eq(str![[r##"[r#"hello\tworld"#]"##]], patch);
+        assert_eq(str![[r##"[r#"hello\tworld"#]"##]].raw(), patch);
 
         let patch = format_patch("{\"foo\": 42}");
-        assert_eq(str![[r##"[r#"{"foo": 42}"#]"##]], patch);
+        assert_eq(str![[r##"[r#"{"foo": 42}"#]"##]].raw(), patch);
     }
 
     #[test]
@@ -400,7 +400,8 @@ Patchwork {
     ],
 }
 
-"#]],
+"#]]
+            .raw(),
             patchwork.to_debug(),
         );
     }

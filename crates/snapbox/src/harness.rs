@@ -66,6 +66,15 @@ where
     ///   are considered
     /// - `setup`: Given a path, choose the test name and the output location
     /// - `test`: Given a path, return the actual output value
+    ///
+    /// By default [`filters`][crate::filters] are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, have [`Setup`] call [`Data::raw`][crate::Data::raw] on `expected`.
     pub fn new(input_root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
         Self {
             root: input_root.into(),
