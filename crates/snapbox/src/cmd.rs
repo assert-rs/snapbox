@@ -620,7 +620,7 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stdout")) {
+        if let Err(err) = self.config.try_eq(expected.raw(), actual, Some(&"stdout")) {
             err.panic();
         }
 
@@ -661,7 +661,7 @@ impl OutputAssert {
     #[track_caller]
     fn stdout_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        if let Err(err) = self.config.try_matches(expected, actual, Some(&"stdout")) {
+        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stdout")) {
             err.panic();
         }
 
@@ -702,7 +702,7 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stderr")) {
+        if let Err(err) = self.config.try_eq(expected.raw(), actual, Some(&"stderr")) {
             err.panic();
         }
 
@@ -743,7 +743,7 @@ impl OutputAssert {
     #[track_caller]
     fn stderr_matches_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        if let Err(err) = self.config.try_matches(expected, actual, Some(&"stderr")) {
+        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stderr")) {
             err.panic();
         }
 
