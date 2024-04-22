@@ -111,32 +111,38 @@ pub(crate) enum DataInner {
 }
 
 impl Data {
+    pub(crate) fn with_inner(inner: DataInner) -> Self {
+        Self {
+            inner,
+            source: None,
+        }
+    }
+
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
-        DataInner::Binary(raw.into()).into()
+        Self::with_inner(DataInner::Binary(raw.into()))
     }
 
     /// Mark the data as text (post-processing)
     pub fn text(raw: impl Into<String>) -> Self {
-        DataInner::Text(raw.into()).into()
+        Self::with_inner(DataInner::Text(raw.into()))
     }
 
     #[cfg(feature = "json")]
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
-        DataInner::Json(raw.into()).into()
+        Self::with_inner(DataInner::Json(raw.into()))
     }
 
     #[cfg(feature = "json")]
     pub fn jsonlines(raw: impl Into<Vec<serde_json::Value>>) -> Self {
-        DataInner::JsonLines(serde_json::Value::Array(raw.into())).into()
+        Self::with_inner(DataInner::JsonLines(serde_json::Value::Array(raw.into())))
     }
 
     fn error(raw: impl Into<crate::Error>, intended: DataFormat) -> Self {
-        DataError {
+        Self::with_inner(DataInner::Error(DataError {
             error: raw.into(),
             intended,
-        }
-        .into()
+        }))
     }
 
     /// Empty test data
@@ -288,13 +294,13 @@ impl Data {
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (inner, DataFormat::Binary) => {
-                let remake: Self = inner.into();
+                let remake = Self::with_inner(inner);
                 DataInner::Binary(remake.to_bytes().expect("error case handled"))
             }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                if let Some(str) = Data::from(inner).render() {
+                if let Some(str) = Self::with_inner(inner).render() {
                     DataInner::Text(str)
                 } else {
                     return Err(format!("cannot convert {original:?} to {format:?}").into());
@@ -365,13 +371,13 @@ impl Data {
                 DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner))
             }
             (inner, DataFormat::Binary) => {
-                let remake: Self = inner.into();
+                let remake = Self::with_inner(inner);
                 DataInner::Binary(remake.to_bytes().expect("error case handled"))
             }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                let remake: Self = inner.into();
+                let remake = Self::with_inner(inner);
                 if let Some(str) = remake.render() {
                     DataInner::Text(str)
                 } else {
@@ -434,24 +440,6 @@ impl Data {
             DataInner::JsonLines(_) => None,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => text_elem(data),
-        }
-    }
-}
-
-impl From<DataInner> for Data {
-    fn from(inner: DataInner) -> Self {
-        Data {
-            inner,
-            source: None,
-        }
-    }
-}
-
-impl From<DataError> for Data {
-    fn from(inner: DataError) -> Self {
-        Data {
-            inner: DataInner::Error(inner),
-            source: None,
         }
     }
 }
