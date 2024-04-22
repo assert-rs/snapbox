@@ -86,13 +86,6 @@ impl Inline {
         data.is(format)
     }
 
-    /// Deprecated, replaced with [`Inline::is`]
-    #[deprecated(since = "0.5.2", note = "Replaced with `Inline::is`")]
-    pub fn coerce_to(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.coerce_to(format)
-    }
-
     fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
