@@ -35,7 +35,7 @@
 //! }
 //! ```
 
-use crate::data::{DataFormat, NormalizeNewlines};
+use crate::data::{DataFormat, Normalize as _, NormalizeNewlines};
 use crate::Action;
 
 use libtest_mimic::Trial;
@@ -125,7 +125,7 @@ where
                 Trial::test(case.name.clone(), move || {
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
-                    let actual = crate::Data::text(actual).normalize(NormalizeNewlines);
+                    let actual = NormalizeNewlines.normalize(crate::Data::text(actual));
                     #[allow(deprecated)]
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
@@ -188,8 +188,10 @@ impl Verifier {
         expected_path: &std::path::Path,
         actual: crate::Data,
     ) -> crate::Result<()> {
-        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))
-            .normalize(NormalizeNewlines);
+        let expected = NormalizeNewlines.normalize(crate::Data::read_from(
+            expected_path,
+            Some(DataFormat::Text),
+        ));
 
         if expected != actual {
             let mut buf = String::new();
