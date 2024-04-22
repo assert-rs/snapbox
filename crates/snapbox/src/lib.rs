@@ -112,6 +112,7 @@ pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
+pub use data::IntoData;
 pub use data::ToDebug;
 pub use error::Error;
 pub use filters::Redactions;

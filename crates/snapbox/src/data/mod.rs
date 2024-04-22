@@ -42,6 +42,32 @@ impl<D: std::fmt::Debug> ToDebug for D {
     }
 }
 
+/// Modify `expected` data
+pub trait IntoData: Sized {
+    /// Remove default [`filters`][crate::filters] from this `expected` result
+    fn raw(self) -> Data {
+        self.into_data().raw()
+    }
+
+    /// Initialize as [`format`][DataFormat] or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    fn is(self, format: DataFormat) -> Data {
+        self.into_data().is(format)
+    }
+
+    fn into_data(self) -> Data;
+}
+
+impl<D> IntoData for D
+where
+    D: Into<Data>,
+{
+    fn into_data(self) -> Data {
+        self.into()
+    }
+}
+
 /// Declare an expected value for an assert from a file
 ///
 /// This is relative to the source file the macro is run from
@@ -140,6 +166,7 @@ pub(crate) enum DataInner {
 /// - [`str!`] for inline snapshots
 /// - [`file!`] for external snapshots
 /// - [`ToDebug`] for verifying a debug representation
+/// - [`IntoData`] for modifying `expected`
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
