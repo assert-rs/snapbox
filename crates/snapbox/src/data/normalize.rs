@@ -8,54 +8,54 @@ pub trait Normalize {
 pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
-        let mut new = match data.inner {
-            DataInner::Error(err) => err.into(),
-            DataInner::Binary(bin) => Data::binary(bin),
+        let source = data.source;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_lines(&text);
-                Data::text(lines)
+                DataInner::Text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
                 normalize_value(&mut value, crate::utils::normalize_lines);
-                Data::json(value)
+                DataInner::Json(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 let lines = crate::utils::normalize_lines(&text);
-                DataInner::TermSvg(lines).into()
+                DataInner::TermSvg(lines)
             }
         };
-        new.source = data.source;
-        new
+        Data { inner, source }
     }
 }
 
 pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
-        let mut new = match data.inner {
-            DataInner::Error(err) => err.into(),
-            DataInner::Binary(bin) => Data::binary(bin),
+        let source = data.source;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 let lines = crate::utils::normalize_paths(&text);
-                Data::text(lines)
+                DataInner::Text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
                 normalize_value(&mut value, crate::utils::normalize_paths);
-                Data::json(value)
+                DataInner::Json(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 let lines = crate::utils::normalize_paths(&text);
-                DataInner::TermSvg(lines).into()
+                DataInner::TermSvg(lines)
             }
         };
-        new.source = data.source;
-        new
+        Data { inner, source }
     }
 }
 
@@ -75,15 +75,16 @@ impl<'a> NormalizeMatches<'a> {
 
 impl Normalize for NormalizeMatches<'_> {
     fn normalize(&self, data: Data) -> Data {
-        let mut new = match data.inner {
-            DataInner::Error(err) => err.into(),
-            DataInner::Binary(bin) => Data::binary(bin),
+        let source = data.source;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 if let Some(pattern) = self.pattern.render() {
                     let lines = self.substitutions.normalize(&text, &pattern);
-                    Data::text(lines)
+                    DataInner::Text(lines)
                 } else {
-                    DataInner::Text(text).into()
+                    DataInner::Text(text)
                 }
             }
             #[cfg(feature = "json")]
@@ -92,20 +93,19 @@ impl Normalize for NormalizeMatches<'_> {
                 if let DataInner::Json(exp) = &self.pattern.inner {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
-                Data::json(value)
+                DataInner::Json(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 if let Some(pattern) = self.pattern.render() {
                     let lines = self.substitutions.normalize(&text, &pattern);
-                    DataInner::TermSvg(lines).into()
+                    DataInner::TermSvg(lines)
                 } else {
-                    DataInner::TermSvg(text).into()
+                    DataInner::TermSvg(text)
                 }
             }
         };
-        new.source = data.source;
-        new
+        Data { inner, source }
     }
 }
 

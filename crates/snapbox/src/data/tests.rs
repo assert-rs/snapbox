@@ -6,7 +6,7 @@ use super::*;
 #[test]
 #[cfg(feature = "term-svg")]
 fn term_svg_eq() {
-    let left = Data::from(DataInner::TermSvg(
+    let left = Data::with_inner(DataInner::TermSvg(
         "
 irrelevant
   <text>relevant
@@ -15,7 +15,7 @@ irrelevant
 irrelevant"
             .to_owned(),
     ));
-    let right = Data::from(DataInner::TermSvg(
+    let right = Data::with_inner(DataInner::TermSvg(
         "
 irrelevant
   <text>relevant
@@ -26,7 +26,7 @@ irrelevant"
     ));
     assert_eq!(left, right);
 
-    let left = Data::from(DataInner::TermSvg(
+    let left = Data::with_inner(DataInner::TermSvg(
         "
 irrelevant 1
   <text>relevant
@@ -35,7 +35,7 @@ irrelevant 1
 irrelevant 1"
             .to_owned(),
     ));
-    let right = Data::from(DataInner::TermSvg(
+    let right = Data::with_inner(DataInner::TermSvg(
         "
 irrelevant 2
   <text>relevant
@@ -50,7 +50,7 @@ irrelevant 2"
 #[test]
 #[cfg(feature = "term-svg")]
 fn term_svg_ne() {
-    let left = Data::from(DataInner::TermSvg(
+    let left = Data::with_inner(DataInner::TermSvg(
         "
 irrelevant 1
   <text>relevant 1
@@ -59,7 +59,7 @@ irrelevant 1
 irrelevant 1"
             .to_owned(),
     ));
-    let right = Data::from(DataInner::TermSvg(
+    let right = Data::with_inner(DataInner::TermSvg(
         "
 irrelevant 2
   <text>relevant 2
