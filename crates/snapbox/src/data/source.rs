@@ -79,24 +79,6 @@ pub struct Inline {
 }
 
 impl Inline {
-    /// Initialize `Self` as [`format`][crate::data::DataFormat] or [`Error`][crate::data::DataFormat::Error]
-    ///
-    /// This is generally used for `expected` data
-    ///
-    /// ```rust
-    /// # #[cfg(feature = "json")] {
-    /// use snapbox::str;
-    ///
-    /// let expected = str![[r#"{"hello": "world"}"#]]
-    ///     .is(snapbox::data::DataFormat::Json);
-    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
-    /// # }
-    /// ```
-    pub fn is(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.is(format)
-    }
-
     fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
