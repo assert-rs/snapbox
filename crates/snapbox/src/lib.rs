@@ -152,7 +152,7 @@ pub mod prelude {
 /// assert_eq(file!["output.txt"], actual);
 /// ```
 #[track_caller]
-pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
+pub fn assert_eq(expected: impl IntoData, actual: impl IntoData) {
     Assert::new()
         .action_env(DEFAULT_ACTION_ENV)
         .eq(expected, actual);

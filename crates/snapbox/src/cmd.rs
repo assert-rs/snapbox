@@ -3,6 +3,8 @@
 #[cfg(feature = "color")]
 use anstream::panic;
 
+use crate::IntoData;
+
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
 pub struct Command {
@@ -243,8 +245,8 @@ impl Command {
     ///     .assert()
     ///     .stdout_eq("42");
     /// ```
-    pub fn stdin(mut self, stream: impl Into<crate::Data>) -> Self {
-        self.stdin = Some(stream.into());
+    pub fn stdin(mut self, stream: impl IntoData) -> Self {
+        self.stdin = Some(stream.into_data());
         self
     }
 
@@ -621,8 +623,8 @@ impl OutputAssert {
     ///     .stdout_eq(file!["stdout.log"]);
     /// ```
     #[track_caller]
-    pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
+    pub fn stdout_eq(self, expected: impl IntoData) -> Self {
+        let expected = expected.into_data();
         self.stdout_eq_inner(expected)
     }
 
@@ -671,8 +673,8 @@ impl OutputAssert {
     ///     .stderr_eq(file!["stderr.log"]);
     /// ```
     #[track_caller]
-    pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
+    pub fn stderr_eq(self, expected: impl IntoData) -> Self {
+        let expected = expected.into_data();
         self.stderr_eq_inner(expected)
     }
 
