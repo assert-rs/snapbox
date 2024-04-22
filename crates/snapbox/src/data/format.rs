@@ -1,19 +1,26 @@
+/// Describes the structure of [`Data`][crate::Data]
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, Default)]
 #[non_exhaustive]
 pub enum DataFormat {
+    /// Processing of the [`Data`][crate::Data] failed
     Error,
+    /// Non-textual, opaque data
     Binary,
     #[default]
     Text,
     #[cfg(feature = "json")]
     Json,
+    /// Streamed JSON output according to <https://jsonlines.org/>
     #[cfg(feature = "json")]
     JsonLines,
+    /// [ANSI escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code#DOS_and_Windows)
+    /// rendered as [svg](https://docs.rs/anstyle-svg)
     #[cfg(feature = "term-svg")]
     TermSvg,
 }
 
 impl DataFormat {
+    /// Assumed file extension for the format
     pub fn ext(self) -> &'static str {
         match self {
             Self::Error => "txt",
