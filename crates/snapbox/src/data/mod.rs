@@ -50,9 +50,51 @@ impl<D: std::fmt::Debug> ToDebug for D {
     }
 }
 
+/// Convert to [`Data`] with modifiers for `expected` data
+pub trait IntoData: Sized {
+    /// Remove default [`filters`][crate::filter] from this `expected` result
+    fn raw(self) -> Data {
+        self.into_data().raw()
+    }
+
+    /// Initialize as [`format`][DataFormat] or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .is(snapbox::data::DataFormat::Json);
+    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
+    /// # }
+    /// ```
+    fn is(self, format: DataFormat) -> Data {
+        self.into_data().is(format)
+    }
+
+    /// Convert to [`Data`], applying defaults
+    fn into_data(self) -> Data;
+}
+
+impl<D> IntoData for D
+where
+    D: Into<Data>,
+{
+    fn into_data(self) -> Data {
+        self.into()
+    }
+}
+
 /// Declare an expected value for an assert from a file
 ///
 /// This is relative to the source file the macro is run from
+///
+/// Output type: [`Data`]
 ///
 /// ```
 /// # #[cfg(feature = "json")] {
@@ -88,6 +130,8 @@ macro_rules! file {
 
 /// Declare an expected value from within Rust source
 ///
+/// Output type: [`Inline`], see [`IntoData`] for operations
+///
 /// ```
 /// # use snapbox::str;
 /// str![["
@@ -97,8 +141,6 @@ macro_rules! file {
 /// ```
 ///
 /// Leading indentation is stripped.
-///
-/// See [`Inline::is`] for declaring the data to be of a certain format.
 #[macro_export]
 macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
@@ -147,6 +189,7 @@ pub(crate) enum DataInner {
 /// - [`file!`] for external snapshots
 /// - [`ToString`] for verifying a `Display` representation
 /// - [`ToDebug`] for verifying a debug representation
+/// - [`IntoData`] for modifying `expected`
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
