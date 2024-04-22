@@ -114,7 +114,7 @@ impl Inline {
         data.coerce_to(format)
     }
 
-    fn trimmed(&self) -> String {
+    pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
             if data.starts_with('\n') {
@@ -150,13 +150,6 @@ fn trim_indent(text: &str) -> String {
 impl std::fmt::Display for Inline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.position.fmt(f)
-    }
-}
-
-impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
     }
 }
 

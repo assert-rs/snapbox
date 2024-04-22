@@ -630,6 +630,13 @@ impl<'s> From<&'s str> for Data {
     }
 }
 
+impl From<Inline> for super::Data {
+    fn from(inline: Inline) -> Self {
+        let trimmed = inline.trimmed();
+        super::Data::text(trimmed).with_source(inline)
+    }
+}
+
 #[cfg(feature = "detect-encoding")]
 fn is_binary(data: &[u8]) -> bool {
     match content_inspector::inspect(data) {
