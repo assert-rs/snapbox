@@ -42,7 +42,7 @@ impl<D: std::fmt::Debug> ToDebug for D {
     }
 }
 
-/// Modify `expected` data
+/// Convert to [`Data`] with modifiers for `expected` data
 pub trait IntoData: Sized {
     /// Remove default [`filters`][crate::filters] from this `expected` result
     fn raw(self) -> Data {
@@ -67,15 +67,56 @@ pub trait IntoData: Sized {
         self.into_data().is(format)
     }
 
+    /// Convert to [`Data`], applying defaults
     fn into_data(self) -> Data;
 }
 
-impl<D> IntoData for D
-where
-    D: Into<Data>,
-{
+impl IntoData for Data {
     fn into_data(self) -> Data {
-        self.into()
+        self
+    }
+}
+
+impl IntoData for &'_ Data {
+    fn into_data(self) -> Data {
+        self.clone()
+    }
+}
+
+impl IntoData for Vec<u8> {
+    fn into_data(self) -> Data {
+        Data::binary(self)
+    }
+}
+
+impl IntoData for &'_ [u8] {
+    fn into_data(self) -> Data {
+        self.to_owned().into()
+    }
+}
+
+impl IntoData for String {
+    fn into_data(self) -> Data {
+        Data::text(self)
+    }
+}
+
+impl IntoData for &'_ String {
+    fn into_data(self) -> Data {
+        self.to_owned().into()
+    }
+}
+
+impl IntoData for &'_ str {
+    fn into_data(self) -> Data {
+        self.to_owned().into()
+    }
+}
+
+impl IntoData for Inline {
+    fn into_data(self) -> Data {
+        let trimmed = self.trimmed();
+        super::Data::text(trimmed).with_source(self)
     }
 }
 
