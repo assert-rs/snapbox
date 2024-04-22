@@ -258,7 +258,7 @@ impl From<&'_ regex::Regex> for RedactedValue {
 
 impl PartialOrd for RedactedValueInner {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.as_cmp().partial_cmp(other.as_cmp())
+        Some(self.as_cmp().cmp(other.as_cmp()))
     }
 }
 
