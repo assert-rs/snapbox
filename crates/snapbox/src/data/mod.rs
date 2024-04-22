@@ -358,9 +358,10 @@ impl Data {
             }
             #[cfg(feature = "json")]
             (DataInner::Text(inner), DataFormat::Json) => {
-                match serde_json::from_str::<serde_json::Value>(&inner) {
-                    Ok(json) => Self::json(json),
-                    Err(_) => Self::text(inner),
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&inner) {
+                    Self::json(json)
+                } else {
+                    Self::text(inner)
                 }
             }
             #[cfg(feature = "json")]
