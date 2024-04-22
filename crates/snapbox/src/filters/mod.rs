@@ -1,3 +1,9 @@
+//! Normalize `actual` or `expected` data
+//!
+//! This can be done for
+//! - Making snapshots consistent across platforms or conditional compilation
+//! - Focusing snapshots on the characteristics of the data being tested
+
 mod substitutions;
 
 #[cfg(feature = "regex")]
@@ -15,6 +21,11 @@ fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 }
 
 /// Normalize path separators
+///
+/// [`std::path::MAIN_SEPARATOR`] can vary by platform, so make it consistent
+///
+/// Note: this cannot distinguish between when a character is being used as a path separator or not
+/// and can "normalize" unrelated data
 pub fn normalize_paths(data: &str) -> String {
     normalize_paths_chars(data.chars()).collect()
 }
