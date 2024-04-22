@@ -120,6 +120,12 @@ pub use snapbox_macros::debug;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
+/// Easier access to common traits
+pub mod prelude {
+    pub use crate::IntoData;
+    pub use crate::ToDebug;
+}
+
 /// Check if a value is the same as an expected value
 ///
 /// By default [`filters`] are applied, including:
