@@ -79,32 +79,7 @@ pub struct Inline {
 }
 
 impl Inline {
-    /// Initialize `Self` as [`format`][crate::data::DataFormat] or [`Error`][crate::data::DataFormat::Error]
-    ///
-    /// This is generally used for `expected` data
-    ///
-    /// ```rust
-    /// # #[cfg(feature = "json")] {
-    /// use snapbox::str;
-    ///
-    /// let expected = str![[r#"{"hello": "world"}"#]]
-    ///     .is(snapbox::data::DataFormat::Json);
-    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
-    /// # }
-    /// ```
-    pub fn is(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.is(format)
-    }
-
-    /// Remove default [`filters`][crate::filters] from this `expected` result
-    pub fn raw(self) -> super::Data {
-        let mut data: super::Data = self.into();
-        data.filters = super::FilterSet::empty().newlines();
-        data
-    }
-
-    fn trimmed(&self) -> String {
+    pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
             data = data.strip_prefix('\n').unwrap_or(data);
@@ -117,13 +92,6 @@ impl Inline {
 impl std::fmt::Display for Inline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.position.fmt(f)
-    }
-}
-
-impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
     }
 }
 

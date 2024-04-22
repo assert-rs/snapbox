@@ -112,12 +112,19 @@ pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
+pub use data::IntoData;
 pub use data::ToDebug;
 pub use error::Error;
 pub use filters::Redactions;
 pub use snapbox_macros::debug;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+/// Easier access to common traits
+pub mod prelude {
+    pub use crate::IntoData;
+    pub use crate::ToDebug;
+}
 
 /// Check if a value is the same as an expected value
 ///
@@ -145,7 +152,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 /// assert_eq(file!["output.txt"], actual);
 /// ```
 #[track_caller]
-pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
+pub fn assert_eq(expected: impl IntoData, actual: impl IntoData) {
     Assert::new()
         .action_env(DEFAULT_ACTION_ENV)
         .eq(expected, actual);

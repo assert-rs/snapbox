@@ -42,6 +42,84 @@ impl<D: std::fmt::Debug> ToDebug for D {
     }
 }
 
+/// Convert to [`Data`] with modifiers for `expected` data
+pub trait IntoData: Sized {
+    /// Remove default [`filters`][crate::filters] from this `expected` result
+    fn raw(self) -> Data {
+        self.into_data().raw()
+    }
+
+    /// Initialize as [`format`][DataFormat] or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .is(snapbox::data::DataFormat::Json);
+    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
+    /// # }
+    /// ```
+    fn is(self, format: DataFormat) -> Data {
+        self.into_data().is(format)
+    }
+
+    /// Convert to [`Data`], applying defaults
+    fn into_data(self) -> Data;
+}
+
+impl IntoData for Data {
+    fn into_data(self) -> Data {
+        self
+    }
+}
+
+impl IntoData for &'_ Data {
+    fn into_data(self) -> Data {
+        self.clone()
+    }
+}
+
+impl IntoData for Vec<u8> {
+    fn into_data(self) -> Data {
+        Data::binary(self)
+    }
+}
+
+impl IntoData for &'_ [u8] {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for String {
+    fn into_data(self) -> Data {
+        Data::text(self)
+    }
+}
+
+impl IntoData for &'_ String {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for &'_ str {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for Inline {
+    fn into_data(self) -> Data {
+        let trimmed = self.trimmed();
+        super::Data::text(trimmed).with_source(self)
+    }
+}
+
 /// Declare an expected value for an assert from a file
 ///
 /// This is relative to the source file the macro is run from
@@ -80,6 +158,8 @@ macro_rules! file {
 
 /// Declare an expected value from within Rust source
 ///
+/// Output type: [`Inline`], see [`IntoData`] for operations
+///
 /// ```
 /// # use snapbox::str;
 /// str![["
@@ -87,10 +167,6 @@ macro_rules! file {
 /// "]];
 /// str![r#"{"Foo": 92}"#];
 /// ```
-///
-/// Leading indentation is stripped.
-///
-/// See [`Inline::is`] for declaring the data to be of a certain format.
 #[macro_export]
 macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
@@ -140,6 +216,7 @@ pub(crate) enum DataInner {
 /// - [`str!`] for inline snapshots
 /// - [`file!`] for external snapshots
 /// - [`ToDebug`] for verifying a debug representation
+/// - [`IntoData`] for modifying `expected`
 impl Data {
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
@@ -591,42 +668,6 @@ impl Eq for Data {}
 impl Default for Data {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl<'d> From<&'d Data> for Data {
-    fn from(other: &'d Data) -> Self {
-        other.clone()
-    }
-}
-
-impl From<Vec<u8>> for Data {
-    fn from(other: Vec<u8>) -> Self {
-        Self::binary(other)
-    }
-}
-
-impl<'b> From<&'b [u8]> for Data {
-    fn from(other: &'b [u8]) -> Self {
-        other.to_owned().into()
-    }
-}
-
-impl From<String> for Data {
-    fn from(other: String) -> Self {
-        Self::text(other)
-    }
-}
-
-impl<'s> From<&'s String> for Data {
-    fn from(other: &'s String) -> Self {
-        other.clone().into()
-    }
-}
-
-impl<'s> From<&'s str> for Data {
-    fn from(other: &'s str) -> Self {
-        other.to_owned().into()
     }
 }
 

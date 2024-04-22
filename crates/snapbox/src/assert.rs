@@ -7,6 +7,7 @@ use std::io::stderr;
 
 use crate::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 use crate::Action;
+use crate::IntoData;
 
 /// Snapshot assertion against a file's contents
 ///
@@ -61,9 +62,9 @@ impl Assert {
     /// Assert::new().eq(file!["output.txt"], actual);
     /// ```
     #[track_caller]
-    pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-        let expected = expected.into();
-        let actual = actual.into();
+    pub fn eq(&self, expected: impl IntoData, actual: impl IntoData) {
+        let expected = expected.into_data();
+        let actual = actual.into_data();
         if let Err(err) = self.try_eq(expected, actual, Some(&"In-memory")) {
             err.panic();
         }
