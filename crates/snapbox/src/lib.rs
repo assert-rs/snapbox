@@ -115,6 +115,7 @@ pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
 pub use filter::Redactions;
+#[doc(hidden)]
 pub use snapbox_macros::debug;
 
 #[deprecated(since = "0.5.11", note = "Replaced with `Redactions`")]
