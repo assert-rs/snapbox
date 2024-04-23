@@ -26,7 +26,7 @@
 //! ## Getting Started
 //!
 //! Testing Functions:
-//! - [`assert_eq`][crate::assert_eq()] for quick and dirty snapshotting
+//! - [`assert_data_eq`] for quick and dirty snapshotting
 //!
 //! Testing Commands:
 //! - [`cmd::Command`]: Process spawning for testing of non-interactive commands
@@ -44,9 +44,9 @@
 //!
 //! # Examples
 //!
-//! [`assert_eq`][crate::assert_eq()]
+//! [`assert_data_eq`]
 //! ```rust
-//! snapbox::assert_eq("Hello [..] people!", "Hello many people!");
+//! snapbox::assert_data_eq!("Hello many people!", "Hello [..] people!");
 //! ```
 //!
 //! [`Assert`]

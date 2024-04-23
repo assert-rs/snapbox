@@ -30,7 +30,7 @@ use filters::FilterSet;
 ///
 /// let actual = some_function();
 /// let expected = snapbox::str![["5"]];
-/// snapbox::assert_eq(actual.to_debug(), expected);
+/// snapbox::assert_data_eq!(actual.to_debug(), expected);
 /// ```
 pub trait ToDebug {
     fn to_debug(&self) -> Data;
@@ -54,7 +54,7 @@ impl<D: std::fmt::Debug> ToDebug for D {
 ///
 /// let actual = some_function();
 /// let expected = snapbox::str![["5"]];
-/// snapbox::assert_eq(actual.into_json(), expected);
+/// snapbox::assert_data_eq!(actual.into_json(), expected);
 /// ```
 #[cfg(feature = "json")]
 pub trait IntoJson {
