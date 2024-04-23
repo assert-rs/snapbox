@@ -28,3 +28,10 @@ fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 pub fn normalize_text(data: &str) -> String {
     normalize_paths_chars(normalize_lines_chars(data.chars())).collect()
 }
+
+#[doc(inline)]
+pub use crate::cargo_rustc_current_dir;
+#[doc(inline)]
+pub use crate::current_dir;
+#[doc(inline)]
+pub use crate::current_rs;

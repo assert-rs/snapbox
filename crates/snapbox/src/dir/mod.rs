@@ -20,10 +20,3 @@ pub use ops::Walk;
 pub(crate) use ops::canonicalize;
 pub(crate) use ops::display_relpath;
 pub(crate) use ops::shallow_copy;
-
-#[doc(inline)]
-pub use crate::cargo_rustc_current_dir;
-#[doc(inline)]
-pub use crate::current_dir;
-#[doc(inline)]
-pub use crate::current_rs;
