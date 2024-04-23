@@ -1,3 +1,6 @@
+mod action;
+mod error;
+
 #[cfg(feature = "color")]
 use anstream::panic;
 #[cfg(feature = "color")]
@@ -6,8 +9,12 @@ use anstream::stderr;
 use std::io::stderr;
 
 use crate::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
-use crate::Action;
 use crate::IntoData;
+
+pub use action::Action;
+pub use action::DEFAULT_ACTION_ENV;
+pub use error::Error;
+pub use error::Result;
 
 /// Snapshot assertion against a file's contents
 ///
@@ -75,7 +82,7 @@ impl Assert {
         expected: crate::Data,
         actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<()> {
         if expected.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
@@ -122,7 +129,7 @@ impl Assert {
         expected: crate::Data,
         actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<()> {
         let result = self.try_verify(&expected, &actual, actual_name);
         let Err(err) = result else {
             return Ok(());
@@ -149,7 +156,7 @@ impl Assert {
                 } else {
                     crate::report::Styled::new(String::new(), Default::default())
                 };
-                Err(crate::Error::new(format_args!("{err}{message}")))
+                Err(Error::new(format_args!("{err}{message}")))
             }
             Action::Overwrite => {
                 use std::io::Write;
@@ -159,7 +166,7 @@ impl Assert {
                     actual.write_to(source).unwrap();
                     Ok(())
                 } else {
-                    Err(crate::Error::new(format_args!("{err}")))
+                    Err(Error::new(format_args!("{err}")))
                 }
             }
         }
@@ -170,7 +177,7 @@ impl Assert {
         expected: &crate::Data,
         actual: &crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         if expected != actual {
             let mut buf = String::new();
             crate::report::write_diff(

@@ -37,7 +37,7 @@ impl PathFixture {
     }
 
     #[cfg(feature = "path")]
-    pub fn mutable_temp() -> Result<Self, crate::Error> {
+    pub fn mutable_temp() -> Result<Self, crate::assert::Error> {
         let temp = tempfile::tempdir().map_err(|e| e.to_string())?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
@@ -47,7 +47,7 @@ impl PathFixture {
     }
 
     #[cfg(feature = "path")]
-    pub fn mutable_at(target: &std::path::Path) -> Result<Self, crate::Error> {
+    pub fn mutable_at(target: &std::path::Path) -> Result<Self, crate::assert::Error> {
         let _ = std::fs::remove_dir_all(target);
         std::fs::create_dir_all(target)
             .map_err(|e| format!("Failed to create {}: {}", target.display(), e))?;
@@ -55,7 +55,10 @@ impl PathFixture {
     }
 
     #[cfg(feature = "path")]
-    pub fn with_template(self, template_root: &std::path::Path) -> Result<Self, crate::Error> {
+    pub fn with_template(
+        self,
+        template_root: &std::path::Path,
+    ) -> Result<Self, crate::assert::Error> {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => {
                 return Err("Sandboxing is disabled".into());
@@ -114,7 +117,7 @@ impl Default for PathFixture {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathDiff {
-    Failure(crate::Error),
+    Failure(crate::assert::Error),
     TypeMismatch {
         expected_path: std::path::PathBuf,
         actual_path: std::path::PathBuf,
@@ -373,7 +376,7 @@ impl PathDiff {
         Ok(())
     }
 
-    pub fn overwrite(&self) -> Result<(), crate::Error> {
+    pub fn overwrite(&self) -> Result<(), crate::assert::Error> {
         match self {
             // Not passing the error up because users most likely want to treat a processing error
             // differently than an overwrite error
@@ -513,7 +516,7 @@ impl Iterator for Walk {
 pub fn copy_template(
     source: impl AsRef<std::path::Path>,
     dest: impl AsRef<std::path::Path>,
-) -> Result<(), crate::Error> {
+) -> Result<(), crate::assert::Error> {
     let source = source.as_ref();
     let dest = dest.as_ref();
     let source = canonicalize(source)
@@ -535,7 +538,10 @@ pub fn copy_template(
 }
 
 /// Copy a file system entry, without recursing
-fn shallow_copy(source: &std::path::Path, dest: &std::path::Path) -> Result<(), crate::Error> {
+fn shallow_copy(
+    source: &std::path::Path,
+    dest: &std::path::Path,
+) -> Result<(), crate::assert::Error> {
     let meta = source
         .symlink_metadata()
         .map_err(|e| format!("Failed to read metadata from {}: {}", source.display(), e))?;

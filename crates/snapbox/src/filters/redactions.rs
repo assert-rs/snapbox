@@ -49,7 +49,7 @@ impl Redactions {
         &mut self,
         placeholder: &'static str,
         value: impl Into<RedactedValue>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<(), crate::assert::Error> {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if let Some(inner) = value.inner {
@@ -66,14 +66,14 @@ impl Redactions {
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<RedactedValue>)>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<(), crate::assert::Error> {
         for (placeholder, value) in vars {
             self.insert(placeholder, value)?;
         }
         Ok(())
     }
 
-    pub fn remove(&mut self, placeholder: &'static str) -> Result<(), crate::Error> {
+    pub fn remove(&mut self, placeholder: &'static str) -> Result<(), crate::assert::Error> {
         let placeholder = validate_placeholder(placeholder)?;
         self.vars.remove(placeholder);
         Ok(())
@@ -291,7 +291,7 @@ fn replace_many<'a>(
     }
 }
 
-fn validate_placeholder(placeholder: &'static str) -> Result<&'static str, crate::Error> {
+fn validate_placeholder(placeholder: &'static str) -> Result<&'static str, crate::assert::Error> {
     if !placeholder.starts_with('[') || !placeholder.ends_with(']') {
         return Err(format!("Key `{}` is not enclosed in []", placeholder).into());
     }
