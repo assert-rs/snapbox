@@ -141,6 +141,7 @@ pub(crate) enum DataInner {
 /// See also
 /// - [`str!`] for inline snapshots
 /// - [`file!`] for external snapshots
+/// - [`ToString`] for verifying a `Display` representation
 /// - [`ToDebug`] for verifying a debug representation
 impl Data {
     /// Mark the data as binary (no post-processing)
