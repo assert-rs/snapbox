@@ -41,7 +41,7 @@ macro_rules! assert_data_eq {
         let expected = $crate::IntoData::into_data($expected);
         $crate::Assert::new()
             .action_env($crate::assert::DEFAULT_ACTION_ENV)
-            .eq(expected, actual);
+            .eq_(actual, expected);
     }};
 }
 
