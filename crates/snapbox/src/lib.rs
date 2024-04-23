@@ -89,38 +89,6 @@ pub mod prelude {
     pub use crate::ToDebug;
 }
 
-/// Check if a value is the same as an expected value
-///
-/// By default [`filters`] are applied, including:
-/// - `...` is a line-wildcard when on a line by itself
-/// - `[..]` is a character-wildcard when inside a line
-/// - `[EXE]` matches `.exe` on Windows
-/// - `\` to `/`
-/// - Newlines
-///
-/// To limit this to newline normalization for text, call [`Data::raw`] on `expected`.
-///
-/// ```rust
-/// # use snapbox::assert_eq;
-/// let output = "something";
-/// let expected = "so[..]g";
-/// assert_eq(expected, output);
-/// ```
-///
-/// Can combine this with [`file!`]
-/// ```rust,no_run
-/// # use snapbox::assert_eq;
-/// # use snapbox::file;
-/// let actual = "something";
-/// assert_eq(file!["output.txt"], actual);
-/// ```
-#[track_caller]
-pub fn assert_eq(expected: impl IntoData, actual: impl IntoData) {
-    Assert::new()
-        .action_env(assert::DEFAULT_ACTION_ENV)
-        .eq(expected, actual);
-}
-
 /// Check if a path matches the content of another path, recursively
 ///
 /// When the content is text, newlines are normalized.
