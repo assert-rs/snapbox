@@ -810,6 +810,7 @@ dependencies = [
  "libtest-mimic",
  "normalize-line-endings",
  "os_pipe",
+ "serde",
  "serde_json",
  "similar",
  "snapbox-macros",

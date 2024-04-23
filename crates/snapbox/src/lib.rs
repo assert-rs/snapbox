@@ -114,6 +114,8 @@ pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::IntoData;
+#[cfg(feature = "json")]
+pub use data::IntoJson;
 pub use data::ToDebug;
 pub use filter::RedactedValue;
 pub use filter::Redactions;
@@ -134,6 +136,8 @@ pub type Error = assert::Error;
 /// Easier access to common traits
 pub mod prelude {
     pub use crate::IntoData;
+    #[cfg(feature = "json")]
+    pub use crate::IntoJson;
     pub use crate::ToDebug;
 }
 
