@@ -34,7 +34,7 @@
 //!   [`Output`][std::process::Output].
 //!
 //! Testing Filesystem Interactions:
-//! - [`path::PathFixture`]: Working directory for tests
+//! - [`dir::PathFixture`]: Working directory for tests
 //! - [`Assert`]: Diff a directory against files present in a pattern directory
 //!
 //! You can also build your own version of these with the lower-level building blocks these are
@@ -66,8 +66,8 @@ mod macros;
 pub mod assert;
 pub mod cmd;
 pub mod data;
+pub mod dir;
 pub mod filters;
-pub mod path;
 pub mod report;
 pub mod utils;
 
