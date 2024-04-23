@@ -41,7 +41,6 @@
 
 use libtest_mimic::Trial;
 
-pub use snapbox::assert::Action;
 pub use snapbox::data::DataFormat;
 pub use snapbox::Data;
 
@@ -102,19 +101,11 @@ where
         self
     }
 
-    /// Read the failure action from an environment variable
-    pub fn action_env(mut self, var_name: &str) -> Self {
-        self.config = self.config.action_env(var_name);
-        self
-    }
-
-    /// Override the failure action
-    pub fn action(mut self, action: Action) -> Self {
-        self.config = self.config.action(action);
-        self
-    }
-
     /// Customize the assertion behavior
+    ///
+    /// Includes
+    /// - Configuring redactions
+    /// - Override updating environment vaeiable
     pub fn with_assert(mut self, config: snapbox::Assert) -> Self {
         self.config = config;
         self
@@ -156,7 +147,9 @@ where
                     config.try_eq(case.expected.clone(), actual, Some(&case.name))?;
                     Ok(())
                 })
-                .with_ignored_flag(shared_config.selected_action() == Action::Ignore)
+                .with_ignored_flag(
+                    shared_config.selected_action() == snapbox::assert::Action::Ignore,
+                )
             })
             .collect();
 
