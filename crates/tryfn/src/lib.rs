@@ -6,13 +6,17 @@
 //! # Examples
 //!
 //! ```rust,no_run
+//! fn some_func(num: usize) -> usize {
+//!     // ...
+//! #    10
+//! }
+//!
 //! tryfn::Harness::new(
 //!     "tests/fixtures/invalid",
 //!     setup,
 //!     test,
 //! )
 //! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOTS")
 //! .test();
 //!
 //! fn setup(input_path: std::path::PathBuf) -> tryfn::Case {
@@ -29,7 +33,7 @@
 //!     let raw = std::fs::read_to_string(input_path)?;
 //!     let num = raw.parse::<usize>()?;
 //!
-//!     let actual = num + 10;
+//!     let actual = some_func(num);
 //!
 //!     Ok(actual)
 //! }
@@ -38,6 +42,7 @@
 use libtest_mimic::Trial;
 
 pub use snapbox::assert::Action;
+pub use snapbox::data::DataFormat;
 pub use snapbox::Data;
 
 /// [`Harness`] for discovering test inputs and asserting against snapshot files
@@ -87,7 +92,7 @@ where
 
     /// Path patterns for selecting input files
     ///
-    /// This used gitignore syntax
+    /// This uses gitignore syntax
     pub fn select<'p>(mut self, patterns: impl IntoIterator<Item = &'p str>) -> Self {
         let mut overrides = ignore::overrides::OverrideBuilder::new(&self.root);
         for line in patterns {
@@ -160,6 +165,7 @@ where
     }
 }
 
+/// Function signature for generating a test [`Case`] from a path fixture
 pub trait Setup {
     fn setup(&self, fixture: std::path::PathBuf) -> Case;
 }
@@ -173,6 +179,7 @@ where
     }
 }
 
+/// Function signature for running a test [`Case`]
 pub trait Test<S, E>
 where
     S: std::fmt::Display,
@@ -192,7 +199,7 @@ where
     }
 }
 
-/// A test case enumerated by the [`Harness`] with data from the `setup` function
+/// A test case enumerated by the [`Harness`] with data from the [`Setup`] function
 pub struct Case {
     /// Display name
     pub name: String,
