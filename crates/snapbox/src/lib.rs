@@ -94,11 +94,9 @@
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
-mod action;
-mod assert;
-mod error;
 mod macros;
 
+pub mod assert;
 pub mod cmd;
 pub mod data;
 pub mod filters;
@@ -109,19 +107,15 @@ pub mod utils;
 #[cfg(feature = "harness")]
 pub mod harness;
 
-pub use action::Action;
-pub use action::DEFAULT_ACTION_ENV;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::IntoData;
 #[cfg(feature = "json")]
 pub use data::IntoJson;
 pub use data::ToDebug;
-pub use error::Error;
 pub use filters::Redactions;
+#[doc(hidden)]
 pub use snapbox_macros::debug;
-
-pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Easier access to common traits
 pub mod prelude {
@@ -159,7 +153,7 @@ pub mod prelude {
 #[track_caller]
 pub fn assert_eq(expected: impl IntoData, actual: impl IntoData) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .eq(expected, actual);
 }
 
@@ -179,7 +173,7 @@ pub fn assert_subset_eq(
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_eq(expected_root, actual_root);
 }
 
@@ -206,6 +200,6 @@ pub fn assert_subset_matches(
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_matches(pattern_root, actual_root);
 }

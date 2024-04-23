@@ -35,7 +35,7 @@
 //! }
 //! ```
 
-use crate::Action;
+use crate::assert::Action;
 use crate::Data;
 
 use libtest_mimic::Trial;
@@ -81,7 +81,7 @@ where
             overrides: None,
             setup,
             test,
-            config: crate::Assert::new().action_env(crate::DEFAULT_ACTION_ENV),
+            config: crate::Assert::new().action_env(crate::assert::DEFAULT_ACTION_ENV),
             test_output: Default::default(),
             test_error: Default::default(),
         }

@@ -240,7 +240,7 @@ mod runner;
 mod spec;
 
 pub use cases::TestCases;
-pub use snapbox::Error;
+pub use snapbox::assert::Error;
 
 pub(crate) use registry::BinRegistry;
 pub(crate) use runner::{Case, Mode, Runner};
