@@ -348,7 +348,7 @@ impl PathRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assert_eq;
+    use crate::assert_data_eq;
     use crate::prelude::*;
     use crate::str;
 
@@ -356,7 +356,8 @@ mod tests {
     fn test_format_patch() {
         let patch = format_patch("hello\nworld\n");
 
-        assert_eq(
+        assert_data_eq!(
+            patch,
             str![[r##"
 [r#"
 hello
@@ -364,14 +365,13 @@ world
 
 "#]
 "##]],
-            patch,
         );
 
         let patch = format_patch(r"hello\tworld");
-        assert_eq(str![[r##"[r#"hello\tworld"#]"##]].raw(), patch);
+        assert_data_eq!(patch, str![[r##"[r#"hello\tworld"#]"##]].raw());
 
         let patch = format_patch("{\"foo\": 42}");
-        assert_eq(str![[r##"[r#"{"foo": 42}"#]"##]].raw(), patch);
+        assert_data_eq!(patch, str![[r##"[r#"{"foo": 42}"#]"##]].raw());
     }
 
     #[test]
@@ -380,7 +380,8 @@ world
         patchwork.patch(4..7, "zwei");
         patchwork.patch(0..3, "один");
         patchwork.patch(8..13, "3");
-        assert_eq(
+        assert_data_eq!(
+            patchwork.to_debug(),
             str![[r#"
 Patchwork {
     text: "один zwei 3",
@@ -402,7 +403,6 @@ Patchwork {
 
 "#]]
             .raw(),
-            patchwork.to_debug(),
         );
     }
 
