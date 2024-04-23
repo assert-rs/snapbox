@@ -27,7 +27,6 @@
 //!
 //! Testing Functions:
 //! - [`assert_eq`][crate::assert_eq()] for quick and dirty snapshotting
-//! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Testing Commands:
 //! - [`cmd::Command`]: Process spawning for testing of non-interactive commands
@@ -58,38 +57,6 @@
 //!     .eq(snapbox::file!["help_output_is_clean.txt"], actual);
 //! ```
 //!
-//! [`harness::Harness`]
-#![cfg_attr(not(feature = "harness"), doc = " ```rust,ignore")]
-#![cfg_attr(feature = "harness", doc = " ```rust,no_run")]
-//! snapbox::harness::Harness::new(
-//!     "tests/fixtures/invalid",
-//!     setup,
-//!     test,
-//! )
-//! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOTS")
-//! .test();
-//!
-//! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
-//!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = snapbox::Data::read_from(&input_path.with_extension("out"), None);
-//!     snapbox::harness::Case {
-//!         name,
-//!         fixture: input_path,
-//!         expected,
-//!     }
-//! }
-//!
-//! fn test(input_path: &std::path::Path) -> Result<usize, Box<dyn std::error::Error>> {
-//!     let raw = std::fs::read_to_string(input_path)?;
-//!     let num = raw.parse::<usize>()?;
-//!
-//!     let actual = num + 10;
-//!
-//!     Ok(actual)
-//! }
-//! ```
-//!
 //! [trycmd]: https://docs.rs/trycmd
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
@@ -103,9 +70,6 @@ pub mod filters;
 pub mod path;
 pub mod report;
 pub mod utils;
-
-#[cfg(feature = "harness")]
-pub mod harness;
 
 pub use assert::Assert;
 pub use data::Data;

@@ -6,19 +6,23 @@
 //! # Examples
 //!
 //! ```rust,no_run
-//! snapbox::harness::Harness::new(
+//! fn some_func(num: usize) -> usize {
+//!     // ...
+//! #    10
+//! }
+//!
+//! tryfn::Harness::new(
 //!     "tests/fixtures/invalid",
 //!     setup,
 //!     test,
 //! )
 //! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOTS")
 //! .test();
 //!
-//! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
+//! fn setup(input_path: std::path::PathBuf) -> tryfn::Case {
 //!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = snapbox::Data::read_from(&input_path.with_extension("out"), None);
-//!     snapbox::harness::Case {
+//!     let expected = tryfn::Data::read_from(&input_path.with_extension("out"), None);
+//!     tryfn::Case {
 //!         name,
 //!         fixture: input_path,
 //!         expected,
@@ -29,26 +33,24 @@
 //!     let raw = std::fs::read_to_string(input_path)?;
 //!     let num = raw.parse::<usize>()?;
 //!
-//!     let actual = num + 10;
+//!     let actual = some_func(num);
 //!
 //!     Ok(actual)
 //! }
 //! ```
 
-use crate::assert::Action;
-use crate::Data;
-
 use libtest_mimic::Trial;
 
+pub use snapbox::data::DataFormat;
+pub use snapbox::Data;
+
 /// [`Harness`] for discovering test inputs and asserting against snapshot files
-///
-/// See [`harness`][crate::harness] for more details
 pub struct Harness<S, T, I, E> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
-    config: crate::Assert,
+    config: snapbox::Assert,
     test_output: std::marker::PhantomData<I>,
     test_error: std::marker::PhantomData<E>,
 }
@@ -67,21 +69,21 @@ where
     /// - `setup`: Given a path, choose the test name and the output location
     /// - `test`: Given a path, return the actual output value
     ///
-    /// By default [`filters`][crate::filters] are applied, including:
+    /// By default [`filters`][snapbox::filters] are applied, including:
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
     /// - `[EXE]` matches `.exe` on Windows
     /// - `\` to `/`
     /// - Newlines
     ///
-    /// To limit this to newline normalization for text, have [`Setup`] call [`Data::raw`][crate::Data::raw] on `expected`.
+    /// To limit this to newline normalization for text, have [`Setup`] call [`Data::raw`][snapbox::Data::raw] on `expected`.
     pub fn new(input_root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
         Self {
             root: input_root.into(),
             overrides: None,
             setup,
             test,
-            config: crate::Assert::new().action_env(crate::assert::DEFAULT_ACTION_ENV),
+            config: snapbox::Assert::new().action_env(snapbox::assert::DEFAULT_ACTION_ENV),
             test_output: Default::default(),
             test_error: Default::default(),
         }
@@ -89,7 +91,7 @@ where
 
     /// Path patterns for selecting input files
     ///
-    /// This used gitignore syntax
+    /// This uses gitignore syntax
     pub fn select<'p>(mut self, patterns: impl IntoIterator<Item = &'p str>) -> Self {
         let mut overrides = ignore::overrides::OverrideBuilder::new(&self.root);
         for line in patterns {
@@ -99,20 +101,12 @@ where
         self
     }
 
-    /// Read the failure action from an environment variable
-    pub fn action_env(mut self, var_name: &str) -> Self {
-        self.config = self.config.action_env(var_name);
-        self
-    }
-
-    /// Override the failure action
-    pub fn action(mut self, action: Action) -> Self {
-        self.config = self.config.action(action);
-        self
-    }
-
     /// Customize the assertion behavior
-    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+    ///
+    /// Includes
+    /// - Configuring redactions
+    /// - Override updating environment vaeiable
+    pub fn with_assert(mut self, config: snapbox::Assert) -> Self {
         self.config = config;
         self
     }
@@ -149,11 +143,13 @@ where
                 Trial::test(case.name.clone(), move || {
                     let actual = test.run(&case.fixture)?;
                     let actual = actual.to_string();
-                    let actual = crate::Data::text(actual);
+                    let actual = snapbox::Data::text(actual);
                     config.try_eq(case.expected.clone(), actual, Some(&case.name))?;
                     Ok(())
                 })
-                .with_ignored_flag(shared_config.action == Action::Ignore)
+                .with_ignored_flag(
+                    shared_config.selected_action() == snapbox::assert::Action::Ignore,
+                )
             })
             .collect();
 
@@ -162,6 +158,7 @@ where
     }
 }
 
+/// Function signature for generating a test [`Case`] from a path fixture
 pub trait Setup {
     fn setup(&self, fixture: std::path::PathBuf) -> Case;
 }
@@ -175,6 +172,7 @@ where
     }
 }
 
+/// Function signature for running a test [`Case`]
 pub trait Test<S, E>
 where
     S: std::fmt::Display,
@@ -194,9 +192,7 @@ where
     }
 }
 
-/// A test case enumerated by the [`Harness`] with data from the `setup` function
-///
-/// See [`harness`][crate::harness] for more details
+/// A test case enumerated by the [`Harness`] with data from the [`Setup`] function
 pub struct Case {
     /// Display name
     pub name: String,
