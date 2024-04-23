@@ -43,7 +43,7 @@ impl PathDiff {
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> {
-        let walker = crate::path::Walk::new(&expected_root);
+        let walker = crate::dir::Walk::new(&expected_root);
         walker.map(move |r| {
             let expected_path = r.map_err(|e| Self::Failure(e.to_string().into()))?;
             let rel = expected_path.strip_prefix(&expected_root).unwrap();
@@ -119,7 +119,7 @@ impl PathDiff {
         substitutions: &crate::Redactions,
         normalize_paths: bool,
     ) -> impl Iterator<Item = Result<(std::path::PathBuf, std::path::PathBuf), Self>> + '_ {
-        let walker = crate::path::Walk::new(&expected_root);
+        let walker = crate::dir::Walk::new(&expected_root);
         walker.map(move |r| {
             let expected_path = r.map_err(|e| Self::Failure(e.to_string().into()))?;
             let rel = expected_path.strip_prefix(&expected_root).unwrap();

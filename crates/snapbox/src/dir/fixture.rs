@@ -29,7 +29,7 @@ impl PathFixture {
         let temp = tempfile::tempdir().map_err(|e| e.to_string())?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
         // correctly
-        let path = crate::path::canonicalize(temp.path())
+        let path = crate::dir::canonicalize(temp.path())
             .map_err(|e| format!("Failed to canonicalize {}: {}", temp.path().display(), e))?;
         Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
     }

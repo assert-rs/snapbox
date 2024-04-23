@@ -13,8 +13,8 @@ use std::io::stderr;
 
 use rayon::prelude::*;
 use snapbox::data::DataFormat;
+use snapbox::dir::FileType;
 use snapbox::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
-use snapbox::path::FileType;
 use snapbox::IntoData;
 
 #[derive(Debug)]
@@ -188,7 +188,7 @@ impl Case {
             .map(|p| {
                 sequence.fs.rel_cwd().map(|rel| {
                     let p = p.join(rel);
-                    snapbox::path::strip_trailing_slash(&p).to_owned()
+                    snapbox::dir::strip_trailing_slash(&p).to_owned()
                 })
             })
             .transpose()
@@ -504,7 +504,7 @@ impl Case {
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for status in snapbox::path::PathDiff::subset_matches_iter(
+                for status in snapbox::dir::PathDiff::subset_matches_iter(
                     fixture_root,
                     actual_root,
                     substitutions,
@@ -878,11 +878,11 @@ impl FileStatus {
     }
 }
 
-impl From<snapbox::path::PathDiff> for FileStatus {
-    fn from(other: snapbox::path::PathDiff) -> Self {
+impl From<snapbox::dir::PathDiff> for FileStatus {
+    fn from(other: snapbox::dir::PathDiff) -> Self {
         match other {
-            snapbox::path::PathDiff::Failure(err) => FileStatus::Failure(err),
-            snapbox::path::PathDiff::TypeMismatch {
+            snapbox::dir::PathDiff::Failure(err) => FileStatus::Failure(err),
+            snapbox::dir::PathDiff::TypeMismatch {
                 expected_path,
                 actual_path,
                 expected_type,
@@ -893,7 +893,7 @@ impl From<snapbox::path::PathDiff> for FileStatus {
                 actual_type,
                 expected_type,
             },
-            snapbox::path::PathDiff::LinkMismatch {
+            snapbox::dir::PathDiff::LinkMismatch {
                 expected_path,
                 actual_path,
                 expected_target,
@@ -904,7 +904,7 @@ impl From<snapbox::path::PathDiff> for FileStatus {
                 actual_target,
                 expected_target,
             },
-            snapbox::path::PathDiff::ContentMismatch {
+            snapbox::dir::PathDiff::ContentMismatch {
                 expected_path,
                 actual_path,
                 expected_content,
@@ -1016,20 +1016,20 @@ fn fs_context(
     cwd: Option<&std::path::Path>,
     sandbox: bool,
     mode: &crate::Mode,
-) -> Result<snapbox::path::PathFixture, crate::Error> {
+) -> Result<snapbox::dir::PathFixture, crate::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
             crate::Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
-                let mut context = snapbox::path::PathFixture::mutable_at(&target)?;
+                let mut context = snapbox::dir::PathFixture::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
                 Ok(context)
             }
             crate::Mode::Fail | crate::Mode::Overwrite => {
-                let mut context = snapbox::path::PathFixture::mutable_temp()?;
+                let mut context = snapbox::dir::PathFixture::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
@@ -1040,7 +1040,7 @@ fn fs_context(
         Err("Sandboxing is disabled".into())
     } else {
         Ok(cwd
-            .map(snapbox::path::PathFixture::immutable)
-            .unwrap_or_else(snapbox::path::PathFixture::none))
+            .map(snapbox::dir::PathFixture::immutable)
+            .unwrap_or_else(snapbox::dir::PathFixture::none))
     }
 }
