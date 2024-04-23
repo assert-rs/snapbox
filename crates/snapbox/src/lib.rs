@@ -25,7 +25,7 @@
 //! ## Getting Started
 //!
 //! Testing Functions:
-//! - [`assert_eq`][crate::assert_eq()] and [`assert_matches`] for reusing diffing / pattern matching for non-snapshot testing
+//! - [`assert_data_eq!`] for quick and dirty snapshotting
 //! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Testing Commands:
@@ -44,9 +44,9 @@
 //!
 //! # Examples
 //!
-//! [`assert_matches`]
+//! [`assert_data_eq!`]
 //! ```rust
-//! snapbox::assert_matches("Hello [..] people!", "Hello many people!");
+//! snapbox::assert_data_eq!("Hello many people!", "Hello [..] people!");
 //! ```
 //!
 //! [`Assert`]
@@ -54,7 +54,7 @@
 //! let actual = "...";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOTS")
-//!     .matches(snapbox::file!["help_output_is_clean.txt"], actual);
+//!     .eq_(actual, snapbox::file!["help_output_is_clean.txt"]);
 //! ```
 //!
 //! [`harness::Harness`]
@@ -160,6 +160,10 @@ pub mod prelude {
 /// assert_eq(file!["output.txt"], actual);
 /// ```
 #[track_caller]
+#[deprecated(
+    since = "0.5.11",
+    note = "Replaced with `assert_data_eq!(actual, expected.raw())`"
+)]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
         .action_env(assert::DEFAULT_ACTION_ENV)
@@ -192,6 +196,7 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 /// assert_matches(file!["output.txt"], actual);
 /// ```
 #[track_caller]
+#[deprecated(since = "0.5.11", note = "Replaced with `assert_data_eq!(actual)`")]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
         .action_env(assert::DEFAULT_ACTION_ENV)
