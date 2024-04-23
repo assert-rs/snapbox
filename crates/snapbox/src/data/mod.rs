@@ -42,6 +42,35 @@ impl<D: std::fmt::Debug> ToDebug for D {
     }
 }
 
+/// Capture the serde representation of a value
+///
+/// ```rust,no_run
+/// use snapbox::IntoJson as _;
+///
+/// fn some_function() -> usize {
+///     // ...
+/// # 5
+/// }
+///
+/// let actual = some_function();
+/// let expected = snapbox::str![["5"]];
+/// snapbox::assert_eq(actual.into_json(), expected);
+/// ```
+#[cfg(feature = "json")]
+pub trait IntoJson {
+    fn into_json(self) -> Data;
+}
+
+#[cfg(feature = "json")]
+impl<S: serde::Serialize> IntoJson for S {
+    fn into_json(self) -> Data {
+        match serde_json::to_value(self) {
+            Ok(value) => Data::json(value),
+            Err(err) => Data::error(err.to_string(), DataFormat::Json),
+        }
+    }
+}
+
 /// Convert to [`Data`] with modifiers for `expected` data
 pub trait IntoData: Sized {
     /// Remove default [`filters`][crate::filters] from this `expected` result
@@ -215,7 +244,9 @@ pub(crate) enum DataInner {
 /// See also
 /// - [`str!`] for inline snapshots
 /// - [`file!`] for external snapshots
+/// - [`ToString`] for verifying a `Display` representation
 /// - [`ToDebug`] for verifying a debug representation
+/// - [`IntoJson`] for verifying the serde representation
 /// - [`IntoData`] for modifying `expected`
 impl Data {
     /// Mark the data as binary (no post-processing)
