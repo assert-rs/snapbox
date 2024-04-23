@@ -50,7 +50,7 @@ macro_rules! assert_data_eq {
 #[macro_export]
 macro_rules! current_dir {
     () => {{
-        let root = $crate::path::cargo_rustc_current_dir!();
+        let root = $crate::utils::cargo_rustc_current_dir!();
         let file = ::std::file!();
         let rel_path = ::std::path::Path::new(file).parent().unwrap();
         root.join(rel_path)
@@ -62,7 +62,7 @@ macro_rules! current_dir {
 #[macro_export]
 macro_rules! current_rs {
     () => {{
-        let root = $crate::path::cargo_rustc_current_dir!();
+        let root = $crate::utils::cargo_rustc_current_dir!();
         let file = ::std::file!();
         let rel_path = ::std::path::Path::new(file);
         root.join(rel_path)

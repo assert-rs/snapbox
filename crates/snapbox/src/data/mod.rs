@@ -174,12 +174,12 @@ macro_rules! file {
         $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
     [$path:literal] => {{
-        let mut path = $crate::current_dir!();
+        let mut path = $crate::utils::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, None)
     }};
     [$path:literal : $type:ident] => {{
-        let mut path = $crate::current_dir!();
+        let mut path = $crate::utils::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
@@ -201,7 +201,7 @@ macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
     [[$data:literal]] => {{
         let position = $crate::data::Position {
-            file: $crate::path::current_rs!(),
+            file: $crate::utils::current_rs!(),
             line: line!(),
             column: column!(),
         };
