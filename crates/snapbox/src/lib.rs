@@ -12,6 +12,7 @@
 //! ## Which tool is right
 //!
 //! - [cram](https://bitheap.org/cram/): End-to-end CLI snapshotting agnostic of any programming language
+//!   - See also [scrut](https://github.com/facebookincubator/scrut)
 //! - [trycmd](https://crates.io/crates/trycmd): For running a lot of blunt tests (limited test predicates)
 //!   - Particular attention is given to allow the test data to be pulled into documentation, like
 //!     with [mdbook](https://rust-lang.github.io/mdBook/)
