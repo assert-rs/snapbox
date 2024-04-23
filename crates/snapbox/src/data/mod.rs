@@ -215,6 +215,7 @@ pub(crate) enum DataInner {
 /// See also
 /// - [`str!`] for inline snapshots
 /// - [`file!`] for external snapshots
+/// - [`ToString`] for verifying a `Display` representation
 /// - [`ToDebug`] for verifying a debug representation
 /// - [`IntoData`] for modifying `expected`
 impl Data {
