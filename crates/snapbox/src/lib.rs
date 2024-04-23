@@ -114,6 +114,7 @@ pub use data::IntoData;
 pub use data::IntoJson;
 pub use data::ToDebug;
 pub use filters::Redactions;
+#[doc(hidden)]
 pub use snapbox_macros::debug;
 
 /// Easier access to common traits
