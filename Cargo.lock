@@ -885,9 +885,7 @@ dependencies = [
  "dunce",
  "escargot",
  "filetime",
- "ignore",
  "libc",
- "libtest-mimic",
  "normalize-line-endings",
  "os_pipe",
  "regex",
@@ -1015,6 +1013,15 @@ dependencies = [
  "shlex",
  "snapbox",
  "toml_edit",
+]
+
+[[package]]
+name = "tryfn"
+version = "0.1.0"
+dependencies = [
+ "ignore",
+ "libtest-mimic",
+ "snapbox",
 ]
 
 [[package]]
