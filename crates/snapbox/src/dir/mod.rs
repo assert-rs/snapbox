@@ -18,5 +18,4 @@ pub use ops::Walk;
 
 #[cfg(feature = "dir")]
 pub(crate) use ops::canonicalize;
-pub(crate) use ops::display_relpath;
 pub(crate) use ops::shallow_copy;
