@@ -269,7 +269,7 @@ impl Data {
         Self::with_inner(DataInner::JsonLines(serde_json::Value::Array(raw.into())))
     }
 
-    fn error(raw: impl Into<crate::assert::Error>, intended: DataFormat) -> Self {
+    pub fn error(raw: impl Into<crate::assert::Error>, intended: DataFormat) -> Self {
         Self::with_inner(DataInner::Error(DataError {
             error: raw.into(),
             intended,
