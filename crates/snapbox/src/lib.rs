@@ -34,7 +34,7 @@
 //!   [`Output`][std::process::Output].
 //!
 //! Testing Filesystem Interactions:
-//! - [`dir::PathFixture`]: Working directory for tests
+//! - [`dir::DirRoot`]: Working directory for tests
 //! - [`Assert`]: Diff a directory against files present in a pattern directory
 //!
 //! You can also build your own version of these with the lower-level building blocks these are
