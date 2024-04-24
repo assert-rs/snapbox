@@ -33,7 +33,7 @@ default = ["color-auto", "filesystem", "diff"]
 color = ["snapbox/color", "dep:anstream"]
 color-auto = ["snapbox/color-auto"]
 diff = ["snapbox/diff"]
-filesystem = ["snapbox/path"]
+filesystem = ["snapbox/dir"]
 
 schema = ["dep:schemars", "dep:serde_json"]
 examples = ["snapbox/examples"]

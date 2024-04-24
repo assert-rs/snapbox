@@ -34,8 +34,8 @@ default = ["color-auto", "diff"]
 
 ## Smarter binary file detection
 detect-encoding = ["dep:content_inspector"]
-## Snapshotting of paths
-path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
+## Snapshotting of directories
+dir = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
 ## Snapshotting of commands
 cmd = ["dep:os_pipe", "dep:wait-timeout", "dep:libc", "dep:windows-sys"]
 ## Building of examples for snapshotting

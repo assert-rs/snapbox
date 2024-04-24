@@ -1,12 +1,12 @@
 /// Recursively walk a path
 ///
 /// Note: Ignores `.keep` files
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 pub struct Walk {
     inner: walkdir::IntoIter,
 }
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 impl Walk {
     pub fn new(path: &std::path::Path) -> Self {
         Self {
@@ -15,7 +15,7 @@ impl Walk {
     }
 }
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 impl Iterator for Walk {
     type Item = Result<std::path::PathBuf, std::io::Error>;
 
@@ -39,7 +39,7 @@ impl Iterator for Walk {
 /// Note: Generally you'll use [`PathFixture::with_template`][super::PathFixture::with_template] instead.
 ///
 /// Note: Ignores `.keep` files
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 pub fn copy_template(
     source: impl AsRef<std::path::Path>,
     dest: impl AsRef<std::path::Path>,
@@ -110,7 +110,7 @@ pub(crate) fn shallow_copy(
     Ok(())
 }
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 fn copy_stats(
     source_meta: &std::fs::Metadata,
     dest: &std::path::Path,
@@ -121,7 +121,7 @@ fn copy_stats(
     Ok(())
 }
 
-#[cfg(not(feature = "path"))]
+#[cfg(not(feature = "dir"))]
 fn copy_stats(
     _source_meta: &std::fs::Metadata,
     _dest: &std::path::Path,
@@ -157,11 +157,11 @@ pub fn resolve_dir(
 }
 
 pub(crate) fn canonicalize(path: &std::path::Path) -> Result<std::path::PathBuf, std::io::Error> {
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     {
         dunce::canonicalize(path)
     }
-    #[cfg(not(feature = "path"))]
+    #[cfg(not(feature = "dir"))]
     {
         // Hope for the best
         Ok(strip_trailing_slash(path).to_owned())
