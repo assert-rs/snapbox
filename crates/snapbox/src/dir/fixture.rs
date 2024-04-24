@@ -6,9 +6,9 @@ pub struct PathFixture(PathFixtureInner);
 enum PathFixtureInner {
     None,
     Immutable(std::path::PathBuf),
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     MutablePath(std::path::PathBuf),
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     MutableTemp {
         temp: tempfile::TempDir,
         path: std::path::PathBuf,
@@ -24,7 +24,7 @@ impl PathFixture {
         Self(PathFixtureInner::Immutable(target.to_owned()))
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn mutable_temp() -> Result<Self, crate::assert::Error> {
         let temp = tempfile::tempdir().map_err(|e| e.to_string())?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
@@ -34,7 +34,7 @@ impl PathFixture {
         Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn mutable_at(target: &std::path::Path) -> Result<Self, crate::assert::Error> {
         let _ = std::fs::remove_dir_all(target);
         std::fs::create_dir_all(target)
@@ -42,7 +42,7 @@ impl PathFixture {
         Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn with_template(
         self,
         template_root: &std::path::Path,
@@ -67,9 +67,9 @@ impl PathFixture {
     pub fn is_mutable(&self) -> bool {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => false,
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutablePath(_) => true,
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutableTemp { .. } => true,
         }
     }
@@ -78,9 +78,9 @@ impl PathFixture {
         match &self.0 {
             PathFixtureInner::None => None,
             PathFixtureInner::Immutable(path) => Some(path.as_path()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutablePath(path) => Some(path.as_path()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutableTemp { path, .. } => Some(path.as_path()),
         }
     }
@@ -89,9 +89,9 @@ impl PathFixture {
     pub fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => Ok(()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutablePath(_) => Ok(()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutableTemp { temp, .. } => temp.close(),
         }
     }

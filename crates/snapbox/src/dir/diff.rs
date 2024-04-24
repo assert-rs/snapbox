@@ -1,4 +1,4 @@
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 use crate::filters::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -28,7 +28,7 @@ impl PathDiff {
     /// Report differences between `actual_root` and `pattern_root`
     ///
     /// Note: Requires feature flag `path`
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn subset_eq_iter(
         pattern_root: impl Into<std::path::PathBuf>,
         actual_root: impl Into<std::path::PathBuf>,
@@ -38,7 +38,7 @@ impl PathDiff {
         Self::subset_eq_iter_inner(pattern_root, actual_root)
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub(crate) fn subset_eq_iter_inner(
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
@@ -101,7 +101,7 @@ impl PathDiff {
     /// Report differences between `actual_root` and `pattern_root`
     ///
     /// Note: Requires feature flag `path`
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn subset_matches_iter(
         pattern_root: impl Into<std::path::PathBuf>,
         actual_root: impl Into<std::path::PathBuf>,
@@ -112,7 +112,7 @@ impl PathDiff {
         Self::subset_matches_iter_inner(pattern_root, actual_root, substitutions, true)
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub(crate) fn subset_matches_iter_inner(
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
