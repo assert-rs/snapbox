@@ -34,9 +34,9 @@ impl Iterator for Walk {
     }
 }
 
-/// Copy a template into a [`PathFixture`][super::PathFixture]
+/// Copy a template into a [`DirRoot`][super::DirRoot]
 ///
-/// Note: Generally you'll use [`PathFixture::with_template`][super::PathFixture::with_template] instead.
+/// Note: Generally you'll use [`DirRoot::with_template`][super::DirRoot::with_template] instead.
 ///
 /// Note: Ignores `.keep` files
 #[cfg(feature = "dir")]

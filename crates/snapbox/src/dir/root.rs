@@ -1,9 +1,9 @@
 /// Working directory for tests
 #[derive(Debug)]
-pub struct PathFixture(PathFixtureInner);
+pub struct DirRoot(DirRootInner);
 
 #[derive(Debug)]
-enum PathFixtureInner {
+enum DirRootInner {
     None,
     Immutable(std::path::PathBuf),
     #[cfg(feature = "dir")]
@@ -15,13 +15,13 @@ enum PathFixtureInner {
     },
 }
 
-impl PathFixture {
+impl DirRoot {
     pub fn none() -> Self {
-        Self(PathFixtureInner::None)
+        Self(DirRootInner::None)
     }
 
     pub fn immutable(target: &std::path::Path) -> Self {
-        Self(PathFixtureInner::Immutable(target.to_owned()))
+        Self(DirRootInner::Immutable(target.to_owned()))
     }
 
     #[cfg(feature = "dir")]
@@ -31,7 +31,7 @@ impl PathFixture {
         // correctly
         let path = crate::dir::canonicalize(temp.path())
             .map_err(|e| format!("Failed to canonicalize {}: {}", temp.path().display(), e))?;
-        Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
+        Ok(Self(DirRootInner::MutableTemp { temp, path }))
     }
 
     #[cfg(feature = "dir")]
@@ -39,7 +39,7 @@ impl PathFixture {
         let _ = std::fs::remove_dir_all(target);
         std::fs::create_dir_all(target)
             .map_err(|e| format!("Failed to create {}: {}", target.display(), e))?;
-        Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
+        Ok(Self(DirRootInner::MutablePath(target.to_owned())))
     }
 
     #[cfg(feature = "dir")]
@@ -48,10 +48,10 @@ impl PathFixture {
         template_root: &std::path::Path,
     ) -> Result<Self, crate::assert::Error> {
         match &self.0 {
-            PathFixtureInner::None | PathFixtureInner::Immutable(_) => {
+            DirRootInner::None | DirRootInner::Immutable(_) => {
                 return Err("Sandboxing is disabled".into());
             }
-            PathFixtureInner::MutablePath(path) | PathFixtureInner::MutableTemp { path, .. } => {
+            DirRootInner::MutablePath(path) | DirRootInner::MutableTemp { path, .. } => {
                 crate::debug!(
                     "Initializing {} from {}",
                     path.display(),
@@ -66,38 +66,38 @@ impl PathFixture {
 
     pub fn is_mutable(&self) -> bool {
         match &self.0 {
-            PathFixtureInner::None | PathFixtureInner::Immutable(_) => false,
+            DirRootInner::None | DirRootInner::Immutable(_) => false,
             #[cfg(feature = "dir")]
-            PathFixtureInner::MutablePath(_) => true,
+            DirRootInner::MutablePath(_) => true,
             #[cfg(feature = "dir")]
-            PathFixtureInner::MutableTemp { .. } => true,
+            DirRootInner::MutableTemp { .. } => true,
         }
     }
 
     pub fn path(&self) -> Option<&std::path::Path> {
         match &self.0 {
-            PathFixtureInner::None => None,
-            PathFixtureInner::Immutable(path) => Some(path.as_path()),
+            DirRootInner::None => None,
+            DirRootInner::Immutable(path) => Some(path.as_path()),
             #[cfg(feature = "dir")]
-            PathFixtureInner::MutablePath(path) => Some(path.as_path()),
+            DirRootInner::MutablePath(path) => Some(path.as_path()),
             #[cfg(feature = "dir")]
-            PathFixtureInner::MutableTemp { path, .. } => Some(path.as_path()),
+            DirRootInner::MutableTemp { path, .. } => Some(path.as_path()),
         }
     }
 
     /// Explicitly close to report errors
     pub fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
-            PathFixtureInner::None | PathFixtureInner::Immutable(_) => Ok(()),
+            DirRootInner::None | DirRootInner::Immutable(_) => Ok(()),
             #[cfg(feature = "dir")]
-            PathFixtureInner::MutablePath(_) => Ok(()),
+            DirRootInner::MutablePath(_) => Ok(()),
             #[cfg(feature = "dir")]
-            PathFixtureInner::MutableTemp { temp, .. } => temp.close(),
+            DirRootInner::MutableTemp { temp, .. } => temp.close(),
         }
     }
 }
 
-impl Default for PathFixture {
+impl Default for DirRoot {
     fn default() -> Self {
         Self::none()
     }
