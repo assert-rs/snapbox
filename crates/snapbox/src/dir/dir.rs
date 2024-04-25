@@ -26,19 +26,19 @@ impl Dir for std::path::Path {
 
 impl Dir for &'_ std::path::Path {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::path::PathBuf {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_path().write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for std::path::PathBuf {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_path().write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
@@ -50,19 +50,19 @@ impl Dir for str {
 
 impl Dir for &'_ str {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ String {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_str().write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for String {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_str().write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
@@ -74,19 +74,19 @@ impl Dir for std::ffi::OsStr {
 
 impl Dir for &'_ std::ffi::OsStr {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::ffi::OsString {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_os_str().write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for std::ffi::OsString {
     fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_os_str().write_to_path(root)
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
