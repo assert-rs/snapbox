@@ -83,6 +83,8 @@ pub use snapbox_macros::debug;
 
 /// Easier access to common traits
 pub mod prelude {
+    #[cfg(feature = "dir")]
+    pub use crate::dir::Dir;
     pub use crate::IntoData;
     #[cfg(feature = "json")]
     pub use crate::IntoJson;
