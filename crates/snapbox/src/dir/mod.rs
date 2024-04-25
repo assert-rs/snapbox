@@ -23,10 +23,10 @@ pub use dir::InMemoryDirIter;
 pub use dir::PathIter;
 pub use ops::resolve_dir;
 pub use ops::strip_trailing_slash;
-#[cfg(feature = "dir")]
-pub use ops::Walk;
 pub use root::DirRoot;
 
 #[cfg(feature = "dir")]
 pub(crate) use ops::canonicalize;
 pub(crate) use ops::shallow_copy;
+#[cfg(feature = "dir")]
+pub(crate) use ops::Walk;
