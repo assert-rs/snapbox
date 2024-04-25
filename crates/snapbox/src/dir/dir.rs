@@ -301,6 +301,7 @@ impl Iterator for PathIter {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DirEntry {
     Dir,
     File(crate::Data),
