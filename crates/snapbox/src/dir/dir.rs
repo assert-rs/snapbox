@@ -4,89 +4,89 @@ use super::FileType;
 #[cfg(feature = "dir")] // for documentation purposes only
 pub trait Dir {
     /// Initialize a test fixture directory `root`
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error>;
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error>;
 }
 
 impl Dir for InMemoryDir {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.write_to_path(root)
     }
 }
 
 impl Dir for std::path::Path {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
         let src = super::resolve_dir(self).map_err(|e| format!("{e}: {}", self.display()))?;
         for (relpath, entry) in PathIter::binary_iter(src.as_path()) {
             let dest = root.join(relpath);
-            entry.write_to(&dest)?;
+            entry.write_to_path(&dest)?;
         }
         Ok(())
     }
 }
 
 impl Dir for &'_ std::path::Path {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        (*self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::path::PathBuf {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_path().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.as_path().write_to_path(root)
     }
 }
 
 impl Dir for std::path::PathBuf {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_path().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.as_path().write_to_path(root)
     }
 }
 
 impl Dir for str {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        std::path::Path::new(self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ str {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        (*self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ String {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.as_str().write_to_path(root)
     }
 }
 
 impl Dir for String {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.as_str().write_to_path(root)
     }
 }
 
 impl Dir for std::ffi::OsStr {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        std::path::Path::new(self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::ffi::OsStr {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        (*self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::ffi::OsString {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_os_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.as_os_str().write_to_path(root)
     }
 }
 
 impl Dir for std::ffi::OsString {
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_os_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.as_os_str().write_to_path(root)
     }
 }
 
@@ -98,10 +98,10 @@ pub struct InMemoryDir {
 
 impl InMemoryDir {
     /// Initialize a test fixture directory `root`
-    pub fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+    pub fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
         for (relpath, entry) in &self.content {
             let dest = root.join(relpath);
-            entry.write_to(&dest)?;
+            entry.write_to_path(&dest)?;
         }
         Ok(())
     }
@@ -271,7 +271,7 @@ impl DirEntry {
         Ok(entry)
     }
 
-    pub fn write_to(&self, path: &std::path::Path) -> Result<(), crate::assert::Error> {
+    pub fn write_to_path(&self, path: &std::path::Path) -> Result<(), crate::assert::Error> {
         match self {
             DirEntry::Dir => {
                 std::fs::create_dir_all(path).map_err(|e| format!("{e}: {}", path.display()))?
