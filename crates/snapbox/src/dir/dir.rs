@@ -1,3 +1,4 @@
+use super::DirSource;
 use super::FileType;
 
 /// Collection of files
@@ -94,9 +95,15 @@ impl Dir for std::ffi::OsString {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InMemoryDir {
     content: std::collections::BTreeMap<std::path::PathBuf, DirEntry>,
+    source: DirSource,
 }
 
 impl InMemoryDir {
+    fn with_source(mut self, source: impl Into<DirSource>) -> Self {
+        self.source = source.into();
+        self
+    }
+
     /// Initialize a test fixture directory `root`
     pub fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
         for (relpath, entry) in &self.content {
@@ -104,6 +111,30 @@ impl InMemoryDir {
             entry.write_to_path(&dest)?;
         }
         Ok(())
+    }
+}
+
+impl From<&'_ std::path::Path> for InMemoryDir {
+    fn from(root: &'_ std::path::Path) -> Self {
+        PathIter::infer_iter(root)
+            .collect::<Self>()
+            .with_source(DirSource::path(root))
+    }
+}
+
+impl From<&'_ std::path::PathBuf> for InMemoryDir {
+    fn from(root: &'_ std::path::PathBuf) -> Self {
+        PathIter::infer_iter(root.as_path())
+            .collect::<Self>()
+            .with_source(DirSource::path(root))
+    }
+}
+
+impl From<std::path::PathBuf> for InMemoryDir {
+    fn from(root: std::path::PathBuf) -> Self {
+        PathIter::infer_iter(root.as_path())
+            .collect::<Self>()
+            .with_source(DirSource::path(root))
     }
 }
 
@@ -154,7 +185,10 @@ where
                 }
             }
         }
-        Self { content }
+        Self {
+            content,
+            source: DirSource::inmemory(),
+        }
     }
 }
 
@@ -167,6 +201,11 @@ pub struct PathIter {
 }
 
 impl PathIter {
+    fn infer_iter(root: &std::path::Path) -> Self {
+        let binary = false;
+        Self::iter_(root, binary)
+    }
+
     fn binary_iter(root: &std::path::Path) -> Self {
         let binary = true;
         Self::iter_(root, binary)

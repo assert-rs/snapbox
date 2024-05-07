@@ -6,6 +6,7 @@ mod diff;
 mod dir;
 mod ops;
 mod root;
+mod source;
 #[cfg(test)]
 mod tests;
 
@@ -24,6 +25,7 @@ pub use dir::PathIter;
 pub use ops::resolve_dir;
 pub use ops::strip_trailing_slash;
 pub use root::DirRoot;
+pub use source::DirSource;
 
 #[cfg(feature = "dir")]
 pub(crate) use ops::canonicalize;
