@@ -3,159 +3,90 @@ use super::FileType;
 /// Collection of files
 #[cfg(feature = "dir")] // for documentation purposes only
 pub trait Dir {
-    type WalkIter;
-
-    /// Return [`DirEntry`]s with files in binary mode
-    fn binary_iter(&self) -> Self::WalkIter;
     /// Initialize a test fixture directory `root`
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error>;
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error>;
 }
 
 impl Dir for InMemoryDir {
-    type WalkIter = InMemoryDirIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.clone().content.into_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        self.write_to_path(root)
     }
 }
 
 impl Dir for std::path::Path {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        PathIter::binary_iter(self)
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
         let src = super::resolve_dir(self).map_err(|e| format!("{e}: {}", self.display()))?;
-        for (relpath, entry) in src.as_path().binary_iter() {
+        for (relpath, entry) in PathIter::binary_iter(src.as_path()) {
             let dest = root.join(relpath);
-            entry.write_to(&dest)?;
+            entry.write_to_path(&dest)?;
         }
         Ok(())
     }
 }
 
 impl Dir for &'_ std::path::Path {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        (*self).binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::path::PathBuf {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.as_path().binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_path().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for std::path::PathBuf {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.as_path().binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_path().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for str {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        std::path::Path::new(self).binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        std::path::Path::new(self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ str {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        (*self).binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ String {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.as_str().binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for String {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.as_str().binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for std::ffi::OsStr {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        std::path::Path::new(self).binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        std::path::Path::new(self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::ffi::OsStr {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        (*self).binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        (*self).write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for &'_ std::ffi::OsString {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.as_os_str().binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_os_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
 impl Dir for std::ffi::OsString {
-    type WalkIter = PathIter;
-
-    fn binary_iter(&self) -> Self::WalkIter {
-        self.as_os_str().binary_iter()
-    }
-    fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
-        self.as_os_str().write_to(root)
+    fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+        std::path::Path::new(self).write_to_path(root)
     }
 }
 
@@ -167,10 +98,10 @@ pub struct InMemoryDir {
 
 impl InMemoryDir {
     /// Initialize a test fixture directory `root`
-    pub fn write_to(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
+    pub fn write_to_path(&self, root: &std::path::Path) -> Result<(), crate::assert::Error> {
         for (relpath, entry) in &self.content {
             let dest = root.join(relpath);
-            entry.write_to(&dest)?;
+            entry.write_to_path(&dest)?;
         }
         Ok(())
     }
@@ -301,6 +232,7 @@ impl Iterator for PathIter {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum DirEntry {
     Dir,
     File(crate::Data),
@@ -339,7 +271,7 @@ impl DirEntry {
         Ok(entry)
     }
 
-    pub fn write_to(&self, path: &std::path::Path) -> Result<(), crate::assert::Error> {
+    pub fn write_to_path(&self, path: &std::path::Path) -> Result<(), crate::assert::Error> {
         match self {
             DirEntry::Dir => {
                 std::fs::create_dir_all(path).map_err(|e| format!("{e}: {}", path.display()))?

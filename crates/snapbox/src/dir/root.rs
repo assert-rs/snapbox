@@ -50,7 +50,7 @@ impl DirRoot {
             }
             DirRootInner::MutablePath(path) | DirRootInner::MutableTemp { path, .. } => {
                 crate::debug!("Initializing {}", path.display());
-                dir.write_to(path)?;
+                dir.write_to_path(path)?;
             }
         }
 
