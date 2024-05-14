@@ -1,4 +1,6 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::print_stdout)]
 
 #[cfg(feature = "color")]
 pub use anstream::eprint;

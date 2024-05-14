@@ -36,5 +36,5 @@ line1
 
 #[test]
 fn test_expect_file() {
-    assert_eq(file!["../README.md"], include_str!("../README.md"))
+    assert_eq(file!["../../README.md"], include_str!("../../README.md"))
 }

@@ -92,6 +92,8 @@
 //! [trycmd]: https://docs.rs/trycmd
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::print_stdout)]
 
 mod action;
 mod assert;

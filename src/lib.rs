@@ -226,10 +226,8 @@
 //! [commandspec]: https://crates.io/crates/commandspec
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-// Doesn't distinguish between incidental sharing vs essential sharing
-#![allow(clippy::branches_sharing_code)]
-// Forces indentation that may not represent the logic
-#![allow(clippy::collapsible_else_if)]
+#![warn(clippy::print_stderr)]
+#![warn(clippy::print_stdout)]
 
 pub mod cargo;
 pub mod schema;

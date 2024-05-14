@@ -101,6 +101,12 @@ windows-sys = { version = "0.52.0", features = ["Win32_Foundation"], optional = 
 [target.'cfg(unix)'.dependencies]
 libc = { version = "0.2.137", optional = true }
 
+[dev-dependencies]
+automod = "1.0.14"
+
 [[example]]
 name = "diff"
 required-features = ["diff"]
+
+[lints]
+workspace = true
