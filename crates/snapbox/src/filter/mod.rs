@@ -1,4 +1,4 @@
-//! Normalize `actual` or `expected` [`Data`]
+//! Filter `actual` or `expected` [`Data`]
 //!
 //! This can be done for
 //! - Making snapshots consistent across platforms or conditional compilation
@@ -10,8 +10,8 @@ mod test;
 use crate::data::DataInner;
 use crate::Data;
 
-pub trait Normalize {
-    #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::filter`")]
+pub trait Filter {
+    #[deprecated(since = "0.5.11", note = "Replaced with `Filter::filter`")]
     fn normalize(&self, data: Data) -> Data;
     fn filter(&self, data: Data) -> Data {
         #[allow(deprecated)]
@@ -19,8 +19,8 @@ pub trait Normalize {
     }
 }
 
-pub struct NormalizeNewlines;
-impl Normalize for NormalizeNewlines {
+pub struct FilterNewlines;
+impl Filter for FilterNewlines {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let inner = match data.inner {
@@ -46,8 +46,8 @@ impl Normalize for NormalizeNewlines {
     }
 }
 
-pub struct NormalizePaths;
-impl Normalize for NormalizePaths {
+pub struct FilterPaths;
+impl Filter for FilterPaths {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let inner = match data.inner {
@@ -73,21 +73,21 @@ impl Normalize for NormalizePaths {
     }
 }
 
-pub struct NormalizeMatches<'a> {
+pub struct FilterMatches<'a> {
     substitutions: &'a crate::Substitutions,
     pattern: &'a Data,
 }
 
-impl<'a> NormalizeMatches<'a> {
+impl<'a> FilterMatches<'a> {
     pub fn new(substitutions: &'a crate::Substitutions, pattern: &'a Data) -> Self {
-        NormalizeMatches {
+        FilterMatches {
             substitutions,
             pattern,
         }
     }
 }
 
-impl Normalize for NormalizeMatches<'_> {
+impl Filter for FilterMatches<'_> {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let inner = match data.inner {

@@ -2,23 +2,23 @@
 
 use super::Data;
 
-pub use crate::filter::Normalize;
+pub use crate::filter::Filter as Normalize;
 
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::NormalizeNewlines")]
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterNewlines")]
 pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
-        crate::filter::NormalizeNewlines.normalize(data)
+        crate::filter::FilterNewlines.normalize(data)
     }
 }
 
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::NormalizePaths")]
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterPaths")]
 pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
-        crate::filter::NormalizePaths.normalize(data)
+        crate::filter::FilterPaths.normalize(data)
     }
 }
 
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::NormalizeMatches")]
-pub type NormalizeMatches<'a> = crate::filter::NormalizeMatches<'a>;
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterMatches")]
+pub type NormalizeMatches<'a> = crate::filter::FilterMatches<'a>;

@@ -10,9 +10,9 @@ use super::*;
 fn json_normalize_paths_and_lines() {
     let json = json!({"name": "John\\Doe\r\n"});
     let data = Data::json(json);
-    let data = NormalizePaths.normalize(data);
+    let data = FilterPaths.normalize(data);
     assert_eq!(Data::json(json!({"name": "John/Doe\r\n"})), data);
-    let data = NormalizeNewlines.normalize(data);
+    let data = FilterNewlines.normalize(data);
     assert_eq!(Data::json(json!({"name": "John/Doe\n"})), data);
 }
 
@@ -26,7 +26,7 @@ fn json_normalize_obj_paths_and_lines() {
         }
     });
     let data = Data::json(json);
-    let data = NormalizePaths.normalize(data);
+    let data = FilterPaths.normalize(data);
     let assert = json!({
         "person": {
             "name": "John/Doe\r\n",
@@ -34,7 +34,7 @@ fn json_normalize_obj_paths_and_lines() {
         }
     });
     assert_eq!(Data::json(assert), data);
-    let data = NormalizeNewlines.normalize(data);
+    let data = FilterNewlines.normalize(data);
     let assert = json!({
         "person": {
             "name": "John/Doe\n",
@@ -49,10 +49,10 @@ fn json_normalize_obj_paths_and_lines() {
 fn json_normalize_array_paths_and_lines() {
     let json = json!({"people": ["John\\Doe\r\n", "Jo\\hn\r\n"]});
     let data = Data::json(json);
-    let data = NormalizePaths.normalize(data);
+    let data = FilterPaths.normalize(data);
     let paths = json!({"people": ["John/Doe\r\n", "Jo/hn\r\n"]});
     assert_eq!(Data::json(paths), data);
-    let data = NormalizeNewlines.normalize(data);
+    let data = FilterNewlines.normalize(data);
     let new_lines = json!({"people": ["John/Doe\n", "Jo/hn\n"]});
     assert_eq!(Data::json(new_lines), data);
 }
@@ -69,7 +69,7 @@ fn json_normalize_array_obj_paths_and_lines() {
         ]
     });
     let data = Data::json(json);
-    let data = NormalizePaths.normalize(data);
+    let data = FilterPaths.normalize(data);
     let paths = json!({
         "people": [
             {
@@ -79,7 +79,7 @@ fn json_normalize_array_obj_paths_and_lines() {
         ]
     });
     assert_eq!(Data::json(paths), data);
-    let data = NormalizeNewlines.normalize(data);
+    let data = FilterNewlines.normalize(data);
     let new_lines = json!({
         "people": [
             {
@@ -97,8 +97,7 @@ fn json_normalize_matches_string() {
     let exp = json!({"name": "{...}"});
     let expected = Data::json(exp);
     let actual = json!({"name": "JohnDoe"});
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -117,8 +116,7 @@ fn json_normalize_matches_array() {
             }
         ]
     });
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -135,8 +133,7 @@ fn json_normalize_matches_obj() {
             "nickname": "John",
         }
     });
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -152,8 +149,7 @@ fn json_normalize_matches_diff_order_array() {
     let actual = json!({
         "people": ["Jane", "John"]
     });
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_ne!(exp, act);
     }
@@ -188,8 +184,7 @@ fn json_normalize_wildcard_object_first() {
             }
         ]
     });
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -220,8 +215,7 @@ fn json_normalize_wildcard_array_first() {
             "nickname": "3",
         }
     ]);
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -257,8 +251,7 @@ fn json_normalize_wildcard_array_first_last() {
             "nickname": "4",
         }
     ]);
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -302,8 +295,7 @@ fn json_normalize_wildcard_array_middle_last() {
             "nickname": "5",
         }
     ]);
-    let actual =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
+    let actual = FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -344,7 +336,7 @@ fn json_normalize_wildcard_array_middle_last_early_return() {
         }
     ]);
     let actual_normalized =
-        NormalizeMatches::new(&Default::default(), &expected).normalize(Data::json(actual.clone()));
+        FilterMatches::new(&Default::default(), &expected).normalize(Data::json(actual.clone()));
     if let DataInner::Json(act) = actual_normalized.inner {
         assert_eq!(act, actual);
     }
