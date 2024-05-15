@@ -27,23 +27,32 @@ impl Filter for FilterNewlines {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
-                let lines = crate::utils::normalize_lines(&text);
+                let lines = normalize_lines(&text);
                 DataInner::Text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, crate::utils::normalize_lines);
+                normalize_value(&mut value, normalize_lines);
                 DataInner::Json(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                let lines = crate::utils::normalize_lines(&text);
+                let lines = normalize_lines(&text);
                 DataInner::TermSvg(lines)
             }
         };
         Data { inner, source }
     }
+}
+
+/// Normalize line endings
+pub fn normalize_lines(data: &str) -> String {
+    normalize_lines_chars(data.chars()).collect()
+}
+
+fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item = char> {
+    normalize_line_endings::normalized(data)
 }
 
 pub struct FilterPaths;
@@ -54,23 +63,32 @@ impl Filter for FilterPaths {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
-                let lines = crate::utils::normalize_paths(&text);
+                let lines = normalize_paths(&text);
                 DataInner::Text(lines)
             }
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, crate::utils::normalize_paths);
+                normalize_value(&mut value, normalize_paths);
                 DataInner::Json(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                let lines = crate::utils::normalize_paths(&text);
+                let lines = normalize_paths(&text);
                 DataInner::TermSvg(lines)
             }
         };
         Data { inner, source }
     }
+}
+
+/// Normalize path separators
+pub fn normalize_paths(data: &str) -> String {
+    normalize_paths_chars(data.chars()).collect()
+}
+
+fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item = char> {
+    data.map(|c| if c == '\\' { '/' } else { c })
 }
 
 pub struct FilterMatches<'a> {

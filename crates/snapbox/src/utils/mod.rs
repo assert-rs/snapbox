@@ -2,22 +2,21 @@ mod lines;
 
 pub use lines::LinesWithTerminator;
 
-/// Normalize line endings
+#[doc(inline)]
+pub use crate::cargo_rustc_current_dir;
+#[doc(inline)]
+pub use crate::current_dir;
+#[doc(inline)]
+pub use crate::current_rs;
+
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::normalize_lines`")]
 pub fn normalize_lines(data: &str) -> String {
-    normalize_lines_chars(data.chars()).collect()
+    crate::filter::normalize_lines(data)
 }
 
-fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item = char> {
-    normalize_line_endings::normalized(data)
-}
-
-/// Normalize path separators
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::normalize_paths`")]
 pub fn normalize_paths(data: &str) -> String {
-    normalize_paths_chars(data.chars()).collect()
-}
-
-fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item = char> {
-    data.map(|c| if c == '\\' { '/' } else { c })
+    crate::filter::normalize_paths(data)
 }
 
 /// "Smart" text normalization
@@ -26,12 +25,6 @@ fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 /// - Line endings
 /// - Path separators
 pub fn normalize_text(data: &str) -> String {
-    normalize_paths_chars(normalize_lines_chars(data.chars())).collect()
+    #[allow(deprecated)]
+    normalize_paths(&normalize_lines(data))
 }
-
-#[doc(inline)]
-pub use crate::cargo_rustc_current_dir;
-#[doc(inline)]
-pub use crate::current_dir;
-#[doc(inline)]
-pub use crate::current_rs;
