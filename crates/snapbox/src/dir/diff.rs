@@ -1,5 +1,5 @@
 #[cfg(feature = "dir")]
-use crate::filter::{Filter as _, FilterMatches, FilterNewlines, FilterPaths};
+use crate::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathDiff {
@@ -160,7 +160,7 @@ impl PathDiff {
                     if normalize_paths {
                         actual = FilterPaths.filter(actual);
                     }
-                    actual = FilterMatches::new(substitutions, &expected)
+                    actual = FilterRedactions::new(substitutions, &expected)
                         .filter(FilterNewlines.filter(actual));
 
                     if expected != actual {

@@ -20,5 +20,5 @@ impl Normalize for NormalizePaths {
     }
 }
 
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterMatches")]
-pub type NormalizeMatches<'a> = crate::filter::FilterMatches<'a>;
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterRedactions")]
+pub type NormalizeMatches<'a> = crate::filter::FilterRedactions<'a>;

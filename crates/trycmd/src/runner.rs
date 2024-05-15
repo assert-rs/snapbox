@@ -14,7 +14,7 @@ use std::io::stderr;
 use rayon::prelude::*;
 use snapbox::data::DataFormat;
 use snapbox::dir::FileType;
-use snapbox::filter::{Filter as _, FilterMatches, FilterNewlines, FilterPaths};
+use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -443,7 +443,7 @@ impl Case {
 
         if let Some(expected_content) = expected_content {
             stream.content =
-                FilterMatches::new(substitutions, expected_content).filter(stream.content);
+                FilterRedactions::new(substitutions, expected_content).filter(stream.content);
 
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());

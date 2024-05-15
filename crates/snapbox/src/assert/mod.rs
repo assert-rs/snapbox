@@ -8,7 +8,7 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::filter::{Filter as _, FilterMatches, FilterNewlines, FilterPaths};
+use crate::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
@@ -164,7 +164,7 @@ impl Assert {
         actual = FilterNewlines.filter(actual);
 
         // If expected is not an error normalize matches
-        actual = FilterMatches::new(&self.substitutions, &expected).filter(actual);
+        actual = FilterRedactions::new(&self.substitutions, &expected).filter(actual);
 
         (expected, actual)
     }

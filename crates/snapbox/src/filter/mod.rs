@@ -99,21 +99,21 @@ fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
     data.map(|c| if c == '\\' { '/' } else { c })
 }
 
-pub struct FilterMatches<'a> {
+pub struct FilterRedactions<'a> {
     substitutions: &'a crate::Redactions,
     pattern: &'a Data,
 }
 
-impl<'a> FilterMatches<'a> {
+impl<'a> FilterRedactions<'a> {
     pub fn new(substitutions: &'a crate::Redactions, pattern: &'a Data) -> Self {
-        FilterMatches {
+        FilterRedactions {
             substitutions,
             pattern,
         }
     }
 }
 
-impl Filter for FilterMatches<'_> {
+impl Filter for FilterRedactions<'_> {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let inner = match data.inner {

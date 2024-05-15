@@ -97,7 +97,7 @@ fn json_normalize_matches_string() {
     let exp = json!({"name": "{...}"});
     let expected = Data::json(exp);
     let actual = json!({"name": "JohnDoe"});
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -116,7 +116,7 @@ fn json_normalize_matches_array() {
             }
         ]
     });
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -133,7 +133,7 @@ fn json_normalize_matches_obj() {
             "nickname": "John",
         }
     });
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -149,7 +149,7 @@ fn json_normalize_matches_diff_order_array() {
     let actual = json!({
         "people": ["Jane", "John"]
     });
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_ne!(exp, act);
     }
@@ -184,7 +184,7 @@ fn json_normalize_wildcard_object_first() {
             }
         ]
     });
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -215,7 +215,7 @@ fn json_normalize_wildcard_array_first() {
             "nickname": "3",
         }
     ]);
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -251,7 +251,7 @@ fn json_normalize_wildcard_array_first_last() {
             "nickname": "4",
         }
     ]);
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -295,7 +295,7 @@ fn json_normalize_wildcard_array_middle_last() {
             "nickname": "5",
         }
     ]);
-    let actual = FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual));
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual));
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -336,7 +336,7 @@ fn json_normalize_wildcard_array_middle_last_early_return() {
         }
     ]);
     let actual_normalized =
-        FilterMatches::new(&Default::default(), &expected).filter(Data::json(actual.clone()));
+        FilterRedactions::new(&Default::default(), &expected).filter(Data::json(actual.clone()));
     if let DataInner::Json(act) = actual_normalized.inner {
         assert_eq!(act, actual);
     }
