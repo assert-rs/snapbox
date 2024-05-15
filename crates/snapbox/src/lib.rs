@@ -96,7 +96,6 @@
 #![warn(clippy::print_stdout)]
 
 mod macros;
-mod substitutions;
 
 pub mod assert;
 pub mod cmd;
@@ -115,8 +114,8 @@ pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
+pub use filter::Substitutions;
 pub use snapbox_macros::debug;
-pub use substitutions::Substitutions;
 
 #[deprecated(since = "0.5.11", note = "Replaced with `assert::DEFAULT_ACTION_ENV`")]
 pub const DEFAULT_ACTION_ENV: &str = assert::DEFAULT_ACTION_ENV;
