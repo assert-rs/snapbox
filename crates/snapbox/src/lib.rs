@@ -103,6 +103,7 @@ mod substitutions;
 
 pub mod cmd;
 pub mod data;
+pub mod filter;
 pub mod path;
 pub mod report;
 pub mod utils;

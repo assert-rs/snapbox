@@ -118,8 +118,8 @@ macro_rules! str {
 /// This provides conveniences for tracking the intended format (binary vs text).
 #[derive(Clone, Debug)]
 pub struct Data {
-    inner: DataInner,
-    source: Option<DataSource>,
+    pub(crate) inner: DataInner,
+    pub(crate) source: Option<DataSource>,
 }
 
 #[derive(Clone, Debug)]
