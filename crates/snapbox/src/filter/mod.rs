@@ -100,12 +100,12 @@ fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 }
 
 pub struct FilterMatches<'a> {
-    substitutions: &'a crate::Substitutions,
+    substitutions: &'a crate::Redactions,
     pattern: &'a Data,
 }
 
 impl<'a> FilterMatches<'a> {
-    pub fn new(substitutions: &'a crate::Substitutions, pattern: &'a Data) -> Self {
+    pub fn new(substitutions: &'a crate::Redactions, pattern: &'a Data) -> Self {
         FilterMatches {
             substitutions,
             pattern,
@@ -173,7 +173,7 @@ fn normalize_value(value: &mut serde_json::Value, op: fn(&str) -> String) {
 fn normalize_value_matches(
     actual: &mut serde_json::Value,
     expected: &serde_json::Value,
-    substitutions: &crate::Substitutions,
+    substitutions: &crate::Redactions,
 ) {
     use serde_json::Value::*;
 
