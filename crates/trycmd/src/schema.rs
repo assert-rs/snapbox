@@ -109,13 +109,13 @@ impl TryCmd {
             .fs
             .base
             .take()
-            .map(|p| snapbox::path::resolve_dir(p).map_err(|e| e.to_string()))
+            .map(|p| snapbox::dir::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
         sequence.fs.cwd = sequence
             .fs
             .cwd
             .take()
-            .map(|p| snapbox::path::resolve_dir(p).map_err(|e| e.to_string()))
+            .map(|p| snapbox::dir::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
 
         Ok(sequence)
