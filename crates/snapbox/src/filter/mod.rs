@@ -11,7 +11,12 @@ use crate::data::DataInner;
 use crate::Data;
 
 pub trait Normalize {
+    #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::filter`")]
     fn normalize(&self, data: Data) -> Data;
+    fn filter(&self, data: Data) -> Data {
+        #[allow(deprecated)]
+        self.normalize(data)
+    }
 }
 
 pub struct NormalizeNewlines;
