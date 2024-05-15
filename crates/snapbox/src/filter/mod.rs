@@ -83,6 +83,11 @@ impl Filter for FilterPaths {
 }
 
 /// Normalize path separators
+///
+/// [`std::path::MAIN_SEPARATOR`] can vary by platform, so make it consistent
+///
+/// Note: this cannot distinguish between when a character is being used as a path separator or not
+/// and can "normalize" unrelated data
 pub fn normalize_paths(data: &str) -> String {
     normalize_paths_chars(data.chars()).collect()
 }
