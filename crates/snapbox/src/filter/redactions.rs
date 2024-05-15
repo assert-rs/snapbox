@@ -6,12 +6,12 @@ use std::borrow::Cow;
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub struct Substitutions {
+pub struct Redactions {
     vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<Cow<'static, str>>>,
     unused: std::collections::BTreeSet<&'static str>,
 }
 
-impl Substitutions {
+impl Redactions {
     pub fn new() -> Self {
         Default::default()
     }
@@ -29,7 +29,7 @@ impl Substitutions {
     /// `placeholder` must be enclosed in `[` and `]`.
     ///
     /// ```rust
-    /// let mut subst = snapbox::Substitutions::new();
+    /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
     pub fn insert(
@@ -77,7 +77,7 @@ impl Substitutions {
     /// Otherwise, `input`, with as many patterns replaced as possible, will be returned.
     ///
     /// ```rust
-    /// let subst = snapbox::Substitutions::new();
+    /// let subst = snapbox::Redactions::new();
     /// let output = subst.normalize("Hello World!", "Hello [..]!");
     /// assert_eq!(output, "Hello [..]!");
     /// ```
@@ -124,7 +124,7 @@ fn validate_placeholder(placeholder: &'static str) -> crate::assert::Result<&'st
     Ok(placeholder)
 }
 
-fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
+fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
@@ -227,7 +227,7 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(line: &str, pattern: &str, substitutions: &Substitutions) -> bool {
+fn line_matches(line: &str, pattern: &str, substitutions: &Redactions) -> bool {
     if line == pattern {
         return true;
     }
@@ -266,7 +266,7 @@ mod test {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -275,7 +275,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -284,7 +284,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -293,7 +293,7 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -302,7 +302,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -311,7 +311,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -320,7 +320,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -329,7 +329,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -338,7 +338,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -347,7 +347,7 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -356,7 +356,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\n...";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -365,7 +365,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -409,7 +409,7 @@ mod test {
             ("hello world, goodbye moon", "hello [..], [..] world", false),
         ];
         for (line, pattern, expected) in cases {
-            let actual = line_matches(line, pattern, &Substitutions::new());
+            let actual = line_matches(line, pattern, &Redactions::new());
             assert_eq!(expected, actual, "line={:?}  pattern={:?}", line, pattern);
         }
     }

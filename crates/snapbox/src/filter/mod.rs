@@ -11,7 +11,7 @@ mod test;
 use crate::data::DataInner;
 use crate::Data;
 
-pub use redactions::Substitutions;
+pub use redactions::Redactions;
 
 pub trait Filter {
     #[deprecated(since = "0.5.11", note = "Replaced with `Filter::filter`")]
