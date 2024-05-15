@@ -96,11 +96,11 @@
 #![warn(clippy::print_stdout)]
 
 mod action;
-mod assert;
 mod error;
 mod macros;
 mod substitutions;
 
+pub mod assert;
 pub mod cmd;
 pub mod data;
 pub mod filter;
