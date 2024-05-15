@@ -4,14 +4,14 @@
 //! - Making snapshots consistent across platforms or conditional compilation
 //! - Focusing snapshots on the characteristics of the data being tested
 
-mod substitutions;
+mod redactions;
 #[cfg(test)]
 mod test;
 
 use crate::data::DataInner;
 use crate::Data;
 
-pub use substitutions::Substitutions;
+pub use redactions::Substitutions;
 
 pub trait Filter {
     #[deprecated(since = "0.5.11", note = "Replaced with `Filter::filter`")]
