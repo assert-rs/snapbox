@@ -249,6 +249,7 @@ impl Data {
     /// Post-process text
     ///
     /// See [utils][crate::utils]
+    #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::normalize`")]
     pub fn normalize(self, op: impl Normalize) -> Self {
         op.normalize(self)
     }
