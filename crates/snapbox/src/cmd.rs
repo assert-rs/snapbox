@@ -21,7 +21,7 @@ impl Command {
             stdin: None,
             timeout: None,
             _stderr_to_stdout: false,
-            config: crate::Assert::new().action_env(crate::DEFAULT_ACTION_ENV),
+            config: crate::Assert::new().action_env(crate::assert::DEFAULT_ACTION_ENV),
         }
     }
 
@@ -32,7 +32,7 @@ impl Command {
             stdin: None,
             timeout: None,
             _stderr_to_stdout: false,
-            config: crate::Assert::new().action_env(crate::DEFAULT_ACTION_ENV),
+            config: crate::Assert::new().action_env(crate::assert::DEFAULT_ACTION_ENV),
         }
     }
 
@@ -454,7 +454,7 @@ impl OutputAssert {
     pub fn new(output: std::process::Output) -> Self {
         Self {
             output,
-            config: crate::Assert::new().action_env(crate::DEFAULT_ACTION_ENV),
+            config: crate::Assert::new().action_env(crate::assert::DEFAULT_ACTION_ENV),
         }
     }
 

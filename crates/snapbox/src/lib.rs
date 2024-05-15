@@ -145,7 +145,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[track_caller]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .eq(expected, actual);
 }
 
@@ -177,7 +177,7 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 #[track_caller]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .matches(pattern, actual);
 }
 
@@ -197,7 +197,7 @@ pub fn assert_subset_eq(
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_eq(expected_root, actual_root);
 }
 
@@ -224,6 +224,6 @@ pub fn assert_subset_matches(
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_matches(pattern_root, actual_root);
 }
