@@ -95,7 +95,6 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
-mod error;
 mod macros;
 mod substitutions;
 
@@ -115,13 +114,16 @@ pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
-pub use error::Error;
-pub use error::Result;
 pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;
 
 #[deprecated(since = "0.5.11", note = "Replaced with `assert::DEFAULT_ACTION_ENV`")]
 pub const DEFAULT_ACTION_ENV: &str = assert::DEFAULT_ACTION_ENV;
+
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::Result`")]
+pub type Result<T, E = assert::Error> = std::result::Result<T, E>;
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::Error`")]
+pub type Error = assert::Error;
 
 /// Check if a value is the same as an expected value
 ///

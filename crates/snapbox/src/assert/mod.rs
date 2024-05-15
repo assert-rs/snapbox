@@ -1,4 +1,5 @@
 mod action;
+mod error;
 
 #[cfg(feature = "color")]
 use anstream::panic;
@@ -11,6 +12,8 @@ use crate::filter::{Filter as _, FilterMatches, FilterNewlines, FilterPaths};
 
 pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
+pub use error::Error;
+pub use error::Result;
 
 /// Snapshot assertion against a file's contents
 ///
