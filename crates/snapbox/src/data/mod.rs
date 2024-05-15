@@ -9,8 +9,11 @@ mod tests;
 
 pub use format::DataFormat;
 pub use normalize::Normalize;
+#[allow(deprecated)]
 pub use normalize::NormalizeMatches;
+#[allow(deprecated)]
 pub use normalize::NormalizeNewlines;
+#[allow(deprecated)]
 pub use normalize::NormalizePaths;
 pub use source::DataSource;
 pub use source::Inline;
@@ -251,7 +254,7 @@ impl Data {
     /// See [utils][crate::utils]
     #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::normalize`")]
     pub fn normalize(self, op: impl Normalize) -> Self {
-        op.normalize(self)
+        op.filter(self)
     }
 
     /// Return the underlying `String`
