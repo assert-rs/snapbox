@@ -1,3 +1,9 @@
+//! Normalize `actual` or `expected` [`Data`]
+//!
+//! This can be done for
+//! - Making snapshots consistent across platforms or conditional compilation
+//! - Focusing snapshots on the characteristics of the data being tested
+
 use super::Data;
 use super::DataInner;
 
