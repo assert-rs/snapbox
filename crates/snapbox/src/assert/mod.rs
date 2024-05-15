@@ -220,7 +220,7 @@ impl Assert {
         expected: &crate::Data,
         actual: &crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) -> crate::Result<()> {
+    ) -> crate::assert::Result<()> {
         if expected != actual {
             let mut buf = String::new();
             crate::report::write_diff(

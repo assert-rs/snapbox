@@ -158,7 +158,7 @@ impl Data {
         Self::with_inner(DataInner::Json(raw.into()))
     }
 
-    fn error(raw: impl Into<crate::Error>, intended: DataFormat) -> Self {
+    fn error(raw: impl Into<crate::assert::Error>, intended: DataFormat) -> Self {
         Self::with_inner(DataInner::Error(DataError {
             error: raw.into(),
             intended,
@@ -204,7 +204,7 @@ impl Data {
     pub fn try_read_from(
         path: &std::path::Path,
         data_format: Option<DataFormat>,
-    ) -> crate::Result<Self> {
+    ) -> crate::assert::Result<Self> {
         let data =
             std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
         let data = Self::binary(data);
@@ -228,7 +228,7 @@ impl Data {
     }
 
     /// Overwrite a snapshot
-    pub fn write_to(&self, source: &DataSource) -> crate::Result<()> {
+    pub fn write_to(&self, source: &DataSource) -> crate::assert::Result<()> {
         match &source.inner {
             source::DataSourceInner::Path(p) => self.write_to_path(p),
             source::DataSourceInner::Inline(p) => runtime::get()
@@ -238,7 +238,7 @@ impl Data {
     }
 
     /// Overwrite a snapshot
-    pub fn write_to_path(&self, path: &std::path::Path) -> crate::Result<()> {
+    pub fn write_to_path(&self, path: &std::path::Path) -> crate::assert::Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
@@ -272,7 +272,7 @@ impl Data {
         }
     }
 
-    pub fn to_bytes(&self) -> crate::Result<Vec<u8>> {
+    pub fn to_bytes(&self) -> crate::assert::Result<Vec<u8>> {
         match &self.inner {
             DataInner::Error(err) => Err(err.error.clone()),
             DataInner::Binary(data) => Ok(data.clone()),
@@ -296,7 +296,7 @@ impl Data {
         }
     }
 
-    fn try_is(self, format: DataFormat) -> crate::Result<Self> {
+    fn try_is(self, format: DataFormat) -> crate::assert::Result<Self> {
         let original = self.format();
         let source = self.source;
         let inner = match (self.inner, format) {
@@ -491,7 +491,7 @@ impl PartialEq for Data {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DataError {
-    error: crate::Error,
+    error: crate::assert::Error,
     intended: DataFormat,
 }
 

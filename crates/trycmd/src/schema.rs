@@ -446,7 +446,7 @@ fn overwrite_trycmd_status(
     step: &Step,
     stdout_line_nums: &mut std::ops::Range<usize>,
     normalized: &mut String,
-) -> Result<(), snapbox::Error> {
+) -> Result<(), crate::Error> {
     let status = match exit {
         Some(status) => status,
         _ => {

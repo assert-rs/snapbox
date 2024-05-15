@@ -929,7 +929,7 @@ pub(crate) mod examples {
     pub fn compile_example<'a>(
         target_name: &str,
         args: impl IntoIterator<Item = &'a str>,
-    ) -> crate::Result<std::path::PathBuf> {
+    ) -> crate::assert::Result<std::path::PathBuf> {
         crate::debug!("Compiling example {}", target_name);
         let messages = escargot::CargoBuild::new()
             .current_target()
@@ -937,12 +937,12 @@ pub(crate) mod examples {
             .example(target_name)
             .args(args)
             .exec()
-            .map_err(|e| crate::Error::new(e.to_string()))?;
+            .map_err(|e| crate::assert::Error::new(e.to_string()))?;
         for message in messages {
-            let message = message.map_err(|e| crate::Error::new(e.to_string()))?;
+            let message = message.map_err(|e| crate::assert::Error::new(e.to_string()))?;
             let message = message
                 .decode()
-                .map_err(|e| crate::Error::new(e.to_string()))?;
+                .map_err(|e| crate::assert::Error::new(e.to_string()))?;
             crate::debug!("Message: {:?}", message);
             if let Some(bin) = decode_example_message(&message) {
                 let (name, bin) = bin?;
@@ -951,7 +951,7 @@ pub(crate) mod examples {
             }
         }
 
-        Err(crate::Error::new(format!(
+        Err(crate::assert::Error::new(format!(
             "Unknown error building example {}",
             target_name
         )))
@@ -971,7 +971,9 @@ pub(crate) mod examples {
     #[cfg(feature = "examples")]
     pub fn compile_examples<'a>(
         args: impl IntoIterator<Item = &'a str>,
-    ) -> crate::Result<impl Iterator<Item = (String, crate::Result<std::path::PathBuf>)>> {
+    ) -> crate::assert::Result<
+        impl Iterator<Item = (String, crate::assert::Result<std::path::PathBuf>)>,
+    > {
         crate::debug!("Compiling examples");
         let mut examples = std::collections::BTreeMap::new();
 
@@ -981,12 +983,12 @@ pub(crate) mod examples {
             .examples()
             .args(args)
             .exec()
-            .map_err(|e| crate::Error::new(e.to_string()))?;
+            .map_err(|e| crate::assert::Error::new(e.to_string()))?;
         for message in messages {
-            let message = message.map_err(|e| crate::Error::new(e.to_string()))?;
+            let message = message.map_err(|e| crate::assert::Error::new(e.to_string()))?;
             let message = message
                 .decode()
-                .map_err(|e| crate::Error::new(e.to_string()))?;
+                .map_err(|e| crate::assert::Error::new(e.to_string()))?;
             crate::debug!("Message: {:?}", message);
             if let Some(bin) = decode_example_message(&message) {
                 let (name, bin) = bin?;
@@ -1000,7 +1002,7 @@ pub(crate) mod examples {
     #[allow(clippy::type_complexity)]
     fn decode_example_message<'m>(
         message: &'m escargot::format::Message,
-    ) -> Option<crate::Result<(&'m str, crate::Result<std::path::PathBuf>)>> {
+    ) -> Option<crate::assert::Result<(&'m str, crate::assert::Result<std::path::PathBuf>)>> {
         match message {
             escargot::format::Message::CompilerMessage(msg) => {
                 let level = msg.message.level;
@@ -1014,10 +1016,10 @@ pub(crate) mod examples {
                         .unwrap_or_else(|| msg.message.message.as_ref())
                         .to_owned();
                     if is_example_target(&msg.target) {
-                        let bin = Err(crate::Error::new(output));
+                        let bin = Err(crate::assert::Error::new(output));
                         Some(Ok((msg.target.name.as_ref(), bin)))
                     } else {
-                        Some(Err(crate::Error::new(output)))
+                        Some(Err(crate::assert::Error::new(output)))
                     }
                 } else {
                     None

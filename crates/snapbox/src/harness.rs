@@ -163,7 +163,11 @@ impl Verifier {
         self
     }
 
-    fn verify(&self, expected_path: &std::path::Path, actual: crate::Data) -> crate::Result<()> {
+    fn verify(
+        &self,
+        expected_path: &std::path::Path,
+        actual: crate::Data,
+    ) -> crate::assert::Result<()> {
         match self.action {
             Action::Skip => Ok(()),
             Action::Ignore => {
@@ -179,7 +183,7 @@ impl Verifier {
         &self,
         expected_path: &std::path::Path,
         actual: crate::Data,
-    ) -> crate::Result<()> {
+    ) -> crate::assert::Result<()> {
         actual.write_to_path(expected_path)?;
         Ok(())
     }
@@ -188,7 +192,7 @@ impl Verifier {
         &self,
         expected_path: &std::path::Path,
         actual: crate::Data,
-    ) -> crate::Result<()> {
+    ) -> crate::assert::Result<()> {
         let expected = FilterNewlines.filter(crate::Data::read_from(
             expected_path,
             Some(DataFormat::Text),
