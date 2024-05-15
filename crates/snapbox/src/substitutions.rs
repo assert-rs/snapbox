@@ -42,6 +42,7 @@ impl Substitutions {
         if value.is_empty() {
             self.unused.insert(key);
         } else {
+            #[allow(deprecated)]
             self.vars
                 .entry(key)
                 .or_default()

@@ -70,7 +70,7 @@ impl TryCmd {
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 let raw = std::fs::read_to_string(path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let normalized = snapbox::utils::normalize_lines(&raw);
+                let normalized = snapbox::filter::normalize_lines(&raw);
                 Self::parse_trycmd(&normalized)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
@@ -161,7 +161,7 @@ impl TryCmd {
 
                     let raw = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    let mut normalized = snapbox::utils::normalize_lines(&raw);
+                    let mut normalized = snapbox::filter::normalize_lines(&raw);
 
                     overwrite_trycmd_status(exit, step, &mut line_nums, &mut normalized)?;
 
