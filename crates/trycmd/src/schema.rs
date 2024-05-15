@@ -2,7 +2,7 @@
 //!
 //! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
-use snapbox::data::{NormalizeNewlines, NormalizePaths};
+use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
@@ -40,9 +40,10 @@ impl TryCmd {
                     let stdout_path = path.with_extension("stdout");
                     let stdout = if stdout_path.exists() {
                         Some(
-                            crate::Data::read_from(&stdout_path, Some(is_binary))
-                                .normalize(NormalizePaths)
-                                .normalize(NormalizeNewlines),
+                            FilterNewlines.filter(
+                                FilterPaths
+                                    .filter(crate::Data::read_from(&stdout_path, Some(is_binary))),
+                            ),
                         )
                     } else {
                         None
@@ -54,9 +55,10 @@ impl TryCmd {
                     let stderr_path = path.with_extension("stderr");
                     let stderr = if stderr_path.exists() {
                         Some(
-                            crate::Data::read_from(&stderr_path, Some(is_binary))
-                                .normalize(NormalizePaths)
-                                .normalize(NormalizeNewlines),
+                            FilterNewlines.filter(
+                                FilterPaths
+                                    .filter(crate::Data::read_from(&stderr_path, Some(is_binary))),
+                            ),
                         )
                     } else {
                         None
@@ -68,7 +70,7 @@ impl TryCmd {
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 let raw = std::fs::read_to_string(path)
                     .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                let normalized = snapbox::utils::normalize_lines(&raw);
+                let normalized = snapbox::filter::normalize_lines(&raw);
                 Self::parse_trycmd(&normalized)?
             } else {
                 return Err(format!("Unsupported extension: {}", ext.to_string_lossy()).into());
@@ -107,13 +109,13 @@ impl TryCmd {
             .fs
             .base
             .take()
-            .map(|p| snapbox::path::resolve_dir(p).map_err(|e| e.to_string()))
+            .map(|p| snapbox::dir::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
         sequence.fs.cwd = sequence
             .fs
             .cwd
             .take()
-            .map(|p| snapbox::path::resolve_dir(p).map_err(|e| e.to_string()))
+            .map(|p| snapbox::dir::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
 
         Ok(sequence)
@@ -159,7 +161,7 @@ impl TryCmd {
 
                     let raw = std::fs::read_to_string(path)
                         .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
-                    let mut normalized = snapbox::utils::normalize_lines(&raw);
+                    let mut normalized = snapbox::filter::normalize_lines(&raw);
 
                     overwrite_trycmd_status(exit, step, &mut line_nums, &mut normalized)?;
 
@@ -444,7 +446,7 @@ fn overwrite_trycmd_status(
     step: &Step,
     stdout_line_nums: &mut std::ops::Range<usize>,
     normalized: &mut String,
-) -> Result<(), snapbox::Error> {
+) -> Result<(), crate::Error> {
     let status = match exit {
         Some(status) => status,
         _ => {

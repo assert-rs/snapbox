@@ -9,8 +9,11 @@ mod tests;
 
 pub use format::DataFormat;
 pub use normalize::Normalize;
+#[allow(deprecated)]
 pub use normalize::NormalizeMatches;
+#[allow(deprecated)]
 pub use normalize::NormalizeNewlines;
+#[allow(deprecated)]
 pub use normalize::NormalizePaths;
 pub use source::DataSource;
 pub use source::Inline;
@@ -69,12 +72,12 @@ macro_rules! file {
         $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
     [$path:literal] => {{
-        let mut path = $crate::current_dir!();
+        let mut path = $crate::utils::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, None)
     }};
     [$path:literal : $type:ident] => {{
-        let mut path = $crate::current_dir!();
+        let mut path = $crate::utils::current_dir!();
         path.push($path);
         $crate::Data::read_from(&path, Some($crate::data::DataFormat:: $type))
     }};
@@ -98,7 +101,7 @@ macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
     [[$data:literal]] => {{
         let position = $crate::data::Position {
-            file: $crate::path::current_rs!(),
+            file: $crate::utils::current_rs!(),
             line: line!(),
             column: column!(),
         };
@@ -118,8 +121,8 @@ macro_rules! str {
 /// This provides conveniences for tracking the intended format (binary vs text).
 #[derive(Clone, Debug)]
 pub struct Data {
-    inner: DataInner,
-    source: Option<DataSource>,
+    pub(crate) inner: DataInner,
+    pub(crate) source: Option<DataSource>,
 }
 
 #[derive(Clone, Debug)]
@@ -155,7 +158,7 @@ impl Data {
         Self::with_inner(DataInner::Json(raw.into()))
     }
 
-    fn error(raw: impl Into<crate::Error>, intended: DataFormat) -> Self {
+    fn error(raw: impl Into<crate::assert::Error>, intended: DataFormat) -> Self {
         Self::with_inner(DataInner::Error(DataError {
             error: raw.into(),
             intended,
@@ -201,7 +204,7 @@ impl Data {
     pub fn try_read_from(
         path: &std::path::Path,
         data_format: Option<DataFormat>,
-    ) -> Result<Self, crate::Error> {
+    ) -> crate::assert::Result<Self> {
         let data =
             std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
         let data = Self::binary(data);
@@ -225,7 +228,7 @@ impl Data {
     }
 
     /// Overwrite a snapshot
-    pub fn write_to(&self, source: &DataSource) -> Result<(), crate::Error> {
+    pub fn write_to(&self, source: &DataSource) -> crate::assert::Result<()> {
         match &source.inner {
             source::DataSourceInner::Path(p) => self.write_to_path(p),
             source::DataSourceInner::Inline(p) => runtime::get()
@@ -235,7 +238,7 @@ impl Data {
     }
 
     /// Overwrite a snapshot
-    pub fn write_to_path(&self, path: &std::path::Path) -> Result<(), crate::Error> {
+    pub fn write_to_path(&self, path: &std::path::Path) -> crate::assert::Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
@@ -249,8 +252,9 @@ impl Data {
     /// Post-process text
     ///
     /// See [utils][crate::utils]
+    #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::normalize`")]
     pub fn normalize(self, op: impl Normalize) -> Self {
-        op.normalize(self)
+        op.filter(self)
     }
 
     /// Return the underlying `String`
@@ -268,7 +272,7 @@ impl Data {
         }
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, crate::Error> {
+    pub fn to_bytes(&self) -> crate::assert::Result<Vec<u8>> {
         match &self.inner {
             DataInner::Error(err) => Err(err.error.clone()),
             DataInner::Binary(data) => Ok(data.clone()),
@@ -292,7 +296,7 @@ impl Data {
         }
     }
 
-    fn try_is(self, format: DataFormat) -> Result<Self, crate::Error> {
+    fn try_is(self, format: DataFormat) -> crate::assert::Result<Self> {
         let original = self.format();
         let source = self.source;
         let inner = match (self.inner, format) {
@@ -487,7 +491,7 @@ impl PartialEq for Data {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct DataError {
-    error: crate::Error,
+    error: crate::assert::Error,
     intended: DataFormat,
 }
 

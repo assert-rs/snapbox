@@ -1,3 +1,6 @@
+mod action;
+mod error;
+
 #[cfg(feature = "color")]
 use anstream::panic;
 #[cfg(feature = "color")]
@@ -5,8 +8,12 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::data::{NormalizeMatches, NormalizeNewlines, NormalizePaths};
-use crate::Action;
+use crate::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
+
+pub use action::Action;
+pub use action::DEFAULT_ACTION_ENV;
+pub use error::Error;
+pub use error::Result;
 
 /// Snapshot assertion against a file's contents
 ///
@@ -25,7 +32,7 @@ pub struct Assert {
     action: Action,
     action_var: Option<String>,
     normalize_paths: bool,
-    substitutions: crate::Substitutions,
+    substitutions: crate::Redactions,
     pub(crate) palette: crate::report::Palette,
 }
 
@@ -131,11 +138,11 @@ impl Assert {
         expected: crate::Data,
         mut actual: crate::Data,
     ) -> (crate::Data, crate::Data) {
-        let expected = expected.normalize(NormalizeNewlines);
+        let expected = FilterNewlines.filter(expected);
         // On `expected` being an error, make a best guess
         let format = expected.intended_format();
 
-        actual = actual.coerce_to(format).normalize(NormalizeNewlines);
+        actual = FilterNewlines.filter(actual.coerce_to(format));
 
         (expected, actual)
     }
@@ -145,19 +152,19 @@ impl Assert {
         expected: crate::Data,
         mut actual: crate::Data,
     ) -> (crate::Data, crate::Data) {
-        let expected = expected.normalize(NormalizeNewlines);
+        let expected = FilterNewlines.filter(expected);
         // On `expected` being an error, make a best guess
         let format = expected.intended_format();
         actual = actual.coerce_to(format);
 
         if self.normalize_paths {
-            actual = actual.normalize(NormalizePaths);
+            actual = FilterPaths.filter(actual);
         }
         // Always normalize new lines
-        actual = actual.normalize(NormalizeNewlines);
+        actual = FilterNewlines.filter(actual);
 
         // If expected is not an error normalize matches
-        actual = actual.normalize(NormalizeMatches::new(&self.substitutions, &expected));
+        actual = FilterRedactions::new(&self.substitutions, &expected).filter(actual);
 
         (expected, actual)
     }
@@ -213,7 +220,7 @@ impl Assert {
         expected: &crate::Data,
         actual: &crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) -> crate::Result<()> {
+    ) -> crate::assert::Result<()> {
         if expected != actual {
             let mut buf = String::new();
             crate::report::write_diff(
@@ -233,7 +240,7 @@ impl Assert {
 }
 
 /// # Directory Assertions
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 impl Assert {
     #[track_caller]
     pub fn subset_eq(
@@ -418,8 +425,8 @@ impl Assert {
         self
     }
 
-    /// Override the default [`Substitutions`][crate::Substitutions]
-    pub fn substitutions(mut self, substitutions: crate::Substitutions) -> Self {
+    /// Override the default [`Redactions`][crate::Redactions]
+    pub fn substitutions(mut self, substitutions: crate::Redactions) -> Self {
         self.substitutions = substitutions;
         self
     }
@@ -442,6 +449,6 @@ impl Default for Assert {
             substitutions: Default::default(),
             palette: crate::report::Palette::color(),
         }
-        .substitutions(crate::Substitutions::with_exe())
+        .substitutions(crate::Redactions::with_exe())
     }
 }

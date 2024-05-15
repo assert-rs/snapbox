@@ -12,8 +12,9 @@ use std::eprintln;
 use std::io::stderr;
 
 use rayon::prelude::*;
-use snapbox::data::{DataFormat, NormalizeNewlines, NormalizePaths};
-use snapbox::path::FileType;
+use snapbox::data::DataFormat;
+use snapbox::dir::FileType;
+use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -35,7 +36,7 @@ impl Runner {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) {
         let palette = snapbox::report::Palette::color();
 
@@ -139,7 +140,7 @@ impl Case {
         &self,
         mode: &Mode,
         bins: &crate::BinRegistry,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -186,7 +187,7 @@ impl Case {
             .map(|p| {
                 sequence.fs.rel_cwd().map(|rel| {
                     let p = p.join(rel);
-                    snapbox::path::strip_trailing_slash(&p).to_owned()
+                    snapbox::dir::strip_trailing_slash(&p).to_owned()
                 })
             })
             .transpose()
@@ -308,7 +309,7 @@ impl Case {
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -406,7 +407,7 @@ impl Case {
         &self,
         mut output: Output,
         step: &crate::schema::Step,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Output {
         output.stdout = self.validate_stream(
             output.stdout,
@@ -429,7 +430,7 @@ impl Case {
         stream: Option<Stream>,
         expected_content: Option<&crate::Data>,
         binary: bool,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Option<Stream> {
         let mut stream = stream?;
 
@@ -441,12 +442,8 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            stream.content = stream
-                .content
-                .normalize(snapbox::data::NormalizeMatches::new(
-                    substitutions,
-                    expected_content,
-                ));
+            stream.content =
+                FilterRedactions::new(substitutions, expected_content).filter(stream.content);
 
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
@@ -500,17 +497,17 @@ impl Case {
         actual_root: &std::path::Path,
         mut fs: Filesystem,
         mode: &Mode,
-        substitutions: &snapbox::Substitutions,
+        substitutions: &snapbox::Redactions,
     ) -> Result<Filesystem, Filesystem> {
         let mut ok = true;
 
         #[cfg(feature = "filesystem")]
         if let Mode::Dump(_) = mode {
-            // Handled as part of PathFixture
+            // Handled as part of DirRoot
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
-                for status in snapbox::path::PathDiff::subset_matches_iter(
+                for status in snapbox::dir::PathDiff::subset_matches_iter(
                     fixture_root,
                     actual_root,
                     substitutions,
@@ -740,9 +737,7 @@ impl Stream {
         if content.format() != DataFormat::Text {
             self.status = StreamStatus::Failure("Unable to convert underlying Data to Text".into());
         }
-        self.content = content
-            .normalize(NormalizePaths)
-            .normalize(NormalizeNewlines);
+        self.content = FilterNewlines.filter(FilterPaths.filter(content));
         self
     }
 
@@ -886,11 +881,11 @@ impl FileStatus {
     }
 }
 
-impl From<snapbox::path::PathDiff> for FileStatus {
-    fn from(other: snapbox::path::PathDiff) -> Self {
+impl From<snapbox::dir::PathDiff> for FileStatus {
+    fn from(other: snapbox::dir::PathDiff) -> Self {
         match other {
-            snapbox::path::PathDiff::Failure(err) => FileStatus::Failure(err),
-            snapbox::path::PathDiff::TypeMismatch {
+            snapbox::dir::PathDiff::Failure(err) => FileStatus::Failure(err),
+            snapbox::dir::PathDiff::TypeMismatch {
                 expected_path,
                 actual_path,
                 expected_type,
@@ -901,7 +896,7 @@ impl From<snapbox::path::PathDiff> for FileStatus {
                 actual_type,
                 expected_type,
             },
-            snapbox::path::PathDiff::LinkMismatch {
+            snapbox::dir::PathDiff::LinkMismatch {
                 expected_path,
                 actual_path,
                 expected_target,
@@ -912,7 +907,7 @@ impl From<snapbox::path::PathDiff> for FileStatus {
                 actual_target,
                 expected_target,
             },
-            snapbox::path::PathDiff::ContentMismatch {
+            snapbox::dir::PathDiff::ContentMismatch {
                 expected_path,
                 actual_path,
                 expected_content,
@@ -1024,20 +1019,20 @@ fn fs_context(
     cwd: Option<&std::path::Path>,
     sandbox: bool,
     mode: &crate::Mode,
-) -> Result<snapbox::path::PathFixture, crate::Error> {
+) -> Result<snapbox::dir::DirRoot, crate::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
             crate::Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
-                let mut context = snapbox::path::PathFixture::mutable_at(&target)?;
+                let mut context = snapbox::dir::DirRoot::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
                 Ok(context)
             }
             crate::Mode::Fail | crate::Mode::Overwrite => {
-                let mut context = snapbox::path::PathFixture::mutable_temp()?;
+                let mut context = snapbox::dir::DirRoot::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
@@ -1048,7 +1043,7 @@ fn fs_context(
         Err("Sandboxing is disabled".into())
     } else {
         Ok(cwd
-            .map(snapbox::path::PathFixture::immutable)
-            .unwrap_or_else(snapbox::path::PathFixture::none))
+            .map(snapbox::dir::DirRoot::immutable)
+            .unwrap_or_else(snapbox::dir::DirRoot::none))
     }
 }

@@ -35,7 +35,8 @@
 //! }
 //! ```
 
-use crate::data::{DataFormat, NormalizeNewlines};
+use crate::data::DataFormat;
+use crate::filter::{Filter as _, FilterNewlines};
 use crate::Action;
 
 use libtest_mimic::Trial;
@@ -125,7 +126,7 @@ where
                 Trial::test(case.name.clone(), move || {
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
-                    let actual = crate::Data::text(actual).normalize(NormalizeNewlines);
+                    let actual = FilterNewlines.filter(crate::Data::text(actual));
                     #[allow(deprecated)]
                     let verify = Verifier::new()
                         .palette(crate::report::Palette::auto())
@@ -162,7 +163,11 @@ impl Verifier {
         self
     }
 
-    fn verify(&self, expected_path: &std::path::Path, actual: crate::Data) -> crate::Result<()> {
+    fn verify(
+        &self,
+        expected_path: &std::path::Path,
+        actual: crate::Data,
+    ) -> crate::assert::Result<()> {
         match self.action {
             Action::Skip => Ok(()),
             Action::Ignore => {
@@ -178,7 +183,7 @@ impl Verifier {
         &self,
         expected_path: &std::path::Path,
         actual: crate::Data,
-    ) -> crate::Result<()> {
+    ) -> crate::assert::Result<()> {
         actual.write_to_path(expected_path)?;
         Ok(())
     }
@@ -187,9 +192,11 @@ impl Verifier {
         &self,
         expected_path: &std::path::Path,
         actual: crate::Data,
-    ) -> crate::Result<()> {
-        let expected = crate::Data::read_from(expected_path, Some(DataFormat::Text))
-            .normalize(NormalizeNewlines);
+    ) -> crate::assert::Result<()> {
+        let expected = FilterNewlines.filter(crate::Data::read_from(
+            expected_path,
+            Some(DataFormat::Text),
+        ));
 
         if expected != actual {
             let mut buf = String::new();

@@ -36,8 +36,10 @@ default = ["color-auto", "diff"]
 harness = ["dep:libtest-mimic", "dep:ignore"]
 ## Smarter binary file detection
 detect-encoding = ["dep:content_inspector"]
-## Snapshotting of paths
-path = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
+## Snapshotting of directories
+dir = ["dep:tempfile", "dep:walkdir", "dep:dunce", "detect-encoding", "dep:filetime"]
+## Deprecated since 0.5.11, replaced with `dir`
+path = ["dir"]
 ## Snapshotting of commands
 cmd = ["dep:os_pipe", "dep:wait-timeout", "dep:libc", "dep:windows-sys"]
 ## Building of examples for snapshotting

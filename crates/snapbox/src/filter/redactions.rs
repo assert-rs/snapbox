@@ -2,16 +2,16 @@ use std::borrow::Cow;
 
 /// Match pattern expressions, see [`Assert`][crate::Assert]
 ///
-/// Built-in expressions:
+/// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
-pub struct Substitutions {
+pub struct Redactions {
     vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<Cow<'static, str>>>,
     unused: std::collections::BTreeSet<&'static str>,
 }
 
-impl Substitutions {
+impl Redactions {
     pub fn new() -> Self {
         Default::default()
     }
@@ -26,24 +26,25 @@ impl Substitutions {
 
     /// Insert an additional match pattern
     ///
-    /// `key` must be enclosed in `[` and `]`.
+    /// `placeholder` must be enclosed in `[` and `]`.
     ///
     /// ```rust
-    /// let mut subst = snapbox::Substitutions::new();
+    /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
     pub fn insert(
         &mut self,
-        key: &'static str,
+        placeholder: &'static str,
         value: impl Into<Cow<'static, str>>,
-    ) -> Result<(), crate::Error> {
-        let key = validate_key(key)?;
+    ) -> crate::assert::Result<()> {
+        let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if value.is_empty() {
-            self.unused.insert(key);
+            self.unused.insert(placeholder);
         } else {
+            #[allow(deprecated)]
             self.vars
-                .entry(key)
+                .entry(placeholder)
                 .or_default()
                 .insert(crate::utils::normalize_text(value.as_ref()).into());
         }
@@ -52,20 +53,20 @@ impl Substitutions {
 
     /// Insert additional match patterns
     ///
-    /// keys must be enclosed in `[` and `]`.
+    /// placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
-    ) -> Result<(), crate::Error> {
-        for (key, value) in vars {
-            self.insert(key, value)?;
+    ) -> crate::assert::Result<()> {
+        for (placeholder, value) in vars {
+            self.insert(placeholder, value)?;
         }
         Ok(())
     }
 
-    pub fn remove(&mut self, key: &'static str) -> Result<(), crate::Error> {
-        let key = validate_key(key)?;
-        self.vars.remove(key);
+    pub fn remove(&mut self, placeholder: &'static str) -> crate::assert::Result<()> {
+        let placeholder = validate_placeholder(placeholder)?;
+        self.vars.remove(placeholder);
         Ok(())
     }
 
@@ -76,7 +77,7 @@ impl Substitutions {
     /// Otherwise, `input`, with as many patterns replaced as possible, will be returned.
     ///
     /// ```rust
-    /// let subst = snapbox::Substitutions::new();
+    /// let subst = snapbox::Redactions::new();
     /// let output = subst.normalize("Hello World!", "Hello [..]!");
     /// assert_eq!(output, "Hello [..]!");
     /// ```
@@ -108,22 +109,22 @@ impl Substitutions {
     }
 }
 
-fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
-    if !key.starts_with('[') || !key.ends_with(']') {
-        return Err(format!("Key `{}` is not enclosed in []", key).into());
+fn validate_placeholder(placeholder: &'static str) -> crate::assert::Result<&'static str> {
+    if !placeholder.starts_with('[') || !placeholder.ends_with(']') {
+        return Err(format!("Key `{}` is not enclosed in []", placeholder).into());
     }
 
-    if key[1..(key.len() - 1)]
+    if placeholder[1..(placeholder.len() - 1)]
         .find(|c: char| !c.is_ascii_uppercase())
         .is_some()
     {
-        return Err(format!("Key `{}` can only be A-Z but ", key).into());
+        return Err(format!("Key `{}` can only be A-Z but ", placeholder).into());
     }
 
-    Ok(key)
+    Ok(placeholder)
 }
 
-fn normalize(input: &str, pattern: &str, substitutions: &Substitutions) -> String {
+fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
@@ -226,7 +227,7 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(line: &str, pattern: &str, substitutions: &Substitutions) -> bool {
+fn line_matches(line: &str, pattern: &str, substitutions: &Redactions) -> bool {
     if line == pattern {
         return true;
     }
@@ -265,7 +266,7 @@ mod test {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -274,7 +275,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -283,7 +284,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -292,7 +293,7 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -301,7 +302,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -310,7 +311,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -319,7 +320,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -328,7 +329,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -337,7 +338,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -346,7 +347,7 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -355,7 +356,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\n...";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -364,7 +365,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
-        let actual = normalize(input, pattern, &Substitutions::new());
+        let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -408,13 +409,13 @@ mod test {
             ("hello world, goodbye moon", "hello [..], [..] world", false),
         ];
         for (line, pattern, expected) in cases {
-            let actual = line_matches(line, pattern, &Substitutions::new());
+            let actual = line_matches(line, pattern, &Redactions::new());
             assert_eq!(expected, actual, "line={:?}  pattern={:?}", line, pattern);
         }
     }
 
     #[test]
-    fn test_validate_key() {
+    fn test_validate_placeholder() {
         let cases = [
             ("[HELLO", false),
             ("HELLO]", false),
@@ -422,9 +423,9 @@ mod test {
             ("[hello]", false),
             ("[HE  O]", false),
         ];
-        for (key, expected) in cases {
-            let actual = validate_key(key).is_ok();
-            assert_eq!(expected, actual, "key={:?}", key);
+        for (placeholder, expected) in cases {
+            let actual = validate_placeholder(placeholder).is_ok();
+            assert_eq!(expected, actual, "placeholder={:?}", placeholder);
         }
     }
 }

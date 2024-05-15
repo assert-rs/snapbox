@@ -95,14 +95,13 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
-mod action;
-mod assert;
-mod error;
 mod macros;
-mod substitutions;
 
+pub mod assert;
 pub mod cmd;
 pub mod data;
+pub mod dir;
+pub mod filter;
 pub mod path;
 pub mod report;
 pub mod utils;
@@ -110,16 +109,24 @@ pub mod utils;
 #[cfg(feature = "harness")]
 pub mod harness;
 
-pub use action::Action;
-pub use action::DEFAULT_ACTION_ENV;
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::Assert`")]
+pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
-pub use error::Error;
+pub use filter::Redactions;
 pub use snapbox_macros::debug;
-pub use substitutions::Substitutions;
 
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+#[deprecated(since = "0.5.11", note = "Replaced with `Redactions`")]
+pub type Substitutions = filter::Redactions;
+
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::DEFAULT_ACTION_ENV`")]
+pub const DEFAULT_ACTION_ENV: &str = assert::DEFAULT_ACTION_ENV;
+
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::Result`")]
+pub type Result<T, E = assert::Error> = std::result::Result<T, E>;
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::Error`")]
+pub type Error = assert::Error;
 
 /// Check if a value is the same as an expected value
 ///
@@ -142,7 +149,7 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[track_caller]
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .eq(expected, actual);
 }
 
@@ -174,7 +181,7 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 #[track_caller]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .matches(pattern, actual);
 }
 
@@ -187,14 +194,14 @@ pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::
 /// let expected_root = "tests/snapshots/output.txt";
 /// snapbox::assert_subset_eq(expected_root, output_root);
 /// ```
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 #[track_caller]
 pub fn assert_subset_eq(
     expected_root: impl Into<std::path::PathBuf>,
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_eq(expected_root, actual_root);
 }
 
@@ -214,13 +221,13 @@ pub fn assert_subset_eq(
 /// let expected_root = "tests/snapshots/output.txt";
 /// snapbox::assert_subset_matches(expected_root, output_root);
 /// ```
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 #[track_caller]
 pub fn assert_subset_matches(
     pattern_root: impl Into<std::path::PathBuf>,
     actual_root: impl Into<std::path::PathBuf>,
 ) {
     Assert::new()
-        .action_env(DEFAULT_ACTION_ENV)
+        .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_matches(pattern_root, actual_root);
 }
