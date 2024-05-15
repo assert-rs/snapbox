@@ -101,6 +101,7 @@ mod substitutions;
 pub mod assert;
 pub mod cmd;
 pub mod data;
+pub mod dir;
 pub mod filter;
 pub mod path;
 pub mod report;
