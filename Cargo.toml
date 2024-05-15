@@ -85,6 +85,9 @@ let_and_return = "allow"  # sometimes good to name what you are returning
 # wildcard_imports = "warn"
 # zero_sized_map_values = "warn"
 
+# Remove these later:
+assigning_clones = "allow"
+
 [package]
 name = "trycmd"
 version = "0.15.1"
