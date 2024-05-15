@@ -114,27 +114,33 @@ pub(crate) enum DataInner {
 }
 
 impl Data {
+    pub(crate) fn with_inner(inner: DataInner) -> Self {
+        Self {
+            inner,
+            source: None,
+        }
+    }
+
     /// Mark the data as binary (no post-processing)
     pub fn binary(raw: impl Into<Vec<u8>>) -> Self {
-        DataInner::Binary(raw.into()).into()
+        Self::with_inner(DataInner::Binary(raw.into()))
     }
 
     /// Mark the data as text (post-processing)
     pub fn text(raw: impl Into<String>) -> Self {
-        DataInner::Text(raw.into()).into()
+        Self::with_inner(DataInner::Text(raw.into()))
     }
 
     #[cfg(feature = "json")]
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
-        DataInner::Json(raw.into()).into()
+        Self::with_inner(DataInner::Json(raw.into()))
     }
 
     fn error(raw: impl Into<crate::Error>, intended: DataFormat) -> Self {
-        DataError {
+        Self::with_inner(DataInner::Error(DataError {
             error: raw.into(),
             intended,
-        }
-        .into()
+        }))
     }
 
     /// Empty test data
@@ -284,13 +290,13 @@ impl Data {
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (inner, DataFormat::Binary) => {
-                let remake: Self = inner.into();
+                let remake = Self::with_inner(inner);
                 DataInner::Binary(remake.to_bytes().expect("error case handled"))
             }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                if let Some(str) = Data::from(inner).render() {
+                if let Some(str) = Self::with_inner(inner).render() {
                     DataInner::Text(str)
                 } else {
                     return Err(format!("cannot convert {original:?} to {format:?}").into());
@@ -305,73 +311,75 @@ impl Data {
     ///
     /// This is generally used on `actual` data to make it match `expected`
     pub fn coerce_to(self, format: DataFormat) -> Self {
-        let mut data = match (self.inner, format) {
-            (DataInner::Error(inner), _) => inner.into(),
-            (inner, DataFormat::Error) => inner.into(),
-            (DataInner::Binary(inner), DataFormat::Binary) => Self::binary(inner),
-            (DataInner::Text(inner), DataFormat::Text) => Self::text(inner),
+        let source = self.source;
+        let inner = match (self.inner, format) {
+            (DataInner::Error(inner), _) => DataInner::Error(inner),
+            (inner, DataFormat::Error) => inner,
+            (DataInner::Binary(inner), DataFormat::Binary) => DataInner::Binary(inner),
+            (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
             #[cfg(feature = "json")]
-            (DataInner::Json(inner), DataFormat::Json) => Self::json(inner),
+            (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
             #[cfg(feature = "term-svg")]
-            (DataInner::TermSvg(inner), DataFormat::TermSvg) => inner.into(),
+            (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
                 if is_binary(&inner) {
-                    Self::binary(inner)
+                    DataInner::Binary(inner)
                 } else {
                     match String::from_utf8(inner) {
                         Ok(str) => {
                             let coerced = Self::text(str).coerce_to(format);
                             // if the Text cannot be coerced into the correct format
                             // reset it back to Binary
-                            if coerced.format() != format {
+                            let coerced = if coerced.format() != format {
                                 coerced.coerce_to(DataFormat::Binary)
                             } else {
                                 coerced
-                            }
+                            };
+                            coerced.inner
                         }
                         Err(err) => {
                             let bin = err.into_bytes();
-                            Self::binary(bin)
+                            DataInner::Binary(bin)
                         }
                     }
                 }
             }
             #[cfg(feature = "json")]
             (DataInner::Text(inner), DataFormat::Json) => {
-                match serde_json::from_str::<serde_json::Value>(&inner) {
-                    Ok(json) => Self::json(json),
-                    Err(_) => Self::text(inner),
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&inner) {
+                    DataInner::Json(json)
+                } else {
+                    DataInner::Text(inner)
                 }
             }
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => {
-                DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner)).into()
+                DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner))
             }
             (inner, DataFormat::Binary) => {
-                let remake: Self = inner.into();
-                Self::binary(remake.to_bytes().expect("error case handled"))
+                let remake = Self::with_inner(inner);
+                DataInner::Binary(remake.to_bytes().expect("error case handled"))
             }
             // This variant is already covered unless structured data is enabled
             #[cfg(feature = "structured-data")]
             (inner, DataFormat::Text) => {
-                let remake: Self = inner.into();
+                let remake = Self::with_inner(inner);
                 if let Some(str) = remake.render() {
-                    Self::text(str)
+                    DataInner::Text(str)
                 } else {
-                    remake
+                    remake.inner
                 }
             }
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "json")]
-            (inner, DataFormat::Json) => inner.into(),
+            (inner, DataFormat::Json) => inner,
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "term-svg")]
-            (inner, DataFormat::TermSvg) => inner.into(),
+            (inner, DataFormat::TermSvg) => inner,
         };
-        data.source = self.source;
-        data
+        Self { inner, source }
     }
 
     /// Outputs the current `DataFormat` of the underlying data
@@ -408,24 +416,6 @@ impl Data {
             DataInner::Json(_) => None,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => text_elem(data),
-        }
-    }
-}
-
-impl From<DataInner> for Data {
-    fn from(inner: DataInner) -> Self {
-        Data {
-            inner,
-            source: None,
-        }
-    }
-}
-
-impl From<DataError> for Data {
-    fn from(inner: DataError) -> Self {
-        Data {
-            inner: DataInner::Error(inner),
-            source: None,
         }
     }
 }
