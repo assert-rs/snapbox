@@ -204,7 +204,7 @@ impl Data {
     pub fn try_read_from(
         path: &std::path::Path,
         data_format: Option<DataFormat>,
-    ) -> Result<Self, crate::Error> {
+    ) -> crate::Result<Self> {
         let data =
             std::fs::read(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
         let data = Self::binary(data);
@@ -228,7 +228,7 @@ impl Data {
     }
 
     /// Overwrite a snapshot
-    pub fn write_to(&self, source: &DataSource) -> Result<(), crate::Error> {
+    pub fn write_to(&self, source: &DataSource) -> crate::Result<()> {
         match &source.inner {
             source::DataSourceInner::Path(p) => self.write_to_path(p),
             source::DataSourceInner::Inline(p) => runtime::get()
@@ -238,7 +238,7 @@ impl Data {
     }
 
     /// Overwrite a snapshot
-    pub fn write_to_path(&self, path: &std::path::Path) -> Result<(), crate::Error> {
+    pub fn write_to_path(&self, path: &std::path::Path) -> crate::Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
                 format!("Failed to create parent dir for {}: {}", path.display(), e)
@@ -272,7 +272,7 @@ impl Data {
         }
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, crate::Error> {
+    pub fn to_bytes(&self) -> crate::Result<Vec<u8>> {
         match &self.inner {
             DataInner::Error(err) => Err(err.error.clone()),
             DataInner::Binary(data) => Ok(data.clone()),
@@ -296,7 +296,7 @@ impl Data {
         }
     }
 
-    fn try_is(self, format: DataFormat) -> Result<Self, crate::Error> {
+    fn try_is(self, format: DataFormat) -> crate::Result<Self> {
         let original = self.format();
         let source = self.source;
         let inner = match (self.inner, format) {

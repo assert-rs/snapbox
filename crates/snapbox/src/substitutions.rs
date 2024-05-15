@@ -36,7 +36,7 @@ impl Substitutions {
         &mut self,
         key: &'static str,
         value: impl Into<Cow<'static, str>>,
-    ) -> Result<(), crate::Error> {
+    ) -> crate::Result<()> {
         let key = validate_key(key)?;
         let value = value.into();
         if value.is_empty() {
@@ -56,14 +56,14 @@ impl Substitutions {
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
-    ) -> Result<(), crate::Error> {
+    ) -> crate::Result<()> {
         for (key, value) in vars {
             self.insert(key, value)?;
         }
         Ok(())
     }
 
-    pub fn remove(&mut self, key: &'static str) -> Result<(), crate::Error> {
+    pub fn remove(&mut self, key: &'static str) -> crate::Result<()> {
         let key = validate_key(key)?;
         self.vars.remove(key);
         Ok(())
@@ -108,7 +108,7 @@ impl Substitutions {
     }
 }
 
-fn validate_key(key: &'static str) -> Result<&'static str, crate::Error> {
+fn validate_key(key: &'static str) -> crate::Result<&'static str> {
     if !key.starts_with('[') || !key.ends_with(']') {
         return Err(format!("Key `{}` is not enclosed in []", key).into());
     }

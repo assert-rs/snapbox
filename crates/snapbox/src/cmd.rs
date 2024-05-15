@@ -929,7 +929,7 @@ pub(crate) mod examples {
     pub fn compile_example<'a>(
         target_name: &str,
         args: impl IntoIterator<Item = &'a str>,
-    ) -> Result<std::path::PathBuf, crate::Error> {
+    ) -> crate::Result<std::path::PathBuf> {
         crate::debug!("Compiling example {}", target_name);
         let messages = escargot::CargoBuild::new()
             .current_target()
@@ -971,10 +971,7 @@ pub(crate) mod examples {
     #[cfg(feature = "examples")]
     pub fn compile_examples<'a>(
         args: impl IntoIterator<Item = &'a str>,
-    ) -> Result<
-        impl Iterator<Item = (String, Result<std::path::PathBuf, crate::Error>)>,
-        crate::Error,
-    > {
+    ) -> crate::Result<impl Iterator<Item = (String, crate::Result<std::path::PathBuf>)>> {
         crate::debug!("Compiling examples");
         let mut examples = std::collections::BTreeMap::new();
 
@@ -1003,7 +1000,7 @@ pub(crate) mod examples {
     #[allow(clippy::type_complexity)]
     fn decode_example_message<'m>(
         message: &'m escargot::format::Message,
-    ) -> Option<Result<(&'m str, Result<std::path::PathBuf, crate::Error>), crate::Error>> {
+    ) -> Option<crate::Result<(&'m str, crate::Result<std::path::PathBuf>)>> {
         match message {
             escargot::format::Message::CompilerMessage(msg) => {
                 let level = msg.message.level;
