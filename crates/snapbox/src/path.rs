@@ -7,7 +7,7 @@ pub use crate::current_dir;
 #[doc(inline)]
 pub use crate::current_rs;
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 use crate::filter::{Filter as _, FilterMatches, FilterNewlines, FilterPaths};
 
 /// Working directory for tests
@@ -18,9 +18,9 @@ pub struct PathFixture(PathFixtureInner);
 enum PathFixtureInner {
     None,
     Immutable(std::path::PathBuf),
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     MutablePath(std::path::PathBuf),
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     MutableTemp {
         temp: tempfile::TempDir,
         path: std::path::PathBuf,
@@ -36,7 +36,7 @@ impl PathFixture {
         Self(PathFixtureInner::Immutable(target.to_owned()))
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn mutable_temp() -> crate::assert::Result<Self> {
         let temp = tempfile::tempdir().map_err(|e| e.to_string())?;
         // We need to get the `/private` prefix on Mac so variable substitutions work
@@ -46,7 +46,7 @@ impl PathFixture {
         Ok(Self(PathFixtureInner::MutableTemp { temp, path }))
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn mutable_at(target: &std::path::Path) -> crate::assert::Result<Self> {
         let _ = std::fs::remove_dir_all(target);
         std::fs::create_dir_all(target)
@@ -54,7 +54,7 @@ impl PathFixture {
         Ok(Self(PathFixtureInner::MutablePath(target.to_owned())))
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn with_template(self, template_root: &std::path::Path) -> crate::assert::Result<Self> {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => {
@@ -76,9 +76,9 @@ impl PathFixture {
     pub fn is_mutable(&self) -> bool {
         match &self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => false,
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutablePath(_) => true,
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutableTemp { .. } => true,
         }
     }
@@ -87,9 +87,9 @@ impl PathFixture {
         match &self.0 {
             PathFixtureInner::None => None,
             PathFixtureInner::Immutable(path) => Some(path.as_path()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutablePath(path) => Some(path.as_path()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutableTemp { path, .. } => Some(path.as_path()),
         }
     }
@@ -98,9 +98,9 @@ impl PathFixture {
     pub fn close(self) -> Result<(), std::io::Error> {
         match self.0 {
             PathFixtureInner::None | PathFixtureInner::Immutable(_) => Ok(()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutablePath(_) => Ok(()),
-            #[cfg(feature = "path")]
+            #[cfg(feature = "dir")]
             PathFixtureInner::MutableTemp { temp, .. } => temp.close(),
         }
     }
@@ -139,7 +139,7 @@ impl PathDiff {
     /// Report differences between `actual_root` and `pattern_root`
     ///
     /// Note: Requires feature flag `path`
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn subset_eq_iter(
         pattern_root: impl Into<std::path::PathBuf>,
         actual_root: impl Into<std::path::PathBuf>,
@@ -149,7 +149,7 @@ impl PathDiff {
         Self::subset_eq_iter_inner(pattern_root, actual_root)
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub(crate) fn subset_eq_iter_inner(
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
@@ -212,7 +212,7 @@ impl PathDiff {
     /// Report differences between `actual_root` and `pattern_root`
     ///
     /// Note: Requires feature flag `path`
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub fn subset_matches_iter(
         pattern_root: impl Into<std::path::PathBuf>,
         actual_root: impl Into<std::path::PathBuf>,
@@ -223,7 +223,7 @@ impl PathDiff {
         Self::subset_matches_iter_inner(pattern_root, actual_root, substitutions, true)
     }
 
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     pub(crate) fn subset_matches_iter_inner(
         expected_root: std::path::PathBuf,
         actual_root: std::path::PathBuf,
@@ -471,12 +471,12 @@ impl std::fmt::Display for FileType {
 /// Recursively walk a path
 ///
 /// Note: Ignores `.keep` files
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 pub struct Walk {
     inner: walkdir::IntoIter,
 }
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 impl Walk {
     pub fn new(path: &std::path::Path) -> Self {
         Self {
@@ -485,7 +485,7 @@ impl Walk {
     }
 }
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 impl Iterator for Walk {
     type Item = Result<std::path::PathBuf, std::io::Error>;
 
@@ -509,7 +509,7 @@ impl Iterator for Walk {
 /// Note: Generally you'll use [`PathFixture::with_template`] instead.
 ///
 /// Note: Ignores `.keep` files
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 pub fn copy_template(
     source: impl AsRef<std::path::Path>,
     dest: impl AsRef<std::path::Path>,
@@ -577,7 +577,7 @@ fn shallow_copy(source: &std::path::Path, dest: &std::path::Path) -> crate::asse
     Ok(())
 }
 
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 fn copy_stats(
     source_meta: &std::fs::Metadata,
     dest: &std::path::Path,
@@ -588,7 +588,7 @@ fn copy_stats(
     Ok(())
 }
 
-#[cfg(not(feature = "path"))]
+#[cfg(not(feature = "dir"))]
 fn copy_stats(
     _source_meta: &std::fs::Metadata,
     _dest: &std::path::Path,
@@ -624,11 +624,11 @@ pub fn resolve_dir(
 }
 
 fn canonicalize(path: &std::path::Path) -> Result<std::path::PathBuf, std::io::Error> {
-    #[cfg(feature = "path")]
+    #[cfg(feature = "dir")]
     {
         dunce::canonicalize(path)
     }
-    #[cfg(not(feature = "path"))]
+    #[cfg(not(feature = "dir"))]
     {
         // Hope for the best
         Ok(strip_trailing_slash(path).to_owned())

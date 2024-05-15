@@ -191,7 +191,7 @@ pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::
 /// let expected_root = "tests/snapshots/output.txt";
 /// snapbox::assert_subset_eq(expected_root, output_root);
 /// ```
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 #[track_caller]
 pub fn assert_subset_eq(
     expected_root: impl Into<std::path::PathBuf>,
@@ -218,7 +218,7 @@ pub fn assert_subset_eq(
 /// let expected_root = "tests/snapshots/output.txt";
 /// snapbox::assert_subset_matches(expected_root, output_root);
 /// ```
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 #[track_caller]
 pub fn assert_subset_matches(
     pattern_root: impl Into<std::path::PathBuf>,

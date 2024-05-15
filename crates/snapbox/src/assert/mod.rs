@@ -240,7 +240,7 @@ impl Assert {
 }
 
 /// # Directory Assertions
-#[cfg(feature = "path")]
+#[cfg(feature = "dir")]
 impl Assert {
     #[track_caller]
     pub fn subset_eq(
