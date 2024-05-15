@@ -503,7 +503,7 @@ impl Case {
 
         #[cfg(feature = "filesystem")]
         if let Mode::Dump(_) = mode {
-            // Handled as part of PathFixture
+            // Handled as part of DirRoot
         } else {
             let fixture_root = self.path.with_extension("out");
             if fixture_root.exists() {
@@ -1019,20 +1019,20 @@ fn fs_context(
     cwd: Option<&std::path::Path>,
     sandbox: bool,
     mode: &crate::Mode,
-) -> Result<snapbox::dir::PathFixture, crate::Error> {
+) -> Result<snapbox::dir::DirRoot, crate::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
             crate::Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
-                let mut context = snapbox::dir::PathFixture::mutable_at(&target)?;
+                let mut context = snapbox::dir::DirRoot::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
                 Ok(context)
             }
             crate::Mode::Fail | crate::Mode::Overwrite => {
-                let mut context = snapbox::dir::PathFixture::mutable_temp()?;
+                let mut context = snapbox::dir::DirRoot::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
                 }
@@ -1043,7 +1043,7 @@ fn fs_context(
         Err("Sandboxing is disabled".into())
     } else {
         Ok(cwd
-            .map(snapbox::dir::PathFixture::immutable)
-            .unwrap_or_else(snapbox::dir::PathFixture::none))
+            .map(snapbox::dir::DirRoot::immutable)
+            .unwrap_or_else(snapbox::dir::DirRoot::none))
     }
 }

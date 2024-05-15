@@ -14,7 +14,7 @@ pub use ops::resolve_dir;
 pub use ops::strip_trailing_slash;
 #[cfg(feature = "dir")]
 pub use ops::Walk;
-pub use root::PathFixture;
+pub use root::DirRoot;
 
 #[cfg(feature = "dir")]
 pub(crate) use ops::canonicalize;

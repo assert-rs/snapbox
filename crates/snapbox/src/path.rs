@@ -8,8 +8,8 @@ pub use crate::current_dir;
 pub use crate::current_rs;
 
 /// Working directory for tests
-#[deprecated(since = "0.5.11", note = "Replaced with dir::PathFixture")]
-pub type PathFixture = crate::dir::PathFixture;
+#[deprecated(since = "0.5.11", note = "Replaced with dir::DirRoot")]
+pub type PathFixture = crate::dir::DirRoot;
 
 pub use crate::dir::FileType;
 pub use crate::dir::PathDiff;
