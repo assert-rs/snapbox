@@ -95,7 +95,6 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
-mod action;
 mod error;
 mod macros;
 mod substitutions;
@@ -111,14 +110,17 @@ pub mod utils;
 #[cfg(feature = "harness")]
 pub mod harness;
 
-pub use action::Action;
-pub use action::DEFAULT_ACTION_ENV;
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::Assert`")]
+pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::ToDebug;
 pub use error::Error;
 pub use snapbox_macros::debug;
 pub use substitutions::Substitutions;
+
+#[deprecated(since = "0.5.11", note = "Replaced with `assert::DEFAULT_ACTION_ENV`")]
+pub const DEFAULT_ACTION_ENV: &str = assert::DEFAULT_ACTION_ENV;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 

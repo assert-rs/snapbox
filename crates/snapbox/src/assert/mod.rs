@@ -1,3 +1,5 @@
+mod action;
+
 #[cfg(feature = "color")]
 use anstream::panic;
 #[cfg(feature = "color")]
@@ -6,7 +8,9 @@ use anstream::stderr;
 use std::io::stderr;
 
 use crate::filter::{Filter as _, FilterMatches, FilterNewlines, FilterPaths};
-use crate::Action;
+
+pub use action::Action;
+pub use action::DEFAULT_ACTION_ENV;
 
 /// Snapshot assertion against a file's contents
 ///
