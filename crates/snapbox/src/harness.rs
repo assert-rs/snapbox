@@ -98,6 +98,12 @@ where
         self
     }
 
+    /// Customize the assertion behavior
+    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+        self.config = config;
+        self
+    }
+
     /// Run tests
     pub fn test(self) -> ! {
         let mut walk = ignore::WalkBuilder::new(&self.root);
