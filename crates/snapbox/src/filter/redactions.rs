@@ -97,12 +97,12 @@ impl Redactions {
     }
 
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
-        if pattern.contains('[') {
-            let mut pattern = Cow::Borrowed(pattern);
+        if !self.unused.is_empty() && pattern.contains('[') {
+            let mut pattern = pattern.to_owned();
             for var in self.unused.iter() {
-                pattern = Cow::Owned(pattern.replace(var, ""));
+                pattern = pattern.replace(var, "");
             }
-            pattern
+            Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
         }
@@ -316,6 +316,15 @@ mod test {
     }
 
     #[test]
+    fn elide_delimited_with_sub() {
+        let input = "Hello World\nHow are you?\nGoodbye World";
+        let pattern = "Hello [..]\n...\nGoodbye [..]";
+        let expected = "Hello [..]\nHow are you?\nGoodbye World";
+        let actual = normalize(input, pattern, &Redactions::new());
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn leading_elide() {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
@@ -427,5 +436,25 @@ mod test {
             let actual = validate_placeholder(placeholder).is_ok();
             assert_eq!(expected, actual, "placeholder={:?}", placeholder);
         }
+    }
+
+    #[test]
+    fn substitute_literal() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Redactions::new();
+        sub.insert("[OBJECT]", "world").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    fn substitute_disabled() {
+        let input = "cargo";
+        let pattern = "cargo[EXE]";
+        let mut sub = Redactions::new();
+        sub.insert("[EXE]", "").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
     }
 }
