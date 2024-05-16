@@ -29,7 +29,7 @@ pub use error::Result;
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
-    action: Action,
+    pub(crate) action: Action,
     action_var: Option<String>,
     normalize_paths: bool,
     substitutions: crate::Redactions,
@@ -64,24 +64,30 @@ impl Assert {
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
-        self.eq_inner(expected, actual);
+        if let Err(err) = self.try_eq(expected, actual, Some(&"In-memory")) {
+            err.panic();
+        }
     }
 
-    #[track_caller]
-    fn eq_inner(&self, expected: crate::Data, actual: crate::Data) {
+    pub(crate) fn try_eq(
+        &self,
+        expected: crate::Data,
+        actual: crate::Data,
+        actual_name: Option<&dyn std::fmt::Display>,
+    ) -> Result<()> {
         if expected.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
         match self.action {
             Action::Skip => {
-                return;
+                return Ok(());
             }
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
         let (expected, actual) = self.normalize_eq(expected, actual);
 
-        self.do_action(expected, actual, Some(&"In-memory"));
+        self.do_action(expected, actual, actual_name)
     }
 
     /// Check if a value matches a pattern
@@ -113,24 +119,30 @@ impl Assert {
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
         let actual = actual.into();
-        self.matches_inner(pattern, actual);
+        if let Err(err) = self.try_matches(pattern, actual, Some(&"In-memory")) {
+            err.panic();
+        }
     }
 
-    #[track_caller]
-    fn matches_inner(&self, pattern: crate::Data, actual: crate::Data) {
+    pub(crate) fn try_matches(
+        &self,
+        pattern: crate::Data,
+        actual: crate::Data,
+        actual_name: Option<&dyn std::fmt::Display>,
+    ) -> Result<()> {
         if pattern.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
         match self.action {
             Action::Skip => {
-                return;
+                return Ok(());
             }
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
         let (expected, actual) = self.normalize_match(pattern, actual);
 
-        self.do_action(expected, actual, Some(&"In-memory"));
+        self.do_action(expected, actual, actual_name)
     }
 
     pub(crate) fn normalize_eq(
@@ -169,47 +181,49 @@ impl Assert {
         (expected, actual)
     }
 
-    #[track_caller]
     pub(crate) fn do_action(
         &self,
         expected: crate::Data,
         actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
-    ) {
+    ) -> Result<()> {
         let result = self.try_verify(&expected, &actual, actual_name);
-        if let Err(err) = result {
-            match self.action {
-                Action::Skip => unreachable!("Bailed out earlier"),
-                Action::Ignore => {
-                    use std::io::Write;
+        let Err(err) = result else {
+            return Ok(());
+        };
+        match self.action {
+            Action::Skip => unreachable!("Bailed out earlier"),
+            Action::Ignore => {
+                use std::io::Write;
 
-                    let _ = writeln!(
-                        stderr(),
-                        "{}: {}",
-                        self.palette.warn("Ignoring failure"),
-                        err
-                    );
-                }
-                Action::Verify => {
-                    let message = if expected.source().is_none() {
-                        crate::report::Styled::new(String::new(), Default::default())
-                    } else if let Some(action_var) = self.action_var.as_deref() {
-                        self.palette
-                            .hint(format!("Update with {}=overwrite", action_var))
-                    } else {
-                        crate::report::Styled::new(String::new(), Default::default())
-                    };
-                    panic!("{err}{message}");
-                }
-                Action::Overwrite => {
-                    use std::io::Write;
+                let _ = writeln!(
+                    stderr(),
+                    "{}: {}",
+                    self.palette.warn("Ignoring failure"),
+                    err
+                );
+                Ok(())
+            }
+            Action::Verify => {
+                let message = if expected.source().is_none() {
+                    crate::report::Styled::new(String::new(), Default::default())
+                } else if let Some(action_var) = self.action_var.as_deref() {
+                    self.palette
+                        .hint(format!("Update with {}=overwrite", action_var))
+                } else {
+                    crate::report::Styled::new(String::new(), Default::default())
+                };
+                Err(Error::new(format_args!("{err}{message}")))
+            }
+            Action::Overwrite => {
+                use std::io::Write;
 
-                    if let Some(source) = expected.source() {
-                        let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
-                        actual.write_to(source).unwrap();
-                    } else {
-                        panic!("{err}");
-                    }
+                if let Some(source) = expected.source() {
+                    let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
+                    actual.write_to(source).unwrap();
+                    Ok(())
+                } else {
+                    Err(Error::new(format_args!("{err}")))
                 }
             }
         }
