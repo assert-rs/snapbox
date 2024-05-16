@@ -124,7 +124,7 @@ impl Assert {
         self.do_action(expected, actual, actual_name)
     }
 
-    pub(crate) fn normalize(
+    fn normalize(
         &self,
         mut expected: crate::Data,
         mut actual: crate::Data,
@@ -150,7 +150,7 @@ impl Assert {
         (expected, actual)
     }
 
-    pub(crate) fn do_action(
+    fn do_action(
         &self,
         expected: crate::Data,
         actual: crate::Data,
@@ -198,7 +198,7 @@ impl Assert {
         }
     }
 
-    pub(crate) fn try_verify(
+    fn try_verify(
         &self,
         expected: &crate::Data,
         actual: &crate::Data,
