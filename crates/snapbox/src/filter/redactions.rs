@@ -7,8 +7,8 @@ use std::borrow::Cow;
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Redactions {
-    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<Cow<'static, str>>>,
-    unused: std::collections::BTreeSet<&'static str>,
+    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<RedactedValueInner>>,
+    unused: std::collections::BTreeSet<RedactedValueInner>,
 }
 
 impl Redactions {
@@ -35,18 +35,14 @@ impl Redactions {
     pub fn insert(
         &mut self,
         placeholder: &'static str,
-        value: impl Into<Cow<'static, str>>,
+        value: impl Into<RedactedValue>,
     ) -> crate::assert::Result<()> {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
-        if value.is_empty() {
-            self.unused.insert(placeholder);
+        if let Some(inner) = value.inner {
+            self.vars.entry(placeholder).or_default().insert(inner);
         } else {
-            #[allow(deprecated)]
-            self.vars
-                .entry(placeholder)
-                .or_default()
-                .insert(crate::utils::normalize_text(value.as_ref()).into());
+            self.unused.insert(RedactedValueInner::Str(placeholder));
         }
         Ok(())
     }
@@ -56,7 +52,7 @@ impl Redactions {
     /// placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
-        vars: impl IntoIterator<Item = (&'static str, impl Into<Cow<'static, str>>)>,
+        vars: impl IntoIterator<Item = (&'static str, impl Into<RedactedValue>)>,
     ) -> crate::assert::Result<()> {
         for (placeholder, value) in vars {
             self.insert(placeholder, value)?;
@@ -89,9 +85,9 @@ impl Redactions {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
-            self.vars.iter().flat_map(|(var, replaces)| {
-                replaces.iter().map(|replace| (replace.as_ref(), *var))
-            }),
+            self.vars
+                .iter()
+                .flat_map(|(var, replaces)| replaces.iter().map(|replace| (replace, *var))),
         );
         Cow::Owned(input)
     }
@@ -99,7 +95,7 @@ impl Redactions {
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
         if !self.unused.is_empty() && pattern.contains('[') {
             let mut pattern = pattern.to_owned();
-            replace_many(&mut pattern, self.unused.iter().map(|var| (*var, "")));
+            replace_many(&mut pattern, self.unused.iter().map(|var| (var, "")));
             Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
@@ -107,16 +103,56 @@ impl Redactions {
     }
 }
 
+#[derive(Clone)]
+pub struct RedactedValue {
+    inner: Option<RedactedValueInner>,
+}
+
+#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+enum RedactedValueInner {
+    Str(&'static str),
+    String(String),
+}
+
+impl RedactedValueInner {
+    fn find_in(&self, buffer: &str) -> Option<std::ops::Range<usize>> {
+        match self {
+            Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            Self::String(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+        }
+    }
+}
+
+impl<C> From<C> for RedactedValue
+where
+    C: Into<Cow<'static, str>>,
+{
+    fn from(inner: C) -> Self {
+        let inner = inner.into();
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            #[allow(deprecated)]
+            Self {
+                inner: Some(RedactedValueInner::String(crate::utils::normalize_text(
+                    &inner,
+                ))),
+            }
+        }
+    }
+}
+
+/// Replacements is `(from, to)`
 fn replace_many<'a>(
     buffer: &mut String,
-    replacements: impl IntoIterator<Item = (&'a str, &'a str)>,
+    replacements: impl IntoIterator<Item = (&'a RedactedValueInner, &'a str)>,
 ) {
     for (var, replace) in replacements {
         let mut index = 0;
-        while let Some(offset) = buffer[index..].find(var) {
-            let old_range = (index + offset)..(index + offset + var.len());
+        while let Some(offset) = var.find_in(&buffer[index..]) {
+            let old_range = (index + offset.start)..(index + offset.end);
             buffer.replace_range(old_range, replace);
-            index += offset + replace.len();
+            index += offset.start + replace.len();
         }
     }
 }
