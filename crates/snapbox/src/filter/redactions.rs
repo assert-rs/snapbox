@@ -85,26 +85,38 @@ impl Redactions {
         normalize(input, pattern, self)
     }
 
-    fn substitute<'v>(&self, value: &'v str) -> Cow<'v, str> {
-        let mut value = Cow::Borrowed(value);
-        for (var, replace) in self.vars.iter() {
-            for replace in replace {
-                debug_assert!(!replace.is_empty());
-                value = Cow::Owned(value.replace(replace.as_ref(), var));
-            }
-        }
-        value
+    fn substitute<'v>(&self, input: &'v str) -> Cow<'v, str> {
+        let mut input = input.to_owned();
+        replace_many(
+            &mut input,
+            self.vars.iter().flat_map(|(var, replaces)| {
+                replaces.iter().map(|replace| (replace.as_ref(), *var))
+            }),
+        );
+        Cow::Owned(input)
     }
 
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
         if !self.unused.is_empty() && pattern.contains('[') {
             let mut pattern = pattern.to_owned();
-            for var in self.unused.iter() {
-                pattern = pattern.replace(var, "");
-            }
+            replace_many(&mut pattern, self.unused.iter().map(|var| (*var, "")));
             Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
+        }
+    }
+}
+
+fn replace_many<'a>(
+    buffer: &mut String,
+    replacements: impl IntoIterator<Item = (&'a str, &'a str)>,
+) {
+    for (var, replace) in replacements {
+        let mut index = 0;
+        while let Some(offset) = buffer[index..].find(var) {
+            let old_range = (index + offset)..(index + offset + var.len());
+            buffer.replace_range(old_range, replace);
+            index += offset + replace.len();
         }
     }
 }
