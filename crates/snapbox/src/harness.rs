@@ -12,7 +12,6 @@
 //!     test,
 //! )
 //! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOTS")
 //! .test();
 //!
 //! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
@@ -90,12 +89,14 @@ where
     }
 
     /// Read the failure action from an environment variable
+    #[deprecated(since = "0.1.0", note = "Replaced with `Harness::with_assert`")]
     pub fn action_env(mut self, var_name: &str) -> Self {
         self.config = self.config.action_env(var_name);
         self
     }
 
     /// Override the failure action
+    #[deprecated(since = "0.1.0", note = "Replaced with `Harness::with_assert`")]
     pub fn action(mut self, action: Action) -> Self {
         self.config = self.config.action(action);
         self
