@@ -34,6 +34,8 @@
 //! }
 //! ```
 
+#![allow(deprecated)]
+
 use crate::data::DataFormat;
 use crate::Action;
 
@@ -45,6 +47,7 @@ use libtest_mimic::Trial;
 /// [`Cargo and rustupes?cargo-and-rustups
 ///
 /// See [`harness`][crate::harness] for more details
+#[deprecated(since = "0.5.12", note = "Replaced with `tryfn` crate")]
 pub struct Harness<S, T> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
