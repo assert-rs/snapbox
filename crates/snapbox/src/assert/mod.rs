@@ -291,7 +291,7 @@ impl Assert {
         }
 
         let checks: Vec<_> =
-            crate::path::PathDiff::subset_eq_iter_inner(expected_root, actual_root).collect();
+            crate::dir::PathDiff::subset_eq_iter_inner(expected_root, actual_root).collect();
         self.verify(checks);
     }
 
@@ -319,7 +319,7 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let checks: Vec<_> = crate::path::PathDiff::subset_matches_iter_inner(
+        let checks: Vec<_> = crate::dir::PathDiff::subset_matches_iter_inner(
             expected_root,
             actual_root,
             &self.substitutions,
@@ -332,7 +332,7 @@ impl Assert {
     #[track_caller]
     fn verify(
         &self,
-        mut checks: Vec<Result<(std::path::PathBuf, std::path::PathBuf), crate::path::PathDiff>>,
+        mut checks: Vec<Result<(std::path::PathBuf, std::path::PathBuf), crate::dir::PathDiff>>,
     ) {
         if checks.iter().all(Result::is_ok) {
             for check in checks {

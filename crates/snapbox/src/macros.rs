@@ -1,3 +1,50 @@
+/// Check if a value is the same as an expected value
+///
+/// By default [`filters`][crate::filter] are applied, including:
+/// - `...` is a line-wildcard when on a line by itself
+/// - `[..]` is a character-wildcard when inside a line
+/// - `[EXE]` matches `.exe` on Windows
+/// - `\` to `/`
+/// - Newlines
+///
+/// To limit this to newline normalization for text, call [`Data::raw`][crate::Data] on `expected`.
+///
+/// # Effective signature
+///
+/// ```rust
+/// # use snapbox::IntoData;
+/// fn assert_data_eq(actual: impl IntoData, expected: impl IntoData) {
+///     // ...
+/// }
+/// ```
+///
+/// # Examples
+///
+/// ```rust
+/// # use snapbox::assert_data_eq;
+/// let output = "something";
+/// let expected = "so[..]g";
+/// assert_data_eq!(output, expected);
+/// ```
+///
+/// Can combine this with [`file!`]
+/// ```rust,no_run
+/// # use snapbox::assert_data_eq;
+/// # use snapbox::file;
+/// let actual = "something";
+/// assert_data_eq!(actual, file!["output.txt"]);
+/// ```
+#[macro_export]
+macro_rules! assert_data_eq {
+    ($actual: expr, $expected: expr $(,)?) => {{
+        let actual = $crate::IntoData::into_data($actual);
+        let expected = $crate::IntoData::into_data($expected);
+        $crate::Assert::new()
+            .action_env($crate::assert::DEFAULT_ACTION_ENV)
+            .eq_(actual, expected);
+    }};
+}
+
 /// Find the directory for your source file
 #[doc(hidden)] // forced to be visible in intended location
 #[macro_export]

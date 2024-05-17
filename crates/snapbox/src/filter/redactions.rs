@@ -17,11 +17,11 @@ impl Redactions {
     }
 
     pub(crate) fn with_exe() -> Self {
-        let mut substitutions = Self::new();
-        substitutions
+        let mut redactions = Self::new();
+        redactions
             .insert("[EXE]", std::env::consts::EXE_SUFFIX)
             .unwrap();
-        substitutions
+        redactions
     }
 
     /// Insert an additional match pattern
@@ -172,7 +172,7 @@ fn validate_placeholder(placeholder: &'static str) -> crate::assert::Result<&'st
     Ok(placeholder)
 }
 
-fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
+fn normalize(input: &str, pattern: &str, redactions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
@@ -191,7 +191,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
                 input_lines[input_index..]
                     .iter()
                     .copied()
-                    .map(|s| substitutions.substitute(s)),
+                    .map(|s| redactions.substitute(s)),
             );
             break 'outer;
         };
@@ -204,7 +204,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
         };
         let next_input_index = input_index + 1;
 
-        if line_matches(input_line, pattern_line, substitutions) {
+        if line_matches(input_line, pattern_line, redactions) {
             pattern_index = next_pattern_index;
             input_index = next_input_index;
             normalized.push(Cow::Borrowed(pattern_line));
@@ -232,7 +232,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
                     input_lines[input_index..]
                         .iter()
                         .copied()
-                        .map(|s| substitutions.substitute(s)),
+                        .map(|s| redactions.substitute(s)),
                 );
                 break 'outer;
             }
@@ -250,7 +250,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
                         input_lines[input_index..future_input_index]
                             .iter()
                             .copied()
-                            .map(|s| substitutions.substitute(s)),
+                            .map(|s| redactions.substitute(s)),
                     );
                     pattern_index = future_pattern_index;
                     input_index = future_input_index;
@@ -262,7 +262,7 @@ fn normalize(input: &str, pattern: &str, substitutions: &Redactions) -> String {
                 input_lines[input_index..]
                     .iter()
                     .copied()
-                    .map(|s| substitutions.substitute(s)),
+                    .map(|s| redactions.substitute(s)),
             );
             break 'outer;
         }
@@ -275,15 +275,15 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(line: &str, pattern: &str, substitutions: &Redactions) -> bool {
+fn line_matches(line: &str, pattern: &str, redactions: &Redactions) -> bool {
     if line == pattern {
         return true;
     }
 
-    let subbed = substitutions.substitute(line);
+    let subbed = redactions.substitute(line);
     let mut line = subbed.as_ref();
 
-    let pattern = substitutions.clear(pattern);
+    let pattern = redactions.clear(pattern);
 
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {

@@ -1,40 +1,40 @@
-use snapbox::assert_eq;
+use snapbox::assert_data_eq;
 use snapbox::file;
 use snapbox::str;
 
 #[test]
 fn test_trivial_assert() {
-    assert_eq(str!["5"], "5");
+    assert_data_eq!("5", str!["5"]);
 }
 
 #[test]
 fn smoke_test_indent() {
-    assert_eq(
+    assert_data_eq!(
+        "\
+line1
+  line2
+",
         str![[r#"
             line1
               line2
         "#]]
         .indent(true),
+    );
+
+    assert_data_eq!(
         "\
 line1
   line2
 ",
-    );
-
-    assert_eq(
         str![[r#"
 line1
   line2
 "#]]
         .indent(false),
-        "\
-line1
-  line2
-",
     );
 }
 
 #[test]
 fn test_expect_file() {
-    assert_eq(file!["../../README.md"], include_str!("../../README.md"))
+    assert_data_eq!(include_str!("../../README.md"), file!["../../README.md"]);
 }
