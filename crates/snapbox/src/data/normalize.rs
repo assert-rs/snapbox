@@ -4,19 +4,19 @@ use super::Data;
 
 pub use crate::filter::Filter as Normalize;
 
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterNewlines")]
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::NormalizeNewlines")]
 pub struct NormalizeNewlines;
 impl Normalize for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
-        crate::filter::FilterNewlines.normalize(data)
+        crate::filter::NormalizeNewlines.normalize(data)
     }
 }
 
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterPaths")]
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::NormalizePaths")]
 pub struct NormalizePaths;
 impl Normalize for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
-        crate::filter::FilterPaths.normalize(data)
+        crate::filter::NormalizePaths.normalize(data)
     }
 }
 

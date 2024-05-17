@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Deprecated `OutputAssert::stderr_matches(expected, actual)` in favor of `OutputAssert::stderr_eq_(actual, expected)`
 - Deprecated `data::Data::normalize` in favor of `filter::Filter::filter`
 - Deprecated `data::Normalize::normalize` in favor of `filter::Filter::filter`
-- Deprecated `data::NormalizeNewlines` in favor of `filter::FilterNewlines`
-- Deprecated `data::NormalizePaths` in favor of `filter::FilterPaths`
+- Deprecated `data::NormalizeNewlines` in favor of `filter::NormalizeNewlines`
+- Deprecated `data::NormalizePaths` in favor of `filter::NormalizePaths`
 - Deprecated `data::NormalizeMatches` in favor of `filter::FilterRedactions`
 - Deprecated `data::Substitutions` in favor of `filter::Redactions`
 - Deprecated `path` feature / mod in favor of `dir` feature / mod
