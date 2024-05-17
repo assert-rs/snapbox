@@ -27,6 +27,7 @@ pub struct FilterNewlines;
 impl Filter for FilterNewlines {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
+        let filters = data.filters;
         let inner = match data.inner {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
@@ -46,7 +47,11 @@ impl Filter for FilterNewlines {
                 DataInner::TermSvg(lines)
             }
         };
-        Data { inner, source }
+        Data {
+            inner,
+            source,
+            filters,
+        }
     }
 }
 
@@ -63,6 +68,7 @@ pub struct FilterPaths;
 impl Filter for FilterPaths {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
+        let filters = data.filters;
         let inner = match data.inner {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
@@ -82,7 +88,11 @@ impl Filter for FilterPaths {
                 DataInner::TermSvg(lines)
             }
         };
-        Data { inner, source }
+        Data {
+            inner,
+            source,
+            filters,
+        }
     }
 }
 
@@ -117,6 +127,7 @@ impl<'a> FilterRedactions<'a> {
 impl Filter for FilterRedactions<'_> {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
+        let filters = data.filters;
         let inner = match data.inner {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
@@ -146,7 +157,11 @@ impl Filter for FilterRedactions<'_> {
                 }
             }
         };
-        Data { inner, source }
+        Data {
+            inner,
+            source,
+            filters,
+        }
     }
 }
 

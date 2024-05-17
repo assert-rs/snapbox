@@ -25,7 +25,7 @@ pub use error::Result;
 /// # use snapbox::Assert;
 /// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().matches(file!["output.txt"], actual);
+/// Assert::new().eq_(actual, file!["output.txt"]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -40,6 +40,42 @@ pub struct Assert {
 impl Assert {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Check if a value is the same as an expected value
+    ///
+    /// By default [`filters`][crate::filter] are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, call [`Data::raw`][crate::Data::raw] on `expected`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use snapbox::Assert;
+    /// let actual = "something";
+    /// let expected = "so[..]g";
+    /// Assert::new().eq_(actual, expected);
+    /// ```
+    ///
+    /// Can combine this with [`file!`][crate::file]
+    /// ```rust,no_run
+    /// # use snapbox::Assert;
+    /// # use snapbox::file;
+    /// let actual = "something";
+    /// Assert::new().eq_(actual, file!["output.txt"]);
+    /// ```
+    #[track_caller]
+    pub fn eq_(&self, actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
+        let expected = expected.into();
+        let actual = actual.into();
+        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected) {
+            err.panic();
+        }
     }
 
     /// Check if a value is the same as an expected value
@@ -61,33 +97,16 @@ impl Assert {
     /// Assert::new().eq(file!["output.txt"], actual);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `Assert::eq_(actual, expected.raw())`"
+    )]
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
-        if let Err(err) = self.try_eq(expected, actual, Some(&"In-memory")) {
+        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected.raw()) {
             err.panic();
         }
-    }
-
-    pub(crate) fn try_eq(
-        &self,
-        expected: crate::Data,
-        actual: crate::Data,
-        actual_name: Option<&dyn std::fmt::Display>,
-    ) -> Result<()> {
-        if expected.source().is_none() && actual.source().is_some() {
-            panic!("received `(actual, expected)`, expected `(expected, actual)`");
-        }
-        match self.action {
-            Action::Skip => {
-                return Ok(());
-            }
-            Action::Ignore | Action::Verify | Action::Overwrite => {}
-        }
-
-        let (expected, actual) = self.normalize_eq(expected, actual);
-
-        self.do_action(expected, actual, actual_name)
     }
 
     /// Check if a value matches a pattern
@@ -116,21 +135,25 @@ impl Assert {
     /// Assert::new().matches(file!["output.txt"], actual);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `Assert::eq_(actual, expected)`"
+    )]
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
         let actual = actual.into();
-        if let Err(err) = self.try_matches(pattern, actual, Some(&"In-memory")) {
+        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, pattern) {
             err.panic();
         }
     }
 
-    pub(crate) fn try_matches(
+    pub(crate) fn try_eq(
         &self,
-        pattern: crate::Data,
-        actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
+        actual: crate::Data,
+        expected: crate::Data,
     ) -> Result<()> {
-        if pattern.source().is_none() && actual.source().is_some() {
+        if expected.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
         }
         match self.action {
@@ -140,54 +163,44 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let (expected, actual) = self.normalize_match(pattern, actual);
+        let (actual, expected) = self.normalize(actual, expected);
 
-        self.do_action(expected, actual, actual_name)
+        self.do_action(actual_name, actual, expected)
     }
 
-    pub(crate) fn normalize_eq(
+    fn normalize(
         &self,
-        expected: crate::Data,
         mut actual: crate::Data,
+        mut expected: crate::Data,
     ) -> (crate::Data, crate::Data) {
-        let expected = FilterNewlines.filter(expected);
-        // On `expected` being an error, make a best guess
-        let format = expected.intended_format();
+        if expected.filters.is_newlines_set() {
+            expected = FilterNewlines.filter(expected);
+        }
 
-        actual = FilterNewlines.filter(actual.coerce_to(format));
-
-        (expected, actual)
-    }
-
-    pub(crate) fn normalize_match(
-        &self,
-        expected: crate::Data,
-        mut actual: crate::Data,
-    ) -> (crate::Data, crate::Data) {
-        let expected = FilterNewlines.filter(expected);
         // On `expected` being an error, make a best guess
         let format = expected.intended_format();
         actual = actual.coerce_to(format);
 
-        if self.normalize_paths {
+        if self.normalize_paths && expected.filters.is_paths_set() {
             actual = FilterPaths.filter(actual);
         }
-        // Always normalize new lines
-        actual = FilterNewlines.filter(actual);
+        if expected.filters.is_newlines_set() {
+            actual = FilterNewlines.filter(actual);
+        }
+        if expected.filters.is_redaction_set() {
+            actual = FilterRedactions::new(&self.substitutions, &expected).filter(actual);
+        }
 
-        // If expected is not an error normalize matches
-        actual = FilterRedactions::new(&self.substitutions, &expected).filter(actual);
-
-        (expected, actual)
+        (actual, expected)
     }
 
-    pub(crate) fn do_action(
+    fn do_action(
         &self,
-        expected: crate::Data,
-        actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
+        actual: crate::Data,
+        expected: crate::Data,
     ) -> Result<()> {
-        let result = self.try_verify(&expected, &actual, actual_name);
+        let result = self.try_verify(actual_name, &actual, &expected);
         let Err(err) = result else {
             return Ok(());
         };
@@ -229,13 +242,13 @@ impl Assert {
         }
     }
 
-    pub(crate) fn try_verify(
+    fn try_verify(
         &self,
-        expected: &crate::Data,
-        actual: &crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
+        actual: &crate::Data,
+        expected: &crate::Data,
     ) -> crate::assert::Result<()> {
-        if expected != actual {
+        if actual != expected {
             let mut buf = String::new();
             crate::report::write_diff(
                 &mut buf,

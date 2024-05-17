@@ -152,7 +152,7 @@ pub type Error = assert::Error;
 pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
         .action_env(assert::DEFAULT_ACTION_ENV)
-        .eq(expected, actual);
+        .eq_(actual, expected.into().raw());
 }
 
 /// Check if a value matches a pattern
@@ -184,7 +184,7 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
         .action_env(assert::DEFAULT_ACTION_ENV)
-        .matches(pattern, actual);
+        .eq_(actual, pattern);
 }
 
 /// Check if a path matches the content of another path, recursively

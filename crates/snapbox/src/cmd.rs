@@ -588,6 +588,48 @@ impl OutputAssert {
 
     /// Ensure the command wrote the expected data to `stdout`.
     ///
+    /// By default [`filters`][crate::filter] are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, call [`Data::raw`][crate::Data::raw] on `expected`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_eq_("he[..]o");
+    /// ```
+    ///
+    /// Can combine this with [`file!`][crate::file]
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    /// use snapbox::file;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stdout_eq_(file!["stdout.log"]);
+    /// ```
+    #[track_caller]
+    pub fn stdout_eq_(self, expected: impl Into<crate::Data>) -> Self {
+        let expected = expected.into();
+        self.stdout_eq_inner(expected)
+    }
+
+    /// Ensure the command wrote the expected data to `stdout`.
+    ///
     /// ```rust,no_run
     /// use snapbox::cmd::Command;
     /// use snapbox::cmd::cargo_bin;
@@ -612,19 +654,13 @@ impl OutputAssert {
     ///     .stdout_eq(file!["stdout.log"]);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `OutputAssert::stdout_eq_(expected.raw())`"
+    )]
     pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stdout_eq_inner(expected)
-    }
-
-    #[track_caller]
-    fn stdout_eq_inner(self, expected: crate::Data) -> Self {
-        let actual = crate::Data::from(self.output.stdout.as_slice());
-        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stdout")) {
-            err.panic();
-        }
-
-        self
+        self.stdout_eq_inner(expected.raw())
     }
 
     /// Ensure the command wrote the expected data to `stdout`.
@@ -653,19 +689,65 @@ impl OutputAssert {
     ///     .stdout_matches(file!["stdout.log"]);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `OutputAssert::stdout_eq_(expected)`"
+    )]
     pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stdout_matches_inner(expected)
+        self.stdout_eq_inner(expected)
     }
 
     #[track_caller]
-    fn stdout_matches_inner(self, expected: crate::Data) -> Self {
+    fn stdout_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stdout.as_slice());
-        if let Err(err) = self.config.try_matches(expected, actual, Some(&"stdout")) {
+        if let Err(err) = self.config.try_eq(Some(&"stdout"), actual, expected) {
             err.panic();
         }
 
         self
+    }
+
+    /// Ensure the command wrote the expected data to `stderr`.
+    ///
+    /// By default [`filters`][crate::filter] are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, call [`Data::raw`][crate::Data::raw] on `expected`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_eq_("wo[..]d");
+    /// ```
+    ///
+    /// Can combine this with [`file!`][crate::file]
+    /// ```rust,no_run
+    /// use snapbox::cmd::Command;
+    /// use snapbox::cmd::cargo_bin;
+    /// use snapbox::file;
+    ///
+    /// let assert = Command::new(cargo_bin("snap-fixture"))
+    ///     .env("stdout", "hello")
+    ///     .env("stderr", "world")
+    ///     .assert()
+    ///     .stderr_eq_(file!["stderr.log"]);
+    /// ```
+    #[track_caller]
+    pub fn stderr_eq_(self, expected: impl Into<crate::Data>) -> Self {
+        let expected = expected.into();
+        self.stderr_eq_inner(expected)
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
@@ -694,19 +776,13 @@ impl OutputAssert {
     ///     .stderr_eq(file!["stderr.log"]);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `OutputAssert::stderr_eq_(expected.raw())`"
+    )]
     pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stderr_eq_inner(expected)
-    }
-
-    #[track_caller]
-    fn stderr_eq_inner(self, expected: crate::Data) -> Self {
-        let actual = crate::Data::from(self.output.stderr.as_slice());
-        if let Err(err) = self.config.try_eq(expected, actual, Some(&"stderr")) {
-            err.panic();
-        }
-
-        self
+        self.stderr_eq_inner(expected.raw())
     }
 
     /// Ensure the command wrote the expected data to `stderr`.
@@ -735,15 +811,19 @@ impl OutputAssert {
     ///     .stderr_matches(file!["stderr.log"]);
     /// ```
     #[track_caller]
+    #[deprecated(
+        since = "0.5.11",
+        note = "Replaced with `OutputAssert::stderr_eq_(expected)`"
+    )]
     pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
         let expected = expected.into();
-        self.stderr_matches_inner(expected)
+        self.stderr_eq_inner(expected)
     }
 
     #[track_caller]
-    fn stderr_matches_inner(self, expected: crate::Data) -> Self {
+    fn stderr_eq_inner(self, expected: crate::Data) -> Self {
         let actual = crate::Data::from(self.output.stderr.as_slice());
-        if let Err(err) = self.config.try_matches(expected, actual, Some(&"stderr")) {
+        if let Err(err) = self.config.try_eq(Some(&"stderr"), actual, expected) {
             err.panic();
         }
 
