@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Breaking Changes
+
+- Removed deprecated functions
+- Change `Case::expected` from `PathBuf` to `Data`
+
+### Features
+
+- Allow customizing type, filters on `Case::expected`
+- Generalize `setup`, `test` with traits
+
 ## [0.1.0] - 2024-05-17
 
 <!-- next-url -->
