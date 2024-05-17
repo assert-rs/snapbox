@@ -45,20 +45,22 @@ pub use snapbox::data::DataFormat;
 pub use snapbox::Data;
 
 /// [`Harness`] for discovering test inputs and asserting against snapshot files
-pub struct Harness<S, T> {
+pub struct Harness<S, T, I, E> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
     config: snapbox::Assert,
+    test_output: std::marker::PhantomData<I>,
+    test_error: std::marker::PhantomData<E>,
 }
 
-impl<S, T, I, E> Harness<S, T>
+impl<S, T, I, E> Harness<S, T, I, E>
 where
+    S: Setup + Send + Sync + 'static,
+    T: Test<I, E> + Clone + Send + Sync + 'static,
     I: std::fmt::Display,
     E: std::fmt::Display,
-    S: Fn(std::path::PathBuf) -> Case + Send + Sync + 'static,
-    T: Fn(&std::path::Path) -> Result<I, E> + Send + Sync + 'static + Clone,
 {
     /// Specify where the test scenarios
     ///
@@ -66,6 +68,15 @@ where
     ///   are considered
     /// - `setup`: Given a path, choose the test name and the output location
     /// - `test`: Given a path, return the actual output value
+    ///
+    /// By default filters are applied, including:
+    /// - `...` is a line-wildcard when on a line by itself
+    /// - `[..]` is a character-wildcard when inside a line
+    /// - `[EXE]` matches `.exe` on Windows
+    /// - `\` to `/`
+    /// - Newlines
+    ///
+    /// To limit this to newline normalization for text, have [`Setup`] call [`Data::raw`][snapbox::Data::raw] on `expected`.
     pub fn new(input_root: impl Into<std::path::PathBuf>, setup: S, test: T) -> Self {
         Self {
             root: input_root.into(),
@@ -73,6 +84,8 @@ where
             setup,
             test,
             config: snapbox::Assert::new().action_env(snapbox::assert::DEFAULT_ACTION_ENV),
+            test_output: Default::default(),
+            test_error: Default::default(),
         }
     }
 
@@ -120,7 +133,7 @@ where
         let tests: Vec<_> = tests
             .into_iter()
             .map(|path| {
-                let case = (self.setup)(path);
+                let case = self.setup.setup(path);
                 assert!(
                     case.expected.source().map(|s| s.is_path()).unwrap_or(false),
                     "`Case::expected` must be from a file"
@@ -128,9 +141,9 @@ where
                 let test = self.test.clone();
                 let config = shared_config.clone();
                 Trial::test(case.name.clone(), move || {
-                    let actual = (test)(&case.fixture)?;
+                    let actual = test.run(&case.fixture)?;
                     let actual = actual.to_string();
-                    let actual = crate::Data::text(actual);
+                    let actual = snapbox::Data::text(actual);
                     config.try_eq(Some(&case.name), actual, case.expected.clone())?;
                     Ok(())
                 })
@@ -145,9 +158,41 @@ where
     }
 }
 
-/// A test case enumerated by the [`Harness`] with data from the `setup` function
-///
-/// See [`harness`][crate] for more details
+/// Function signature for generating a test [`Case`] from a path fixture
+pub trait Setup {
+    fn setup(&self, fixture: std::path::PathBuf) -> Case;
+}
+
+impl<F> Setup for F
+where
+    F: Fn(std::path::PathBuf) -> Case,
+{
+    fn setup(&self, fixture: std::path::PathBuf) -> Case {
+        (self)(fixture)
+    }
+}
+
+/// Function signature for running a test [`Case`]
+pub trait Test<S, E>
+where
+    S: std::fmt::Display,
+    E: std::fmt::Display,
+{
+    fn run(&self, fixture: &std::path::Path) -> Result<S, E>;
+}
+
+impl<F, S, E> Test<S, E> for F
+where
+    F: Fn(&std::path::Path) -> Result<S, E>,
+    S: std::fmt::Display,
+    E: std::fmt::Display,
+{
+    fn run(&self, fixture: &std::path::Path) -> Result<S, E> {
+        (self)(fixture)
+    }
+}
+
+/// A test case enumerated by the [`Harness`] with data from the [`Setup`] function
 pub struct Case {
     /// Display name
     pub name: String,
