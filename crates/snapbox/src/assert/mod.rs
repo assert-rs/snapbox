@@ -9,6 +9,7 @@ use anstream::stderr;
 use std::io::stderr;
 
 use crate::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
+use crate::IntoData;
 
 pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
@@ -70,9 +71,9 @@ impl Assert {
     /// Assert::new().eq_(actual, file!["output.txt"]);
     /// ```
     #[track_caller]
-    pub fn eq_(&self, actual: impl Into<crate::Data>, expected: impl Into<crate::Data>) {
-        let expected = expected.into();
-        let actual = actual.into();
+    pub fn eq_(&self, actual: impl IntoData, expected: impl IntoData) {
+        let expected = expected.into_data();
+        let actual = actual.into_data();
         if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected) {
             err.panic();
         }
