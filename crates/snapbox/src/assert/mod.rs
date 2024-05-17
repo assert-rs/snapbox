@@ -26,7 +26,7 @@ pub use error::Result;
 /// # use snapbox::Assert;
 /// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().eq_(actual, file!["output.txt"]);
+/// Assert::new().eq(actual, file!["output.txt"]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -60,7 +60,7 @@ impl Assert {
     /// # use snapbox::Assert;
     /// let actual = "something";
     /// let expected = "so[..]g";
-    /// Assert::new().eq_(actual, expected);
+    /// Assert::new().eq(actual, expected);
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -68,15 +68,21 @@ impl Assert {
     /// # use snapbox::Assert;
     /// # use snapbox::file;
     /// let actual = "something";
-    /// Assert::new().eq_(actual, file!["output.txt"]);
+    /// Assert::new().eq(actual, file!["output.txt"]);
     /// ```
     #[track_caller]
-    pub fn eq_(&self, actual: impl IntoData, expected: impl IntoData) {
+    pub fn eq(&self, actual: impl IntoData, expected: impl IntoData) {
         let expected = expected.into_data();
         let actual = actual.into_data();
         if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected) {
             err.panic();
         }
+    }
+
+    #[track_caller]
+    #[deprecated(since = "0.6.0", note = "Replaced with `Assert::eq`")]
+    pub fn eq_(&self, actual: impl IntoData, expected: impl IntoData) {
+        self.eq(actual, expected)
     }
 
     pub fn try_eq(

@@ -609,7 +609,7 @@ impl OutputAssert {
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stdout_eq_("he[..]o");
+    ///     .stdout_eq("he[..]o");
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -622,12 +622,18 @@ impl OutputAssert {
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stdout_eq_(file!["stdout.log"]);
+    ///     .stdout_eq(file!["stdout.log"]);
     /// ```
     #[track_caller]
-    pub fn stdout_eq_(self, expected: impl IntoData) -> Self {
+    pub fn stdout_eq(self, expected: impl IntoData) -> Self {
         let expected = expected.into_data();
         self.stdout_eq_inner(expected)
+    }
+
+    #[track_caller]
+    #[deprecated(since = "0.6.0", note = "Replaced with `OutputAssert::stdout_eq`")]
+    pub fn stdout_eq_(self, expected: impl IntoData) -> Self {
+        self.stdout_eq(expected)
     }
 
     #[track_caller]
@@ -661,7 +667,7 @@ impl OutputAssert {
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stderr_eq_("wo[..]d");
+    ///     .stderr_eq("wo[..]d");
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -674,12 +680,18 @@ impl OutputAssert {
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stderr_eq_(file!["stderr.log"]);
+    ///     .stderr_eq(file!["stderr.log"]);
     /// ```
     #[track_caller]
-    pub fn stderr_eq_(self, expected: impl IntoData) -> Self {
+    pub fn stderr_eq(self, expected: impl IntoData) -> Self {
         let expected = expected.into_data();
         self.stderr_eq_inner(expected)
+    }
+
+    #[track_caller]
+    #[deprecated(since = "0.6.0", note = "Replaced with `OutputAssert::stderr_eq`")]
+    pub fn stderr_eq_(self, expected: impl IntoData) -> Self {
+        self.stderr_eq(expected)
     }
 
     #[track_caller]

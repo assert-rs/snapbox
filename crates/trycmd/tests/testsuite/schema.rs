@@ -5,5 +5,5 @@ fn dump_schema() {
     snapbox::cmd::Command::new(bin_path)
         .assert()
         .success()
-        .stdout_eq_(snapbox::file!["../../schema.json"]);
+        .stdout_eq(snapbox::file!["../../schema.json"]);
 }

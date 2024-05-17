@@ -55,7 +55,7 @@
 //! let actual = "...";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOTS")
-//!     .eq_(actual, snapbox::file!["help_output_is_clean.txt"]);
+//!     .eq(actual, snapbox::file!["help_output_is_clean.txt"]);
 //! ```
 //!
 //! [trycmd]: https://docs.rs/trycmd
