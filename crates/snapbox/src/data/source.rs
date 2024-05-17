@@ -100,6 +100,8 @@ impl Inline {
     /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
     /// # }
     /// ```
+    // #[deprecated(since = "0.5.11", note = "Replaced with `IntoData::is`")]   // can't deprecate
+    // because trait will always be preferred
     pub fn is(self, format: super::DataFormat) -> super::Data {
         let data: super::Data = self.into();
         data.is(format)
