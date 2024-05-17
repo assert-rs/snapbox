@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.11] - 2024-05-17
+
 ### Compatibility
 
 - Deprecated `Assert::eq(expected, actual)` in favor of `Assert::eq_(actual, expected.raw())`
@@ -342,7 +344,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.10...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.11...HEAD
+[0.5.11]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.10...snapbox-v0.5.11
 [0.5.10]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.9...snapbox-v0.5.10
 [0.5.9]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.8...snapbox-v0.5.9
 [0.5.8]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.7...snapbox-v0.5.8
