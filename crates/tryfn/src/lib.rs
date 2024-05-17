@@ -21,7 +21,7 @@
 //!
 //! fn setup(input_path: std::path::PathBuf) -> tryfn::Case {
 //!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = input_path.with_extension("out");
+//!     let expected = tryfn::Data::read_from(&input_path.with_extension("out"), None);
 //!     tryfn::Case {
 //!         name,
 //!         fixture: input_path,
@@ -121,14 +121,17 @@ where
             .into_iter()
             .map(|path| {
                 let case = (self.setup)(path);
+                assert!(
+                    case.expected.source().map(|s| s.is_path()).unwrap_or(false),
+                    "`Case::expected` must be from a file"
+                );
                 let test = self.test.clone();
                 let config = shared_config.clone();
                 Trial::test(case.name.clone(), move || {
-                    let expected = crate::Data::read_from(&case.expected, Some(DataFormat::Text));
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
                     let actual = crate::Data::text(actual);
-                    config.try_eq(Some(&case.name), actual, expected.raw())?;
+                    config.try_eq(Some(&case.name), actual, case.expected.clone())?;
                     Ok(())
                 })
                 .with_ignored_flag(
@@ -151,5 +154,7 @@ pub struct Case {
     /// Input for the test
     pub fixture: std::path::PathBuf,
     /// What the actual output should be compared against or updated
-    pub expected: std::path::PathBuf,
+    ///
+    /// Generally derived from `fixture` and loaded with [`Data::read_from`]
+    pub expected: Data,
 }
