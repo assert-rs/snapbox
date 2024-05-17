@@ -14,7 +14,7 @@ use std::io::stderr;
 use rayon::prelude::*;
 use snapbox::data::DataFormat;
 use snapbox::dir::FileType;
-use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
+use snapbox::filter::{Filter as _, FilterRedactions, NormalizeNewlines, NormalizePaths};
 use snapbox::IntoData;
 
 #[derive(Debug)]
@@ -738,7 +738,7 @@ impl Stream {
         if content.format() != DataFormat::Text {
             self.status = StreamStatus::Failure("Unable to convert underlying Data to Text".into());
         }
-        self.content = FilterNewlines.filter(FilterPaths.filter(content));
+        self.content = NormalizeNewlines.filter(NormalizePaths.filter(content));
         self
     }
 

@@ -2,7 +2,7 @@
 //!
 //! [`OneShot`] is the top-level item in the `cmd.toml` files.
 
-use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths};
+use snapbox::filter::{Filter as _, NormalizeNewlines, NormalizePaths};
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
@@ -40,8 +40,8 @@ impl TryCmd {
                     let stdout_path = path.with_extension("stdout");
                     let stdout = if stdout_path.exists() {
                         Some(
-                            FilterNewlines.filter(
-                                FilterPaths
+                            NormalizeNewlines.filter(
+                                NormalizePaths
                                     .filter(crate::Data::read_from(&stdout_path, Some(is_binary))),
                             ),
                         )
@@ -55,8 +55,8 @@ impl TryCmd {
                     let stderr_path = path.with_extension("stderr");
                     let stderr = if stderr_path.exists() {
                         Some(
-                            FilterNewlines.filter(
-                                FilterPaths
+                            NormalizeNewlines.filter(
+                                NormalizePaths
                                     .filter(crate::Data::read_from(&stderr_path, Some(is_binary))),
                             ),
                         )

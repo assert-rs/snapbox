@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- Deprecated `Assert::eq(expected, actual)` in favor of `Assert::eq_(actual, expected.raw())`
+- Deprecated `Assert::matches(expected, actual)` in favor of `Assert::eq_(actual, expected)`
+- Deprecated `OutputAssert::stdout_eq(expected, actual)` in favor of `OutputAssert::stdout_eq_(actual, expected.raw())`
+- Deprecated `OutputAssert::stdout_matches(expected, actual)` in favor of `OutputAssert::stdout_eq_(actual, expected)`
+- Deprecated `OutputAssert::stderr_eq(expected, actual)` in favor of `OutputAssert::stderr_eq_(actual, expected.raw())`
+- Deprecated `OutputAssert::stderr_matches(expected, actual)` in favor of `OutputAssert::stderr_eq_(actual, expected)`
+- Deprecated `data::Data::normalize` in favor of `filter::Filter::filter`
+- Deprecated `data::Normalize::normalize` in favor of `filter::Filter::filter`
+- Deprecated `data::NormalizeNewlines` in favor of `filter::NormalizeNewlines`
+- Deprecated `data::NormalizePaths` in favor of `filter::NormalizePaths`
+- Deprecated `data::NormalizeMatches` in favor of `filter::FilterRedactions`
+- Deprecated `data::Substitutions` in favor of `filter::Redactions`
+- Deprecated `path` feature / mod in favor of `dir` feature / mod
+- Deprecated `path::PathFixture` in favor of `dir::DirRoot`
+- Deprecated `Error` in favor of `assert::Error`
+- Deprecated `Result` in favor of `assert::Result`
+- Deprecated `Action` in favor of `assert::Action`
+- Deprecated `DEFAULT_ACTION_ENV` in favor of `assert::DEFAULT_ACTION_ENV`
+- Deprecated `utils::normalize_lines` in favor of `filter::normalize_lines`
+- Deprecated `utils::normalize_paths` in favor of `filter::normalize_paths`
+- Deprecated `utils::normalize_text`
+
+### Features
+
+- Add `Assert::eq_(actual, expected)`
+- Add `OutputAssert::stdout_eq_(actual, expected)`
+- Add `OutputAssert::stderr_eq_(actual, expected)`
+- Add `assert_data_eq!(actual, expected)`
+- Add `prelude` for easier access to `IntoData`, `IntoJson`, and `ToDebug`
+- Add `IntoData` for easier data conversions
+- Add `IntoJson` for easier data conversions
+- Add `Data::raw` to disable filters on expected values
+- Add `Harness::with_assert` for greater customization
+- Add `Assert::try_eq` for non-panicking asserts
+- Add `Assert::selected_action` to see whats chosen
+
 ## [0.5.10] - 2024-05-15
 
 ## [0.5.9] - 2024-03-13

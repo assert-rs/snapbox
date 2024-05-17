@@ -23,8 +23,8 @@ pub trait Filter {
     }
 }
 
-pub struct FilterNewlines;
-impl Filter for FilterNewlines {
+pub struct NormalizeNewlines;
+impl Filter for NormalizeNewlines {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
@@ -64,8 +64,8 @@ fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
     normalize_line_endings::normalized(data)
 }
 
-pub struct FilterPaths;
-impl Filter for FilterPaths {
+pub struct NormalizePaths;
+impl Filter for NormalizePaths {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
