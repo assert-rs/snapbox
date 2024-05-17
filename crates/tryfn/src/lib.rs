@@ -6,19 +6,23 @@
 //! # Examples
 //!
 //! ```rust,no_run
-//! snapbox::harness::Harness::new(
+//! fn some_func(num: usize) -> usize {
+//!     // ...
+//! #    10
+//! }
+//!
+//! tryfn::Harness::new(
 //!     "tests/fixtures/invalid",
 //!     setup,
 //!     test,
 //! )
 //! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOTS")
 //! .test();
 //!
-//! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
+//! fn setup(input_path: std::path::PathBuf) -> tryfn::Case {
 //!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
 //!     let expected = input_path.with_extension("out");
-//!     snapbox::harness::Case {
+//!     tryfn::Case {
 //!         name,
 //!         fixture: input_path,
 //!         expected,
@@ -29,29 +33,25 @@
 //!     let raw = std::fs::read_to_string(input_path)?;
 //!     let num = raw.parse::<usize>()?;
 //!
-//!     let actual = num + 10;
+//!     let actual = some_func(num);
 //!
 //!     Ok(actual)
 //! }
 //! ```
 
-use crate::data::DataFormat;
-use crate::Action;
-
 use libtest_mimic::Trial;
 
-/// [`Fallback dependenciesforfallback-dependenciess
-/// [`Build script directivesck-build-script-directivess
-/// [`When to use packages or workspaces?ck-when-to-use-packages-or-workspacess
-/// [`Cargo and rustupes?cargo-and-rustups
-///
-/// See [`harness`][crate::harness] for more details
+pub use snapbox::assert::Action;
+pub use snapbox::data::DataFormat;
+pub use snapbox::Data;
+
+/// [`Harness`] for discovering test inputs and asserting against snapshot files
 pub struct Harness<S, T> {
     root: std::path::PathBuf,
     overrides: Option<ignore::overrides::Override>,
     setup: S,
     test: T,
-    config: crate::Assert,
+    config: snapbox::Assert,
 }
 
 impl<S, T, I, E> Harness<S, T>
@@ -73,13 +73,13 @@ where
             overrides: None,
             setup,
             test,
-            config: crate::Assert::new().action_env(crate::assert::DEFAULT_ACTION_ENV),
+            config: snapbox::Assert::new().action_env(snapbox::assert::DEFAULT_ACTION_ENV),
         }
     }
 
     /// Path patterns for selecting input files
     ///
-    /// This used gitignore syntax
+    /// This uses gitignore syntax
     pub fn select<'p>(mut self, patterns: impl IntoIterator<Item = &'p str>) -> Self {
         let mut overrides = ignore::overrides::OverrideBuilder::new(&self.root);
         for line in patterns {
@@ -102,7 +102,11 @@ where
     }
 
     /// Customize the assertion behavior
-    pub fn with_assert(mut self, config: crate::Assert) -> Self {
+    ///
+    /// Includes
+    /// - Configuring redactions
+    /// - Override updating environment vaeiable
+    pub fn with_assert(mut self, config: snapbox::Assert) -> Self {
         self.config = config;
         self
     }
@@ -140,7 +144,7 @@ where
                     config.try_eq(Some(&case.name), actual, expected.raw())?;
                     Ok(())
                 })
-                .with_ignored_flag(shared_config.action == Action::Ignore)
+                .with_ignored_flag(shared_config.selected_action() == Action::Ignore)
             })
             .collect();
 
@@ -151,7 +155,7 @@ where
 
 /// A test case enumerated by the [`Harness`] with data from the `setup` function
 ///
-/// See [`harness`][crate::harness] for more details
+/// See [`harness`][crate] for more details
 pub struct Case {
     /// Display name
     pub name: String,
