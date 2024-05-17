@@ -134,7 +134,7 @@ where
                     let actual = (test)(&case.fixture)?;
                     let actual = actual.to_string();
                     let actual = crate::Data::text(actual);
-                    config.try_eq(expected.raw(), actual, Some(&case.name))?;
+                    config.try_eq(Some(&case.name), actual, expected.raw())?;
                     Ok(())
                 })
                 .with_ignored_flag(shared_config.action == Action::Ignore)

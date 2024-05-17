@@ -64,7 +64,7 @@ impl Assert {
     pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let expected = expected.into();
         let actual = actual.into();
-        if let Err(err) = self.try_eq(expected.raw(), actual, Some(&"In-memory")) {
+        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected.raw()) {
             err.panic();
         }
     }
@@ -98,16 +98,16 @@ impl Assert {
     pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
         let pattern = pattern.into();
         let actual = actual.into();
-        if let Err(err) = self.try_eq(pattern, actual, Some(&"In-memory")) {
+        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, pattern) {
             err.panic();
         }
     }
 
     pub(crate) fn try_eq(
         &self,
-        expected: crate::Data,
-        actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
+        actual: crate::Data,
+        expected: crate::Data,
     ) -> Result<()> {
         if expected.source().is_none() && actual.source().is_some() {
             panic!("received `(actual, expected)`, expected `(expected, actual)`");
@@ -119,15 +119,15 @@ impl Assert {
             Action::Ignore | Action::Verify | Action::Overwrite => {}
         }
 
-        let (expected, actual) = self.normalize(expected, actual);
+        let (actual, expected) = self.normalize(actual, expected);
 
-        self.do_action(expected, actual, actual_name)
+        self.do_action(actual_name, actual, expected)
     }
 
     fn normalize(
         &self,
-        mut expected: crate::Data,
         mut actual: crate::Data,
+        mut expected: crate::Data,
     ) -> (crate::Data, crate::Data) {
         if expected.filters.is_newlines_set() {
             expected = FilterNewlines.filter(expected);
@@ -147,16 +147,16 @@ impl Assert {
             actual = FilterRedactions::new(&self.substitutions, &expected).filter(actual);
         }
 
-        (expected, actual)
+        (actual, expected)
     }
 
     fn do_action(
         &self,
-        expected: crate::Data,
-        actual: crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
+        actual: crate::Data,
+        expected: crate::Data,
     ) -> Result<()> {
-        let result = self.try_verify(&expected, &actual, actual_name);
+        let result = self.try_verify(actual_name, &actual, &expected);
         let Err(err) = result else {
             return Ok(());
         };
@@ -200,11 +200,11 @@ impl Assert {
 
     fn try_verify(
         &self,
-        expected: &crate::Data,
-        actual: &crate::Data,
         actual_name: Option<&dyn std::fmt::Display>,
+        actual: &crate::Data,
+        expected: &crate::Data,
     ) -> crate::assert::Result<()> {
-        if expected != actual {
+        if actual != expected {
             let mut buf = String::new();
             crate::report::write_diff(
                 &mut buf,
