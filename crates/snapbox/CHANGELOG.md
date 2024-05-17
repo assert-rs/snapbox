@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.12] - 2024-05-17
+
 ### Compatibility
 
 - Deprecated `Harness` in favor of the `tryfn` crate
@@ -348,7 +350,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.11...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.12...HEAD
+[0.5.12]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.11...snapbox-v0.5.12
 [0.5.11]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.10...snapbox-v0.5.11
 [0.5.10]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.9...snapbox-v0.5.10
 [0.5.9]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.8...snapbox-v0.5.9
