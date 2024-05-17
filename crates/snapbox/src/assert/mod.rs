@@ -148,7 +148,7 @@ impl Assert {
         }
     }
 
-    pub(crate) fn try_eq(
+    pub fn try_eq(
         &self,
         actual_name: Option<&dyn std::fmt::Display>,
         actual: crate::Data,
@@ -465,6 +465,12 @@ impl Assert {
     pub fn normalize_paths(mut self, yes: bool) -> Self {
         self.normalize_paths = yes;
         self
+    }
+}
+
+impl Assert {
+    pub fn selected_action(&self) -> Action {
+        self.action
     }
 }
 
