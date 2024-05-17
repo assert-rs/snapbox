@@ -28,28 +28,6 @@ impl Palette {
         Self::default()
     }
 
-    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::color")]
-    pub fn always() -> Self {
-        Self::color()
-    }
-
-    #[deprecated(since = "0.4.9", note = "Renamed to `Palette::plain")]
-    pub fn never() -> Self {
-        Self::plain()
-    }
-
-    #[deprecated(
-        since = "0.4.9",
-        note = "Use `Palette::always`, `auto` behavior is now implicit"
-    )]
-    pub fn auto() -> Self {
-        if is_colored() {
-            Self::color()
-        } else {
-            Self::plain()
-        }
-    }
-
     pub fn info<D: std::fmt::Display>(self, item: D) -> Styled<D> {
         Styled::new(item, self.info)
     }
@@ -72,17 +50,6 @@ impl Palette {
 
     pub fn actual<D: std::fmt::Display>(self, item: D) -> Styled<D> {
         Styled::new(item, self.actual)
-    }
-}
-
-fn is_colored() -> bool {
-    #[cfg(feature = "color")]
-    {
-        anstream::AutoStream::choice(&std::io::stderr()) != anstream::ColorChoice::Never
-    }
-    #[cfg(not(feature = "color"))]
-    {
-        false
     }
 }
 

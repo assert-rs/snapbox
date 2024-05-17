@@ -2,20 +2,12 @@
 
 mod filters;
 mod format;
-mod normalize;
 mod runtime;
 mod source;
 #[cfg(test)]
 mod tests;
 
 pub use format::DataFormat;
-pub use normalize::Normalize;
-#[allow(deprecated)]
-pub use normalize::NormalizeMatches;
-#[allow(deprecated)]
-pub use normalize::NormalizeNewlines;
-#[allow(deprecated)]
-pub use normalize::NormalizePaths;
 pub use source::DataSource;
 pub use source::Inline;
 #[doc(hidden)]
@@ -334,14 +326,6 @@ impl Data {
         let bytes = self.to_bytes()?;
         std::fs::write(path, bytes)
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
-    }
-
-    /// Post-process text
-    ///
-    /// See [utils][crate::utils]
-    #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::normalize`")]
-    pub fn normalize(self, op: impl Normalize) -> Self {
-        op.filter(self)
     }
 
     /// Return the underlying `String`

@@ -16,6 +16,7 @@
 //! - [trycmd](https://crates.io/crates/trycmd): For running a lot of blunt tests (limited test predicates)
 //!   - Particular attention is given to allow the test data to be pulled into documentation, like
 //!     with [mdbook](https://rust-lang.github.io/mdBook/)
+//! - [tryfn](https://crates.io/crates/tryfn): For running a lot of simple input/output tests
 //! - `snapbox`: When you want something like `trycmd` in one off
 //!   cases or you need to customize `trycmd`s behavior.
 //! - [assert_cmd](https://crates.io/crates/assert_cmd) +
@@ -27,7 +28,6 @@
 //!
 //! Testing Functions:
 //! - [`assert_data_eq!`] for quick and dirty snapshotting
-//! - [`harness::Harness`] for discovering test inputs and asserting against snapshot files:
 //!
 //! Testing Commands:
 //! - [`cmd::Command`]: Process spawning for testing of non-interactive commands
@@ -35,7 +35,7 @@
 //!   [`Output`][std::process::Output].
 //!
 //! Testing Filesystem Interactions:
-//! - [`path::PathFixture`]: Working directory for tests
+//! - [`dir::DirRoot`]: Working directory for tests
 //! - [`Assert`]: Diff a directory against files present in a pattern directory
 //!
 //! You can also build your own version of these with the lower-level building blocks these are
@@ -58,38 +58,6 @@
 //!     .eq_(actual, snapbox::file!["help_output_is_clean.txt"]);
 //! ```
 //!
-//! [`harness::Harness`]
-#![cfg_attr(not(feature = "harness"), doc = " ```rust,ignore")]
-#![cfg_attr(feature = "harness", doc = " ```rust,no_run")]
-//! snapbox::harness::Harness::new(
-//!     "tests/fixtures/invalid",
-//!     setup,
-//!     test,
-//! )
-//! .select(["tests/cases/*.in"])
-//! .action_env("SNAPSHOTS")
-//! .test();
-//!
-//! fn setup(input_path: std::path::PathBuf) -> snapbox::harness::Case {
-//!     let name = input_path.file_name().unwrap().to_str().unwrap().to_owned();
-//!     let expected = input_path.with_extension("out");
-//!     snapbox::harness::Case {
-//!         name,
-//!         fixture: input_path,
-//!         expected,
-//!     }
-//! }
-//!
-//! fn test(input_path: &std::path::Path) -> Result<usize, Box<dyn std::error::Error>> {
-//!     let raw = std::fs::read_to_string(input_path)?;
-//!     let num = raw.parse::<usize>()?;
-//!
-//!     let actual = num + 10;
-//!
-//!     Ok(actual)
-//! }
-//! ```
-//!
 //! [trycmd]: https://docs.rs/trycmd
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
@@ -103,15 +71,9 @@ pub mod cmd;
 pub mod data;
 pub mod dir;
 pub mod filter;
-pub mod path;
 pub mod report;
 pub mod utils;
 
-#[cfg(feature = "harness")]
-pub mod harness;
-
-#[deprecated(since = "0.5.11", note = "Replaced with `assert::Assert`")]
-pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
 pub use data::IntoData;
@@ -123,88 +85,12 @@ pub use filter::Redactions;
 #[doc(hidden)]
 pub use snapbox_macros::debug;
 
-#[deprecated(since = "0.5.11", note = "Replaced with `Redactions`")]
-pub type Substitutions = filter::Redactions;
-
-#[deprecated(since = "0.5.11", note = "Replaced with `assert::DEFAULT_ACTION_ENV`")]
-pub const DEFAULT_ACTION_ENV: &str = assert::DEFAULT_ACTION_ENV;
-
-#[deprecated(since = "0.5.11", note = "Replaced with `assert::Result`")]
-pub type Result<T, E = assert::Error> = std::result::Result<T, E>;
-#[deprecated(since = "0.5.11", note = "Replaced with `assert::Error`")]
-pub type Error = assert::Error;
-
 /// Easier access to common traits
 pub mod prelude {
     pub use crate::IntoData;
     #[cfg(feature = "json")]
     pub use crate::IntoJson;
     pub use crate::ToDebug;
-}
-
-/// Check if a value is the same as an expected value
-///
-/// When the content is text, newlines are normalized.
-///
-/// ```rust
-/// # use snapbox::assert_eq;
-/// let output = "something";
-/// let expected = "something";
-/// assert_eq(expected, output);
-/// ```
-///
-/// Can combine this with [`file!`]
-/// ```rust,no_run
-/// # use snapbox::assert_eq;
-/// # use snapbox::file;
-/// let actual = "something";
-/// assert_eq(file!["output.txt"], actual);
-/// ```
-#[track_caller]
-#[deprecated(
-    since = "0.5.11",
-    note = "Replaced with `assert_data_eq!(actual, expected.raw())`"
-)]
-pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-    Assert::new()
-        .action_env(assert::DEFAULT_ACTION_ENV)
-        .eq_(actual, expected.into().raw());
-}
-
-/// Check if a value matches a pattern
-///
-/// Pattern syntax:
-/// - `...` is a line-wildcard when on a line by itself
-/// - `[..]` is a character-wildcard when inside a line
-/// - `[EXE]` matches `.exe` on Windows
-///
-/// Normalization:
-/// - Newlines
-/// - `\` to `/`
-///
-/// ```rust
-/// # use snapbox::assert_matches;
-/// let output = "something";
-/// let expected = "so[..]g";
-/// assert_matches(expected, output);
-/// ```
-///
-/// Can combine this with [`file!`]
-/// ```rust,no_run
-/// # use snapbox::assert_matches;
-/// # use snapbox::file;
-/// let actual = "something";
-/// assert_matches(file!["output.txt"], actual);
-/// ```
-#[track_caller]
-#[deprecated(
-    since = "0.5.11",
-    note = "Replaced with `assert_data_eq!(actual, expected)`"
-)]
-pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-    Assert::new()
-        .action_env(assert::DEFAULT_ACTION_ENV)
-        .eq_(actual, pattern);
 }
 
 /// Check if a path matches the content of another path, recursively

@@ -87,33 +87,6 @@ impl Inline {
         self
     }
 
-    /// Initialize `Self` as [`format`][crate::data::DataFormat] or [`Error`][crate::data::DataFormat::Error]
-    ///
-    /// This is generally used for `expected` data
-    ///
-    /// ```rust
-    /// # #[cfg(feature = "json")] {
-    /// use snapbox::str;
-    ///
-    /// let expected = str![[r#"{"hello": "world"}"#]]
-    ///     .is(snapbox::data::DataFormat::Json);
-    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
-    /// # }
-    /// ```
-    // #[deprecated(since = "0.5.11", note = "Replaced with `IntoData::is`")]   // can't deprecate
-    // because trait will always be preferred
-    pub fn is(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.is(format)
-    }
-
-    /// Deprecated, replaced with [`Inline::is`]
-    #[deprecated(since = "0.5.2", note = "Replaced with `Inline::is`")]
-    pub fn coerce_to(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.coerce_to(format)
-    }
-
     pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {

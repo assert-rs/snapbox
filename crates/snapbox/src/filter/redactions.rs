@@ -132,10 +132,9 @@ where
         if inner.is_empty() {
             Self { inner: None }
         } else {
-            #[allow(deprecated)]
             Self {
-                inner: Some(RedactedValueInner::String(crate::utils::normalize_text(
-                    &inner,
+                inner: Some(RedactedValueInner::String(crate::filter::normalize_paths(
+                    &crate::filter::normalize_lines(&inner),
                 ))),
             }
         }

@@ -15,35 +15,12 @@ pub use redactions::RedactedValue;
 pub use redactions::Redactions;
 
 pub trait Filter {
-    #[deprecated(since = "0.5.11", note = "Replaced with `Filter::filter`")]
-    fn normalize(&self, data: Data) -> Data;
-    fn filter(&self, data: Data) -> Data {
-        #[allow(deprecated)]
-        self.normalize(data)
-    }
-}
-
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterNewlines")]
-pub struct NormalizeNewlines;
-#[allow(deprecated)]
-impl Filter for NormalizeNewlines {
-    fn normalize(&self, data: Data) -> Data {
-        FilterNewlines.normalize(data)
-    }
-}
-
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterPaths")]
-pub struct NormalizePaths;
-#[allow(deprecated)]
-impl Filter for NormalizePaths {
-    fn normalize(&self, data: Data) -> Data {
-        FilterPaths.normalize(data)
-    }
+    fn filter(&self, data: Data) -> Data;
 }
 
 pub struct FilterNewlines;
 impl Filter for FilterNewlines {
-    fn normalize(&self, data: Data) -> Data {
+    fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
         let inner = match data.inner {
@@ -84,7 +61,7 @@ fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 
 pub struct FilterPaths;
 impl Filter for FilterPaths {
-    fn normalize(&self, data: Data) -> Data {
+    fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
         let inner = match data.inner {
@@ -143,7 +120,7 @@ impl<'a> FilterRedactions<'a> {
 }
 
 impl Filter for FilterRedactions<'_> {
-    fn normalize(&self, data: Data) -> Data {
+    fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
         let inner = match data.inner {
