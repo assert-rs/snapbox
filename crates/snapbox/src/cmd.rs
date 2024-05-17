@@ -3,6 +3,8 @@
 #[cfg(feature = "color")]
 use anstream::panic;
 
+use crate::IntoData;
+
 /// Process spawning for testing of non-interactive commands
 #[derive(Debug)]
 pub struct Command {
@@ -243,8 +245,8 @@ impl Command {
     ///     .assert()
     ///     .stdout_eq("42");
     /// ```
-    pub fn stdin(mut self, stream: impl Into<crate::Data>) -> Self {
-        self.stdin = Some(stream.into());
+    pub fn stdin(mut self, stream: impl IntoData) -> Self {
+        self.stdin = Some(stream.into_data());
         self
     }
 
@@ -623,8 +625,8 @@ impl OutputAssert {
     ///     .stdout_eq_(file!["stdout.log"]);
     /// ```
     #[track_caller]
-    pub fn stdout_eq_(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
+    pub fn stdout_eq_(self, expected: impl IntoData) -> Self {
+        let expected = expected.into_data();
         self.stdout_eq_inner(expected)
     }
 
@@ -700,7 +702,7 @@ impl OutputAssert {
 
     #[track_caller]
     fn stdout_eq_inner(self, expected: crate::Data) -> Self {
-        let actual = crate::Data::from(self.output.stdout.as_slice());
+        let actual = self.output.stdout.as_slice().into_data();
         if let Err(err) = self.config.try_eq(Some(&"stdout"), actual, expected) {
             err.panic();
         }
@@ -745,8 +747,8 @@ impl OutputAssert {
     ///     .stderr_eq_(file!["stderr.log"]);
     /// ```
     #[track_caller]
-    pub fn stderr_eq_(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
+    pub fn stderr_eq_(self, expected: impl IntoData) -> Self {
+        let expected = expected.into_data();
         self.stderr_eq_inner(expected)
     }
 
@@ -822,7 +824,7 @@ impl OutputAssert {
 
     #[track_caller]
     fn stderr_eq_inner(self, expected: crate::Data) -> Self {
-        let actual = crate::Data::from(self.output.stderr.as_slice());
+        let actual = self.output.stderr.as_slice().into_data();
         if let Err(err) = self.config.try_eq(Some(&"stderr"), actual, expected) {
             err.panic();
         }

@@ -100,6 +100,8 @@ impl Inline {
     /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
     /// # }
     /// ```
+    // #[deprecated(since = "0.5.11", note = "Replaced with `IntoData::is`")]   // can't deprecate
+    // because trait will always be preferred
     pub fn is(self, format: super::DataFormat) -> super::Data {
         let data: super::Data = self.into();
         data.is(format)
@@ -112,14 +114,7 @@ impl Inline {
         data.coerce_to(format)
     }
 
-    /// Remove default [`filters`][crate::filter] from this `expected` result
-    pub fn raw(self) -> super::Data {
-        let mut data: super::Data = self.into();
-        data.filters = super::FilterSet::empty().newlines();
-        data
-    }
-
-    fn trimmed(&self) -> String {
+    pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
             if data.starts_with('\n') {
@@ -155,13 +150,6 @@ fn trim_indent(text: &str) -> String {
 impl std::fmt::Display for Inline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.position.fmt(f)
-    }
-}
-
-impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
     }
 }
 

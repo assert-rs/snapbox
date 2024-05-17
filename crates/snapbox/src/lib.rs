@@ -113,6 +113,7 @@ pub mod harness;
 pub use assert::Action;
 pub use assert::Assert;
 pub use data::Data;
+pub use data::IntoData;
 pub use data::ToDebug;
 pub use filter::RedactedValue;
 pub use filter::Redactions;
@@ -129,6 +130,12 @@ pub const DEFAULT_ACTION_ENV: &str = assert::DEFAULT_ACTION_ENV;
 pub type Result<T, E = assert::Error> = std::result::Result<T, E>;
 #[deprecated(since = "0.5.11", note = "Replaced with `assert::Error`")]
 pub type Error = assert::Error;
+
+/// Easier access to common traits
+pub mod prelude {
+    pub use crate::IntoData;
+    pub use crate::ToDebug;
+}
 
 /// Check if a value is the same as an expected value
 ///
