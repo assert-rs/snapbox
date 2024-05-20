@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-/// Match pattern expressions, see [`Assert`][crate::Assert]
+/// Replace data with placeholders
 ///
 /// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
@@ -60,7 +60,7 @@ impl Redactions {
 
     /// Insert additional match patterns
     ///
-    /// placeholders must be enclosed in `[` and `]`.
+    /// Placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<RedactedValue>)>,
