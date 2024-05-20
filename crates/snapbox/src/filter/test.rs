@@ -157,6 +157,34 @@ fn json_normalize_matches_diff_order_array() {
 
 #[test]
 #[cfg(feature = "json")]
+fn json_obj_redact_with_disparate_keys() {
+    let expected = json!({
+        "a": "[A]",
+        "b": "[B]",
+        "c": "[C]",
+    });
+    let expected = Data::json(expected);
+    let actual = json!({
+        "a": "value-a",
+        "c": "value-c",
+    });
+    let actual = Data::json(actual);
+    let mut sub = Redactions::new();
+    sub.insert("[A]", "value-a").unwrap();
+    sub.insert("[B]", "value-b").unwrap();
+    sub.insert("[C]", "value-c").unwrap();
+    let actual = FilterRedactions::new(&sub, &expected).filter(actual);
+
+    let expected_actual = json!({
+        "a": "[A]",
+        "c": "value-c",
+    });
+    let expected_actual = Data::json(expected_actual);
+    assert_eq!(actual, expected_actual);
+}
+
+#[test]
+#[cfg(feature = "json")]
 fn json_normalize_wildcard_object_first() {
     let exp = json!({
         "people": [
