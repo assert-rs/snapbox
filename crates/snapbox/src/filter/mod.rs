@@ -33,13 +33,13 @@ impl Filter for FilterNewlines {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, normalize_lines);
+                normalize_json_string(&mut value, normalize_lines);
                 DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                normalize_value(&mut value, normalize_lines);
+                normalize_json_string(&mut value, normalize_lines);
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
@@ -80,13 +80,13 @@ impl Filter for FilterPaths {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, normalize_paths);
+                normalize_json_string(&mut value, normalize_paths);
                 DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                normalize_value(&mut value, normalize_paths);
+                normalize_json_string(&mut value, normalize_paths);
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
@@ -181,19 +181,21 @@ impl Filter for FilterRedactions<'_> {
 }
 
 #[cfg(feature = "structured-data")]
-fn normalize_value(value: &mut serde_json::Value, op: fn(&str) -> String) {
+fn normalize_json_string(value: &mut serde_json::Value, op: fn(&str) -> String) {
     match value {
         serde_json::Value::String(str) => {
             *str = op(str);
         }
         serde_json::Value::Array(arr) => {
             for value in arr.iter_mut() {
-                normalize_value(value, op)
+                normalize_json_string(value, op)
             }
         }
         serde_json::Value::Object(obj) => {
-            for (_, value) in obj.iter_mut() {
-                normalize_value(value, op)
+            for (key, mut value) in std::mem::replace(obj, serde_json::Map::new()) {
+                let key = op(&key);
+                normalize_json_string(&mut value, op);
+                obj.insert(key, value);
             }
         }
         _ => {}

@@ -57,16 +57,16 @@ fn json_normalize_obj_key_paths_and_lines() {
     let data = FilterPaths.filter(data);
     let assert = json!({
         "person": {
-            "John\\Doe\r\n": "name",
-            "Jo\\hn\r\n": "nickname",
+            "John/Doe\r\n": "name",
+            "Jo/hn\r\n": "nickname",
         }
     });
     assert_eq!(Data::json(assert), data);
     let data = FilterNewlines.filter(data);
     let assert = json!({
         "person": {
-            "John\\Doe\r\n": "name",
-            "Jo\\hn\r\n": "nickname",
+            "John/Doe\n": "name",
+            "Jo/hn\n": "nickname",
         }
     });
     assert_eq!(Data::json(assert), data);
