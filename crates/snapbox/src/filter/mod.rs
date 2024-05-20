@@ -252,8 +252,11 @@ fn normalize_value_matches(
             }
         }
         (Object(act), Object(exp)) => {
-            for (a, e) in act.iter_mut().zip(exp).filter(|(a, e)| a.0 == e.0) {
-                normalize_value_matches(a.1, e.1, substitutions)
+            for (actual_key, actual_value) in act.iter_mut() {
+                let Some(expected_value) = exp.get(actual_key) else {
+                    continue;
+                };
+                normalize_value_matches(actual_value, expected_value, substitutions)
             }
         }
         (_, _) => {}

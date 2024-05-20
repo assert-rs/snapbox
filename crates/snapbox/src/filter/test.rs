@@ -177,7 +177,7 @@ fn json_obj_redact_with_disparate_keys() {
 
     let expected_actual = json!({
         "a": "[A]",
-        "c": "value-c",
+        "c": "[C]",
     });
     let expected_actual = Data::json(expected_actual);
     assert_eq!(actual, expected_actual);
