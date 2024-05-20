@@ -50,6 +50,7 @@ impl Assert {
     /// - `[..]` is a character-wildcard when inside a line
     /// - `[EXE]` matches `.exe` on Windows
     /// - `"{...}"` is a JSON value wildcard
+    /// - `"...": "{...}"` is a JSON key-value wildcard
     /// - `\` to `/`
     /// - Newlines
     ///

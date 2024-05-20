@@ -260,8 +260,8 @@ fn json_normalize_wildcard_key() {
 
     let expected_actual = json!({
         "a": "value-a",
-        "b": "value-b",
         "c": "value-c",
+        "...": "{...}",
     });
     let expected_actual = Data::json(expected_actual);
     assert_eq!(actual, expected_actual);

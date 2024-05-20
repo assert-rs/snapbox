@@ -210,6 +210,7 @@ fn normalize_value_matches(
 ) {
     use serde_json::Value::*;
 
+    const KEY_WILDCARD: &str = "...";
     const VALUE_WILDCARD: &str = "{...}";
 
     match (actual, expected) {
@@ -254,12 +255,19 @@ fn normalize_value_matches(
             }
         }
         (Object(act), Object(exp)) => {
+            let has_key_wildcard =
+                exp.get(KEY_WILDCARD).and_then(|v| v.as_str()) == Some(VALUE_WILDCARD);
             for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
                 let actual_key = substitutions.normalize(&actual_key, "");
                 if let Some(expected_value) = exp.get(&actual_key) {
                     normalize_value_matches(&mut actual_value, expected_value, substitutions)
+                } else if has_key_wildcard {
+                    continue;
                 }
                 act.insert(actual_key, actual_value);
+            }
+            if has_key_wildcard {
+                act.insert(KEY_WILDCARD.to_owned(), String(VALUE_WILDCARD.to_owned()));
             }
         }
         (_, _) => {}
