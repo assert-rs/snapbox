@@ -185,6 +185,36 @@ fn json_normalize_matches_diff_order_array() {
 
 #[test]
 #[cfg(feature = "json")]
+fn json_obj_redact_keys() {
+    let expected = json!({
+        "[A]": "value-a",
+        "[B]": "value-b",
+        "[C]": "value-c",
+    });
+    let expected = Data::json(expected);
+    let actual = json!({
+        "key-a": "value-a",
+        "key-b": "value-b",
+        "key-c": "value-c",
+    });
+    let actual = Data::json(actual);
+    let mut sub = Redactions::new();
+    sub.insert("[A]", "key-a").unwrap();
+    sub.insert("[B]", "key-b").unwrap();
+    sub.insert("[C]", "key-c").unwrap();
+    let actual = FilterRedactions::new(&sub, &expected).filter(actual);
+
+    let expected_actual = json!({
+        "key-a": "value-a",
+        "key-b": "value-b",
+        "key-c": "value-c",
+    });
+    let expected_actual = Data::json(expected_actual);
+    assert_eq!(actual, expected_actual);
+}
+
+#[test]
+#[cfg(feature = "json")]
 fn json_obj_redact_with_disparate_keys() {
     let expected = json!({
         "a": "[A]",
