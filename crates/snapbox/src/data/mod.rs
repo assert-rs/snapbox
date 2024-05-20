@@ -104,12 +104,52 @@ pub trait IntoData: Sized {
     fn into_data(self) -> Data;
 }
 
-impl<D> IntoData for D
-where
-    D: Into<Data>,
-{
+impl IntoData for Data {
     fn into_data(self) -> Data {
-        self.into()
+        self
+    }
+}
+
+impl IntoData for &'_ Data {
+    fn into_data(self) -> Data {
+        self.clone()
+    }
+}
+
+impl IntoData for Vec<u8> {
+    fn into_data(self) -> Data {
+        Data::binary(self)
+    }
+}
+
+impl IntoData for &'_ [u8] {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for String {
+    fn into_data(self) -> Data {
+        Data::text(self)
+    }
+}
+
+impl IntoData for &'_ String {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for &'_ str {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for Inline {
+    fn into_data(self) -> Data {
+        let trimmed = self.trimmed();
+        super::Data::text(trimmed).with_source(self)
     }
 }
 
@@ -670,44 +710,43 @@ impl Default for Data {
 
 impl<'d> From<&'d Data> for Data {
     fn from(other: &'d Data) -> Self {
-        other.clone()
+        other.into_data()
     }
 }
 
 impl From<Vec<u8>> for Data {
     fn from(other: Vec<u8>) -> Self {
-        Self::binary(other)
+        other.into_data()
     }
 }
 
 impl<'b> From<&'b [u8]> for Data {
     fn from(other: &'b [u8]) -> Self {
-        other.to_owned().into()
+        other.into_data()
     }
 }
 
 impl From<String> for Data {
     fn from(other: String) -> Self {
-        Self::text(other)
+        other.into_data()
     }
 }
 
 impl<'s> From<&'s String> for Data {
     fn from(other: &'s String) -> Self {
-        other.clone().into()
+        other.into_data()
     }
 }
 
 impl<'s> From<&'s str> for Data {
     fn from(other: &'s str) -> Self {
-        other.to_owned().into()
+        other.into_data()
     }
 }
 
 impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
+    fn from(other: Inline) -> Self {
+        other.into_data()
     }
 }
 
