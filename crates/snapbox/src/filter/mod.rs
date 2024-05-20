@@ -4,6 +4,7 @@
 //! - Making snapshots consistent across platforms or conditional compilation
 //! - Focusing snapshots on the characteristics of the data being tested
 
+mod pattern;
 mod redactions;
 #[cfg(test)]
 mod test;
@@ -11,6 +12,7 @@ mod test;
 use crate::data::DataInner;
 use crate::Data;
 
+pub(crate) use pattern::normalize_to_pattern;
 pub use redactions::RedactedValue;
 pub use redactions::Redactions;
 
