@@ -9,7 +9,7 @@ use std::path::PathBuf;
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Redactions {
-    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<RedactedValueInner>>,
+    vars: std::collections::BTreeMap<RedactedValueInner, std::collections::BTreeSet<&'static str>>,
     unused: std::collections::BTreeSet<RedactedValueInner>,
 }
 
@@ -53,7 +53,7 @@ impl Redactions {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if let Some(value) = value.inner {
-            self.vars.entry(placeholder).or_default().insert(value);
+            self.vars.entry(value).or_default().insert(placeholder);
         } else {
             self.unused.insert(RedactedValueInner::Str(placeholder));
         }
@@ -75,7 +75,10 @@ impl Redactions {
 
     pub fn remove(&mut self, placeholder: &'static str) -> crate::assert::Result<()> {
         let placeholder = validate_placeholder(placeholder)?;
-        self.vars.remove(placeholder);
+        self.vars.retain(|_value, placeholders| {
+            placeholders.retain(|p| *p != placeholder);
+            !placeholders.is_empty()
+        });
         Ok(())
     }
 
@@ -98,9 +101,11 @@ impl Redactions {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
-            self.vars
-                .iter()
-                .flat_map(|(placeholder, values)| values.iter().map(|value| (value, *placeholder))),
+            self.vars.iter().flat_map(|(value, placeholders)| {
+                placeholders
+                    .iter()
+                    .map(move |placeholder| (value, *placeholder))
+            }),
         );
         input
     }
@@ -161,13 +166,16 @@ impl RedactedValueInner {
         }
     }
 
-    fn as_cmp(&self) -> &str {
+    fn as_cmp(&self) -> (usize, std::cmp::Reverse<usize>, &str) {
         match self {
-            Self::Str(s) => s,
-            Self::String(s) => s,
-            Self::Path { normalized, .. } => normalized,
+            Self::Str(s) => (0, std::cmp::Reverse(s.len()), s),
+            Self::String(s) => (0, std::cmp::Reverse(s.len()), s),
+            Self::Path { normalized: s, .. } => (0, std::cmp::Reverse(s.len()), s),
             #[cfg(feature = "regex")]
-            Self::Regex(s) => s.as_str(),
+            Self::Regex(r) => {
+                let s = r.as_str();
+                (1, std::cmp::Reverse(s.len()), s)
+            }
         }
     }
 }
@@ -258,19 +266,19 @@ impl From<&'_ regex::Regex> for RedactedValue {
 
 impl PartialOrd for RedactedValueInner {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.as_cmp().cmp(other.as_cmp()))
+        Some(self.as_cmp().cmp(&other.as_cmp()))
     }
 }
 
 impl Ord for RedactedValueInner {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.as_cmp().cmp(other.as_cmp())
+        self.as_cmp().cmp(&other.as_cmp())
     }
 }
 
 impl PartialEq for RedactedValueInner {
     fn eq(&self, other: &Self) -> bool {
-        self.as_cmp().eq(other.as_cmp())
+        self.as_cmp().eq(&other.as_cmp())
     }
 }
 
@@ -598,7 +606,7 @@ a: /home/epage
 b: /home/epage/snapbox";
         let pattern = "\
 a: [A]
-b: [A]/snapbox";
+b: [B]";
         let mut sub = Redactions::new();
         let sep = std::path::MAIN_SEPARATOR.to_string();
         let redacted = PathBuf::from(&sep).join("home").join("epage");
