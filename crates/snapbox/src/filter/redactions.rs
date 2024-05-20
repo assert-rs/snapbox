@@ -97,7 +97,8 @@ impl Redactions {
         normalize(input, pattern, self)
     }
 
-    fn substitute(&self, input: &str) -> String {
+    /// Apply redaction only, no pattern-dependent globs
+    pub fn redact(&self, input: &str) -> String {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
@@ -319,7 +320,7 @@ fn normalize(input: &str, pattern: &str, redactions: &Redactions) -> String {
         return input.to_owned();
     }
 
-    let input = redactions.substitute(input);
+    let input = redactions.redact(input);
 
     let mut normalized: Vec<&str> = Vec::new();
     let mut input_index = 0;
