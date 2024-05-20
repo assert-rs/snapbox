@@ -18,7 +18,7 @@ fn json_normalize_paths_and_lines() {
 
 #[test]
 #[cfg(feature = "json")]
-fn json_normalize_obj_paths_and_lines() {
+fn json_normalize_obj_value_paths_and_lines() {
     let json = json!({
         "person": {
             "name": "John\\Doe\r\n",
@@ -39,6 +39,34 @@ fn json_normalize_obj_paths_and_lines() {
         "person": {
             "name": "John/Doe\n",
             "nickname": "Jo/hn\n",
+        }
+    });
+    assert_eq!(Data::json(assert), data);
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn json_normalize_obj_key_paths_and_lines() {
+    let json = json!({
+        "person": {
+            "John\\Doe\r\n": "name",
+            "Jo\\hn\r\n": "nickname",
+        }
+    });
+    let data = Data::json(json);
+    let data = FilterPaths.filter(data);
+    let assert = json!({
+        "person": {
+            "John\\Doe\r\n": "name",
+            "Jo\\hn\r\n": "nickname",
+        }
+    });
+    assert_eq!(Data::json(assert), data);
+    let data = FilterNewlines.filter(data);
+    let assert = json!({
+        "person": {
+            "John\\Doe\r\n": "name",
+            "Jo\\hn\r\n": "nickname",
         }
     });
     assert_eq!(Data::json(assert), data);
