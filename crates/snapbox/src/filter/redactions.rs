@@ -94,7 +94,7 @@ impl Redactions {
         normalize(input, pattern, self)
     }
 
-    fn substitute<'v>(&self, input: &'v str) -> Cow<'v, str> {
+    fn substitute(&self, input: &str) -> String {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
@@ -102,7 +102,7 @@ impl Redactions {
                 .iter()
                 .flat_map(|(var, replaces)| replaces.iter().map(|replace| (replace, *var))),
         );
-        Cow::Owned(input)
+        input
     }
 
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
