@@ -52,8 +52,8 @@ impl Redactions {
     ) -> crate::assert::Result<()> {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
-        if let Some(inner) = value.inner {
-            self.vars.entry(placeholder).or_default().insert(inner);
+        if let Some(value) = value.inner {
+            self.vars.entry(placeholder).or_default().insert(value);
         } else {
             self.unused.insert(RedactedValueInner::Str(placeholder));
         }
@@ -100,7 +100,7 @@ impl Redactions {
             &mut input,
             self.vars
                 .iter()
-                .flat_map(|(var, replaces)| replaces.iter().map(|replace| (replace, *var))),
+                .flat_map(|(placeholder, values)| values.iter().map(|value| (value, *placeholder))),
         );
         input
     }
