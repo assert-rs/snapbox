@@ -205,9 +205,9 @@ fn json_obj_redact_keys() {
     let actual = FilterRedactions::new(&sub, &expected).filter(actual);
 
     let expected_actual = json!({
-        "key-a": "value-a",
-        "key-b": "value-b",
-        "key-c": "value-c",
+        "[A]": "value-a",
+        "[B]": "value-b",
+        "[C]": "value-c",
     });
     let expected_actual = Data::json(expected_actual);
     assert_eq!(actual, expected_actual);

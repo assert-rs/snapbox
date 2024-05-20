@@ -254,11 +254,12 @@ fn normalize_value_matches(
             }
         }
         (Object(act), Object(exp)) => {
-            for (actual_key, actual_value) in act.iter_mut() {
-                let Some(expected_value) = exp.get(actual_key) else {
-                    continue;
-                };
-                normalize_value_matches(actual_value, expected_value, substitutions)
+            for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
+                let actual_key = substitutions.normalize(&actual_key, "");
+                if let Some(expected_value) = exp.get(&actual_key) {
+                    normalize_value_matches(&mut actual_value, expected_value, substitutions)
+                }
+                act.insert(actual_key, actual_value);
             }
         }
         (_, _) => {}
