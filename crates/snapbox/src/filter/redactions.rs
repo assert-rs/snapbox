@@ -123,12 +123,22 @@ impl RedactedValueInner {
     }
 }
 
-impl<C> From<C> for RedactedValue
-where
-    C: Into<Cow<'static, str>>,
-{
-    fn from(inner: C) -> Self {
-        let inner = inner.into();
+impl From<&'static str> for RedactedValue {
+    fn from(inner: &'static str) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(RedactedValueInner::String(crate::filter::normalize_paths(
+                    &crate::filter::normalize_lines(inner),
+                ))),
+            }
+        }
+    }
+}
+
+impl From<String> for RedactedValue {
+    fn from(inner: String) -> Self {
         if inner.is_empty() {
             Self { inner: None }
         } else {
@@ -137,6 +147,21 @@ where
                     &crate::filter::normalize_lines(&inner),
                 ))),
             }
+        }
+    }
+}
+
+impl From<&'_ String> for RedactedValue {
+    fn from(inner: &'_ String) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl From<Cow<'static, str>> for RedactedValue {
+    fn from(inner: Cow<'static, str>) -> Self {
+        match inner {
+            Cow::Borrowed(s) => s.into(),
+            Cow::Owned(s) => s.into(),
         }
     }
 }
