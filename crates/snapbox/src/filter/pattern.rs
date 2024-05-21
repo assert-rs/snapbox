@@ -1,4 +1,142 @@
+use super::Filter;
 use super::Redactions;
+use crate::data::DataInner;
+use crate::Data;
+
+pub struct FilterRedactions<'a> {
+    substitutions: &'a crate::Redactions,
+    pattern: &'a Data,
+}
+
+impl<'a> FilterRedactions<'a> {
+    pub fn new(substitutions: &'a crate::Redactions, pattern: &'a Data) -> Self {
+        FilterRedactions {
+            substitutions,
+            pattern,
+        }
+    }
+}
+
+impl Filter for FilterRedactions<'_> {
+    fn filter(&self, data: Data) -> Data {
+        let source = data.source;
+        let filters = data.filters;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
+            DataInner::Text(text) => {
+                if let Some(pattern) = self.pattern.render() {
+                    let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
+                    DataInner::Text(lines)
+                } else {
+                    DataInner::Text(text)
+                }
+            }
+            #[cfg(feature = "json")]
+            DataInner::Json(value) => {
+                let mut value = value;
+                if let DataInner::Json(exp) = &self.pattern.inner {
+                    normalize_value_matches(&mut value, exp, self.substitutions);
+                }
+                DataInner::Json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                if let DataInner::Json(exp) = &self.pattern.inner {
+                    normalize_value_matches(&mut value, exp, self.substitutions);
+                }
+                DataInner::JsonLines(value)
+            }
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(text) => {
+                if let Some(pattern) = self.pattern.render() {
+                    let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
+                    DataInner::TermSvg(lines)
+                } else {
+                    DataInner::TermSvg(text)
+                }
+            }
+        };
+        Data {
+            inner,
+            source,
+            filters,
+        }
+    }
+}
+
+#[cfg(feature = "structured-data")]
+fn normalize_value_matches(
+    actual: &mut serde_json::Value,
+    expected: &serde_json::Value,
+    substitutions: &crate::Redactions,
+) {
+    use serde_json::Value::*;
+
+    const KEY_WILDCARD: &str = "...";
+    const VALUE_WILDCARD: &str = "{...}";
+
+    match (actual, expected) {
+        (act, String(exp)) if exp == VALUE_WILDCARD => {
+            *act = serde_json::json!(VALUE_WILDCARD);
+        }
+        (String(act), String(exp)) => {
+            *act = normalize_to_pattern(act, exp, substitutions);
+        }
+        (Array(act), Array(exp)) => {
+            let mut sections = exp.split(|e| e == VALUE_WILDCARD).peekable();
+            let mut processed = 0;
+            while let Some(expected_subset) = sections.next() {
+                // Process all values in the current section
+                if !expected_subset.is_empty() {
+                    let actual_subset = &mut act[processed..processed + expected_subset.len()];
+                    for (a, e) in actual_subset.iter_mut().zip(expected_subset) {
+                        normalize_value_matches(a, e, substitutions);
+                    }
+                    processed += expected_subset.len();
+                }
+
+                if let Some(next_section) = sections.peek() {
+                    // If the next section has nothing in it, replace from processed to end with
+                    // a single "{...}"
+                    if next_section.is_empty() {
+                        act.splice(processed.., vec![String(VALUE_WILDCARD.to_owned())]);
+                        processed += 1;
+                    } else {
+                        let first = next_section.first().unwrap();
+                        // Replace everything up until the value we are looking for with
+                        // a single "{...}".
+                        if let Some(index) = act.iter().position(|v| v == first) {
+                            act.splice(processed..index, vec![String(VALUE_WILDCARD.to_owned())]);
+                            processed += 1;
+                        } else {
+                            // If we cannot find the value we are looking for return early
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        (Object(act), Object(exp)) => {
+            let has_key_wildcard =
+                exp.get(KEY_WILDCARD).and_then(|v| v.as_str()) == Some(VALUE_WILDCARD);
+            for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
+                let actual_key = substitutions.redact(&actual_key);
+                if let Some(expected_value) = exp.get(&actual_key) {
+                    normalize_value_matches(&mut actual_value, expected_value, substitutions)
+                } else if has_key_wildcard {
+                    continue;
+                }
+                act.insert(actual_key, actual_value);
+            }
+            if has_key_wildcard {
+                act.insert(KEY_WILDCARD.to_owned(), String(VALUE_WILDCARD.to_owned()));
+            }
+        }
+        (_, _) => {}
+    }
+}
 
 pub(crate) fn normalize_to_pattern(input: &str, pattern: &str, redactions: &Redactions) -> String {
     if input == pattern {
