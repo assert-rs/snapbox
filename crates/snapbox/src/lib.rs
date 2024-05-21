@@ -197,7 +197,10 @@ pub fn assert_eq(expected: impl Into<crate::Data>, actual: impl Into<crate::Data
 /// assert_matches(file!["output.txt"], actual);
 /// ```
 #[track_caller]
-#[deprecated(since = "0.5.11", note = "Replaced with `assert_data_eq!(actual)`")]
+#[deprecated(
+    since = "0.5.11",
+    note = "Replaced with `assert_data_eq!(actual, expected)`"
+)]
 pub fn assert_matches(pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
     Assert::new()
         .action_env(assert::DEFAULT_ACTION_ENV)
