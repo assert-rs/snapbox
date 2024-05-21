@@ -142,7 +142,7 @@ impl Filter for FilterRedactions<'_> {
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 if let Some(pattern) = self.pattern.render() {
-                    let lines = self.substitutions.normalize(&text, &pattern);
+                    let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
                     DataInner::Text(lines)
                 } else {
                     DataInner::Text(text)
@@ -167,7 +167,7 @@ impl Filter for FilterRedactions<'_> {
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 if let Some(pattern) = self.pattern.render() {
-                    let lines = self.substitutions.normalize(&text, &pattern);
+                    let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
                     DataInner::TermSvg(lines)
                 } else {
                     DataInner::TermSvg(text)
@@ -220,7 +220,7 @@ fn normalize_value_matches(
             *act = serde_json::json!(VALUE_WILDCARD);
         }
         (String(act), String(exp)) => {
-            *act = substitutions.normalize(act, exp);
+            *act = normalize_to_pattern(act, exp, substitutions);
         }
         (Array(act), Array(exp)) => {
             let mut sections = exp.split(|e| e == VALUE_WILDCARD).peekable();
