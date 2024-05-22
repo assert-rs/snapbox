@@ -35,13 +35,13 @@ impl Filter for FilterNewlines {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_json_string(&mut value, normalize_lines);
+                normalize_json_string(&mut value, &normalize_lines);
                 DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                normalize_json_string(&mut value, normalize_lines);
+                normalize_json_string(&mut value, &normalize_lines);
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
@@ -82,13 +82,13 @@ impl Filter for FilterPaths {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_json_string(&mut value, normalize_paths);
+                normalize_json_string(&mut value, &normalize_paths);
                 DataInner::Json(value)
             }
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                normalize_json_string(&mut value, normalize_paths);
+                normalize_json_string(&mut value, &normalize_paths);
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
@@ -119,8 +119,48 @@ fn normalize_paths_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
     data.map(|c| if c == '\\' { '/' } else { c })
 }
 
+struct NormalizeRedactions<'r> {
+    redactions: &'r Redactions,
+}
+impl Filter for NormalizeRedactions<'_> {
+    fn filter(&self, data: Data) -> Data {
+        let source = data.source;
+        let filters = data.filters;
+        let inner = match data.inner {
+            DataInner::Error(err) => DataInner::Error(err),
+            DataInner::Binary(bin) => DataInner::Binary(bin),
+            DataInner::Text(text) => {
+                let lines = self.redactions.redact(&text);
+                DataInner::Text(lines)
+            }
+            #[cfg(feature = "json")]
+            DataInner::Json(value) => {
+                let mut value = value;
+                normalize_json_string(&mut value, &|s| self.redactions.redact(s));
+                DataInner::Json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_json_string(&mut value, &|s| self.redactions.redact(s));
+                DataInner::JsonLines(value)
+            }
+            #[cfg(feature = "term-svg")]
+            DataInner::TermSvg(text) => {
+                let lines = normalize_lines(&text);
+                DataInner::TermSvg(lines)
+            }
+        };
+        Data {
+            inner,
+            source,
+            filters,
+        }
+    }
+}
+
 #[cfg(feature = "structured-data")]
-fn normalize_json_string(value: &mut serde_json::Value, op: fn(&str) -> String) {
+fn normalize_json_string(value: &mut serde_json::Value, op: &dyn Fn(&str) -> String) {
     match value {
         serde_json::Value::String(str) => {
             *str = op(str);

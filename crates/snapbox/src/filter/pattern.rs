@@ -1,4 +1,4 @@
-use super::Redactions;
+use super::{Filter, NormalizeRedactions, Redactions};
 use crate::data::DataInner;
 use crate::Data;
 
@@ -43,6 +43,10 @@ impl<'a> NormalizeToExpected<'a> {
         let Some(substitutions) = self.substitutions else {
             return actual;
         };
+        let actual = NormalizeRedactions {
+            redactions: substitutions,
+        }
+        .filter(actual);
         normalize_data_to_redactions(actual, expected, substitutions)
     }
 }
@@ -160,7 +164,6 @@ fn normalize_value_to_redactions(
             let has_key_wildcard =
                 exp.get(KEY_WILDCARD).and_then(|v| v.as_str()) == Some(VALUE_WILDCARD);
             for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
-                let actual_key = substitutions.redact(&actual_key);
                 if let Some(expected_value) = exp.get(&actual_key) {
                     normalize_value_to_redactions(&mut actual_value, expected_value, substitutions)
                 } else if has_key_wildcard {
@@ -181,11 +184,9 @@ fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactio
         return input.to_owned();
     }
 
-    let input = redactions.redact(input);
-
     let mut normalized: Vec<&str> = Vec::new();
     let mut input_index = 0;
-    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(&input).collect();
+    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(input).collect();
     let mut pattern_lines = crate::utils::LinesWithTerminator::new(pattern).peekable();
     'outer: while let Some(pattern_line) = pattern_lines.next() {
         if is_line_elide(pattern_line) {
