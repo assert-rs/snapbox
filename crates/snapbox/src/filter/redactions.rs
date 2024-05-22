@@ -4,9 +4,22 @@ use std::path::PathBuf;
 
 /// Replace data with placeholders
 ///
+/// This can be used for:
+/// - Handling test-run dependent data like temp directories or elapsed time
+/// - Making special characters more obvious (e.g. redacting a tab a `[TAB]`)
+/// - Normalizing platform-specific data like [`std::env::consts::EXE_SUFFIX`]
+///
 /// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
+///
+/// # Examples
+///
+/// ```rust
+/// let mut subst = snapbox::Redactions::new();
+/// subst.insert("[LOCATION]", "World");
+/// assert_eq!(subst.redact("Hello World!"), "Hello [LOCATION]!");
+/// ```
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Redactions {
     vars: std::collections::BTreeMap<RedactedValueInner, std::collections::BTreeSet<&'static str>>,
@@ -43,6 +56,9 @@ impl Redactions {
     /// # #[cfg(feature = "regex")] {
     /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[OBJECT]", regex::Regex::new("(?<redacted>(world|moon))").unwrap());
+    /// assert_eq!(subst.redact("Hello world!"), "Hello [OBJECT]!");
+    /// assert_eq!(subst.redact("Hello moon!"), "Hello [OBJECT]!");
+    /// assert_eq!(subst.redact("Hello other!"), "Hello other!");
     /// # }
     /// ```
     pub fn insert(
@@ -98,6 +114,15 @@ impl Redactions {
     }
 
     /// Apply redaction only, no pattern-dependent globs
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let mut subst = snapbox::Redactions::new();
+    /// subst.insert("[LOCATION]", "World");
+    /// let output = subst.redact("Hello World!");
+    /// assert_eq!(output, "Hello [LOCATION]!");
+    /// ```
     pub fn redact(&self, input: &str) -> String {
         let mut input = input.to_owned();
         replace_many(
