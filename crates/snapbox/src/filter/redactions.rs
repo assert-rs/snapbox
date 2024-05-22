@@ -18,13 +18,18 @@ use std::path::PathBuf;
 /// ```
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Redactions {
-    vars: std::collections::BTreeMap<RedactedValueInner, std::collections::BTreeSet<&'static str>>,
-    unused: std::collections::BTreeSet<RedactedValueInner>,
+    vars: Option<
+        std::collections::BTreeMap<RedactedValueInner, std::collections::BTreeSet<&'static str>>,
+    >,
+    unused: Option<std::collections::BTreeSet<RedactedValueInner>>,
 }
 
 impl Redactions {
-    pub fn new() -> Self {
-        Default::default()
+    pub const fn new() -> Self {
+        Self {
+            vars: None,
+            unused: None,
+        }
     }
 
     pub(crate) fn with_exe() -> Self {
@@ -65,9 +70,15 @@ impl Redactions {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
         if let Some(value) = value.inner {
-            self.vars.entry(value).or_default().insert(placeholder);
+            self.vars
+                .get_or_insert(std::collections::BTreeMap::new())
+                .entry(value)
+                .or_default()
+                .insert(placeholder);
         } else {
-            self.unused.insert(RedactedValueInner::Str(placeholder));
+            self.unused
+                .get_or_insert(std::collections::BTreeSet::new())
+                .insert(RedactedValueInner::Str(placeholder));
         }
         Ok(())
     }
@@ -87,10 +98,12 @@ impl Redactions {
 
     pub fn remove(&mut self, placeholder: &'static str) -> crate::assert::Result<()> {
         let placeholder = validate_placeholder(placeholder)?;
-        self.vars.retain(|_value, placeholders| {
-            placeholders.retain(|p| *p != placeholder);
-            !placeholders.is_empty()
-        });
+        self.vars
+            .get_or_insert(std::collections::BTreeMap::new())
+            .retain(|_value, placeholders| {
+                placeholders.retain(|p| *p != placeholder);
+                !placeholders.is_empty()
+            });
         Ok(())
     }
 
@@ -108,19 +121,25 @@ impl Redactions {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
-            self.vars.iter().flat_map(|(value, placeholders)| {
-                placeholders
-                    .iter()
-                    .map(move |placeholder| (value, *placeholder))
-            }),
+            self.vars
+                .iter()
+                .flatten()
+                .flat_map(|(value, placeholders)| {
+                    placeholders
+                        .iter()
+                        .map(move |placeholder| (value, *placeholder))
+                }),
         );
         input
     }
 
     pub(crate) fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
-        if !self.unused.is_empty() && pattern.contains('[') {
+        if !self.unused.as_ref().map(|s| s.is_empty()).unwrap_or(false) && pattern.contains('[') {
             let mut pattern = pattern.to_owned();
-            replace_many(&mut pattern, self.unused.iter().map(|var| (var, "")));
+            replace_many(
+                &mut pattern,
+                self.unused.iter().flatten().map(|var| (var, "")),
+            );
             Cow::Owned(pattern)
         } else {
             Cow::Borrowed(pattern)
