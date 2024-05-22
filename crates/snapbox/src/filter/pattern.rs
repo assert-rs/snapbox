@@ -263,14 +263,17 @@ mod test {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::prelude::*;
 
     #[test]
     fn str_normalize_redactions_empty() {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -278,8 +281,10 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -287,8 +292,10 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -296,8 +303,10 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -305,8 +314,10 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -314,8 +325,10 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -323,8 +336,10 @@ mod test {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
         let expected = "Hello [..]\n...\nGoodbye [..]";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -332,8 +347,10 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -341,8 +358,10 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -350,8 +369,10 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -359,8 +380,10 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -368,8 +391,10 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\nSir";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -377,8 +402,10 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
-        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
-        assert_eq!(expected, actual);
+        let actual = NormalizeToExpected::new()
+            .redact()
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, expected.into_data());
     }
 
     #[test]
@@ -432,8 +459,10 @@ mod test {
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
         sub.insert("[OBJECT]", "world").unwrap();
-        let actual = normalize_str_to_redactions(input, pattern, &sub);
-        assert_eq!(actual, pattern);
+        let actual = NormalizeToExpected::new()
+            .redact_with(&sub)
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, pattern.into_data());
     }
 
     #[test]
@@ -444,8 +473,10 @@ mod test {
         let sep = std::path::MAIN_SEPARATOR.to_string();
         let redacted = PathBuf::from(sep).join("home").join("epage");
         sub.insert("[HOME]", redacted).unwrap();
-        let actual = normalize_str_to_redactions(input, pattern, &sub);
-        assert_eq!(actual, pattern);
+        let actual = NormalizeToExpected::new()
+            .redact_with(&sub)
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, pattern.into_data());
     }
 
     #[test]
@@ -465,8 +496,10 @@ b: [B]";
             .join("epage")
             .join("snapbox");
         sub.insert("[B]", redacted).unwrap();
-        let actual = normalize_str_to_redactions(input, pattern, &sub);
-        assert_eq!(actual, pattern);
+        let actual = NormalizeToExpected::new()
+            .redact_with(&sub)
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, pattern.into_data());
     }
 
     #[test]
@@ -475,8 +508,10 @@ b: [B]";
         let pattern = "cargo[EXE]";
         let mut sub = Redactions::new();
         sub.insert("[EXE]", "").unwrap();
-        let actual = normalize_str_to_redactions(input, pattern, &sub);
-        assert_eq!(actual, pattern);
+        let actual = NormalizeToExpected::new()
+            .redact_with(&sub)
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, pattern.into_data());
     }
 
     #[test]
@@ -487,8 +522,10 @@ b: [B]";
         let mut sub = Redactions::new();
         sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
             .unwrap();
-        let actual = normalize_str_to_redactions(input, pattern, &sub);
-        assert_eq!(actual, pattern);
+        let actual = NormalizeToExpected::new()
+            .redact_with(&sub)
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, pattern.into_data());
     }
 
     #[test]
@@ -502,7 +539,9 @@ b: [B]";
             regex::Regex::new("(?<redacted>world)!").unwrap(),
         )
         .unwrap();
-        let actual = normalize_str_to_redactions(input, pattern, &sub);
-        assert_eq!(actual, pattern);
+        let actual = NormalizeToExpected::new()
+            .redact_with(&sub)
+            .normalize(input.into(), &pattern.into());
+        assert_eq!(actual, pattern.into_data());
     }
 }
