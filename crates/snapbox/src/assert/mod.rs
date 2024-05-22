@@ -128,7 +128,7 @@ impl Assert {
             actual = FilterNewlines.filter(actual);
         }
         if expected.filters.is_redaction_set() {
-            actual = NormalizeToExpected::new(&self.substitutions, &expected).normalize(actual);
+            actual = NormalizeToExpected::new(&self.substitutions).normalize(actual, &expected);
         }
 
         (actual, expected)

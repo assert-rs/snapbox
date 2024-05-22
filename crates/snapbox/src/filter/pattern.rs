@@ -10,25 +10,21 @@ use crate::Data;
 /// - `[..]`: match multiple characters within a line
 pub struct NormalizeToExpected<'a> {
     substitutions: &'a crate::Redactions,
-    pattern: &'a Data,
 }
 
 impl<'a> NormalizeToExpected<'a> {
-    pub fn new(substitutions: &'a crate::Redactions, pattern: &'a Data) -> Self {
-        NormalizeToExpected {
-            substitutions,
-            pattern,
-        }
+    pub fn new(substitutions: &'a crate::Redactions) -> Self {
+        NormalizeToExpected { substitutions }
     }
 
-    pub fn normalize(&self, actual: Data) -> Data {
+    pub fn normalize(&self, actual: Data, expected: &Data) -> Data {
         let source = actual.source;
         let filters = actual.filters;
         let inner = match actual.inner {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
-                if let Some(pattern) = self.pattern.render() {
+                if let Some(pattern) = expected.render() {
                     let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
                     DataInner::Text(lines)
                 } else {
@@ -38,7 +34,7 @@ impl<'a> NormalizeToExpected<'a> {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                if let DataInner::Json(exp) = &self.pattern.inner {
+                if let DataInner::Json(exp) = &expected.inner {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
                 DataInner::Json(value)
@@ -46,14 +42,14 @@ impl<'a> NormalizeToExpected<'a> {
             #[cfg(feature = "json")]
             DataInner::JsonLines(value) => {
                 let mut value = value;
-                if let DataInner::Json(exp) = &self.pattern.inner {
+                if let DataInner::Json(exp) = &expected.inner {
                     normalize_value_matches(&mut value, exp, self.substitutions);
                 }
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                if let Some(pattern) = self.pattern.render() {
+                if let Some(pattern) = expected.render() {
                     let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
                     DataInner::TermSvg(lines)
                 } else {
