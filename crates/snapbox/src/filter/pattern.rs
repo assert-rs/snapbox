@@ -5,13 +5,23 @@ use crate::Data;
 /// Adjust `actual` based on `expected`
 pub struct NormalizeToExpected<'a> {
     substitutions: Option<&'a crate::Redactions>,
+    unordered: bool,
 }
 
 impl<'a> NormalizeToExpected<'a> {
     pub fn new() -> Self {
         Self {
             substitutions: None,
+            unordered: false,
         }
+    }
+
+    /// Make unordered content comparable
+    ///
+    /// This is done by re-ordering `actual` according to `expected`.
+    pub fn unordered(mut self) -> Self {
+        self.unordered = true;
+        self
     }
 
     /// Apply built-in redactions.
@@ -40,14 +50,24 @@ impl<'a> NormalizeToExpected<'a> {
     }
 
     pub fn normalize(&self, actual: Data, expected: &Data) -> Data {
-        let Some(substitutions) = self.substitutions else {
-            return actual;
+        let actual = if let Some(substitutions) = self.substitutions {
+            NormalizeRedactions {
+                redactions: substitutions,
+            }
+            .filter(actual)
+        } else {
+            actual
         };
-        let actual = NormalizeRedactions {
-            redactions: substitutions,
+        match (self.substitutions, self.unordered) {
+            (None, false) => actual,
+            (Some(substitutions), false) => {
+                normalize_data_to_redactions(actual, expected, substitutions)
+            }
+            (None, true) => normalize_data_to_unordered(actual, expected),
+            (Some(substitutions), true) => {
+                normalize_data_to_unordered_redactions(actual, expected, substitutions)
+            }
         }
-        .filter(actual);
-        normalize_data_to_redactions(actual, expected, substitutions)
     }
 }
 
@@ -55,6 +75,291 @@ impl Default for NormalizeToExpected<'_> {
     fn default() -> Self {
         Self::new()
     }
+}
+
+fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
+    let source = actual.source;
+    let filters = actual.filters;
+    let inner = match actual.inner {
+        DataInner::Error(err) => DataInner::Error(err),
+        DataInner::Binary(bin) => DataInner::Binary(bin),
+        DataInner::Text(text) => {
+            if let Some(pattern) = expected.render() {
+                let lines = normalize_str_to_unordered(&text, &pattern);
+                DataInner::Text(lines)
+            } else {
+                DataInner::Text(text)
+            }
+        }
+        #[cfg(feature = "json")]
+        DataInner::Json(value) => {
+            let mut value = value;
+            if let DataInner::Json(exp) = &expected.inner {
+                normalize_value_to_unordered(&mut value, exp);
+            }
+            DataInner::Json(value)
+        }
+        #[cfg(feature = "json")]
+        DataInner::JsonLines(value) => {
+            let mut value = value;
+            if let DataInner::Json(exp) = &expected.inner {
+                normalize_value_to_unordered(&mut value, exp);
+            }
+            DataInner::JsonLines(value)
+        }
+        #[cfg(feature = "term-svg")]
+        DataInner::TermSvg(text) => {
+            if let Some(pattern) = expected.render() {
+                let lines = normalize_str_to_unordered(&text, &pattern);
+                DataInner::TermSvg(lines)
+            } else {
+                DataInner::TermSvg(text)
+            }
+        }
+    };
+    Data {
+        inner,
+        source,
+        filters,
+    }
+}
+
+#[cfg(feature = "structured-data")]
+fn normalize_value_to_unordered(actual: &mut serde_json::Value, expected: &serde_json::Value) {
+    use serde_json::Value::*;
+
+    match (actual, expected) {
+        (String(act), String(exp)) => {
+            *act = normalize_str_to_unordered(act, exp);
+        }
+        (Array(act), Array(exp)) => {
+            let mut actual_values = std::mem::take(act);
+            let mut expected_values = exp.clone();
+            expected_values.retain(|expected_value| {
+                let mut matched = false;
+                actual_values.retain(|actual_value| {
+                    if !matched && actual_value == expected_value {
+                        matched = true;
+                        false
+                    } else {
+                        true
+                    }
+                });
+                if matched {
+                    act.push(expected_value.clone());
+                }
+                !matched
+            });
+            for actual_value in actual_values {
+                act.push(actual_value);
+            }
+        }
+        (Object(act), Object(exp)) => {
+            for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
+                if let Some(expected_value) = exp.get(&actual_key) {
+                    normalize_value_to_unordered(&mut actual_value, expected_value)
+                }
+                act.insert(actual_key, actual_value);
+            }
+        }
+        (_, _) => {}
+    }
+}
+
+fn normalize_str_to_unordered(actual: &str, expected: &str) -> String {
+    if actual == expected {
+        return actual.to_owned();
+    }
+
+    let mut normalized: Vec<&str> = Vec::new();
+    let mut actual_lines: Vec<_> = crate::utils::LinesWithTerminator::new(actual).collect();
+    let mut expected_lines: Vec<_> = crate::utils::LinesWithTerminator::new(expected).collect();
+    expected_lines.retain(|expected_line| {
+        let mut matched = false;
+        actual_lines.retain(|actual_line| {
+            if !matched && actual_line == expected_line {
+                matched = true;
+                false
+            } else {
+                true
+            }
+        });
+        if matched {
+            normalized.push(expected_line);
+        }
+        !matched
+    });
+    for actual_line in &actual_lines {
+        normalized.push(actual_line);
+    }
+
+    normalized.join("")
+}
+
+#[cfg(feature = "structured-data")]
+const KEY_WILDCARD: &str = "...";
+#[cfg(feature = "structured-data")]
+const VALUE_WILDCARD: &str = "{...}";
+
+fn normalize_data_to_unordered_redactions(
+    actual: Data,
+    expected: &Data,
+    substitutions: &crate::Redactions,
+) -> Data {
+    let source = actual.source;
+    let filters = actual.filters;
+    let inner = match actual.inner {
+        DataInner::Error(err) => DataInner::Error(err),
+        DataInner::Binary(bin) => DataInner::Binary(bin),
+        DataInner::Text(text) => {
+            if let Some(pattern) = expected.render() {
+                let lines = normalize_str_to_unordered_redactions(&text, &pattern, substitutions);
+                DataInner::Text(lines)
+            } else {
+                DataInner::Text(text)
+            }
+        }
+        #[cfg(feature = "json")]
+        DataInner::Json(value) => {
+            let mut value = value;
+            if let DataInner::Json(exp) = &expected.inner {
+                normalize_value_to_unordered_redactions(&mut value, exp, substitutions);
+            }
+            DataInner::Json(value)
+        }
+        #[cfg(feature = "json")]
+        DataInner::JsonLines(value) => {
+            let mut value = value;
+            if let DataInner::Json(exp) = &expected.inner {
+                normalize_value_to_unordered_redactions(&mut value, exp, substitutions);
+            }
+            DataInner::JsonLines(value)
+        }
+        #[cfg(feature = "term-svg")]
+        DataInner::TermSvg(text) => {
+            if let Some(pattern) = expected.render() {
+                let lines = normalize_str_to_unordered_redactions(&text, &pattern, substitutions);
+                DataInner::TermSvg(lines)
+            } else {
+                DataInner::TermSvg(text)
+            }
+        }
+    };
+    Data {
+        inner,
+        source,
+        filters,
+    }
+}
+
+#[cfg(feature = "structured-data")]
+fn normalize_value_to_unordered_redactions(
+    actual: &mut serde_json::Value,
+    expected: &serde_json::Value,
+    substitutions: &crate::Redactions,
+) {
+    use serde_json::Value::*;
+
+    match (actual, expected) {
+        (act, String(exp)) if exp == VALUE_WILDCARD => {
+            *act = serde_json::json!(VALUE_WILDCARD);
+        }
+        (String(act), String(exp)) => {
+            *act = normalize_str_to_unordered_redactions(act, exp, substitutions);
+        }
+        (Array(act), Array(exp)) => {
+            let mut actual_values = std::mem::take(act);
+            let mut expected_values = exp.clone();
+            let mut elided = false;
+            expected_values.retain(|expected_value| {
+                let mut matched = false;
+                if expected_value == VALUE_WILDCARD {
+                    matched = true;
+                    elided = true;
+                } else {
+                    actual_values.retain(|actual_value| {
+                        if !matched && actual_value == expected_value {
+                            matched = true;
+                            false
+                        } else {
+                            true
+                        }
+                    });
+                }
+                if matched {
+                    act.push(expected_value.clone());
+                }
+                !matched
+            });
+            if !elided {
+                for actual_value in actual_values {
+                    act.push(actual_value);
+                }
+            }
+        }
+        (Object(act), Object(exp)) => {
+            let has_key_wildcard =
+                exp.get(KEY_WILDCARD).and_then(|v| v.as_str()) == Some(VALUE_WILDCARD);
+            for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
+                if let Some(expected_value) = exp.get(&actual_key) {
+                    normalize_value_to_unordered_redactions(
+                        &mut actual_value,
+                        expected_value,
+                        substitutions,
+                    )
+                } else if has_key_wildcard {
+                    continue;
+                }
+                act.insert(actual_key, actual_value);
+            }
+            if has_key_wildcard {
+                act.insert(KEY_WILDCARD.to_owned(), String(VALUE_WILDCARD.to_owned()));
+            }
+        }
+        (_, _) => {}
+    }
+}
+
+fn normalize_str_to_unordered_redactions(
+    actual: &str,
+    expected: &str,
+    substitutions: &crate::Redactions,
+) -> String {
+    if actual == expected {
+        return actual.to_owned();
+    }
+
+    let mut normalized: Vec<&str> = Vec::new();
+    let mut actual_lines: Vec<_> = crate::utils::LinesWithTerminator::new(actual).collect();
+    let mut expected_lines: Vec<_> = crate::utils::LinesWithTerminator::new(expected).collect();
+    let mut elided = false;
+    expected_lines.retain(|expected_line| {
+        let mut matched = false;
+        if is_line_elide(expected_line) {
+            matched = true;
+            elided = true;
+        } else {
+            actual_lines.retain(|actual_line| {
+                if !matched && line_matches(actual_line, expected_line, substitutions) {
+                    matched = true;
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+        if matched {
+            normalized.push(expected_line);
+        }
+        !matched
+    });
+    if !elided {
+        for actual_line in &actual_lines {
+            normalized.push(actual_line);
+        }
+    }
+
+    normalized.join("")
 }
 
 fn normalize_data_to_redactions(
@@ -115,9 +420,6 @@ fn normalize_value_to_redactions(
     substitutions: &crate::Redactions,
 ) {
     use serde_json::Value::*;
-
-    const KEY_WILDCARD: &str = "...";
-    const VALUE_WILDCARD: &str = "{...}";
 
     match (actual, expected) {
         (act, String(exp)) if exp == VALUE_WILDCARD => {

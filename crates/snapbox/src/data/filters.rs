@@ -27,6 +27,11 @@ impl FilterSet {
         self
     }
 
+    pub(crate) fn unordered(mut self) -> Self {
+        self.set(Self::UNORDERED);
+        self
+    }
+
     pub(crate) const fn is_redaction_set(&self) -> bool {
         self.is_set(Self::REDACTIONS)
     }
@@ -38,12 +43,17 @@ impl FilterSet {
     pub(crate) const fn is_paths_set(&self) -> bool {
         self.is_set(Self::PATHS)
     }
+
+    pub(crate) const fn is_unordered_set(&self) -> bool {
+        self.is_set(Self::UNORDERED)
+    }
 }
 
 impl FilterSet {
     const REDACTIONS: usize = 1 << 0;
     const NEWLINES: usize = 1 << 1;
     const PATHS: usize = 1 << 2;
+    const UNORDERED: usize = 1 << 3;
 
     fn set(&mut self, flag: usize) -> &mut Self {
         self.flags |= flag;

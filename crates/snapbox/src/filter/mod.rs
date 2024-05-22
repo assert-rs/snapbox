@@ -10,6 +10,8 @@ mod redactions;
 mod test;
 #[cfg(test)]
 mod test_redactions;
+#[cfg(test)]
+mod test_unordered_redactions;
 
 use crate::data::DataInner;
 use crate::Data;

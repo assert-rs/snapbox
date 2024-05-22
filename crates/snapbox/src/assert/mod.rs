@@ -127,11 +127,15 @@ impl Assert {
         if expected.filters.is_newlines_set() {
             actual = FilterNewlines.filter(actual);
         }
+
+        let mut normalize = NormalizeToExpected::new();
         if expected.filters.is_redaction_set() {
-            actual = NormalizeToExpected::new()
-                .redact_with(&self.substitutions)
-                .normalize(actual, &expected);
+            normalize = normalize.redact_with(&self.substitutions);
         }
+        if expected.filters.is_unordered_set() {
+            normalize = normalize.unordered();
+        }
+        actual = normalize.normalize(actual, &expected);
 
         (actual, expected)
     }
