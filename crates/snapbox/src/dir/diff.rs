@@ -161,7 +161,7 @@ impl PathDiff {
                         actual = FilterPaths.filter(actual);
                     }
                     actual = NormalizeToExpected::new(substitutions, &expected)
-                        .filter(FilterNewlines.filter(actual));
+                        .normalize(FilterNewlines.filter(actual));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {

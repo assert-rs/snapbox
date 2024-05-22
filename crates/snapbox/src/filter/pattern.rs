@@ -1,4 +1,3 @@
-use super::Filter;
 use super::Redactions;
 use crate::data::DataInner;
 use crate::Data;
@@ -21,13 +20,11 @@ impl<'a> NormalizeToExpected<'a> {
             pattern,
         }
     }
-}
 
-impl Filter for NormalizeToExpected<'_> {
-    fn filter(&self, data: Data) -> Data {
-        let source = data.source;
-        let filters = data.filters;
-        let inner = match data.inner {
+    pub fn normalize(&self, actual: Data) -> Data {
+        let source = actual.source;
+        let filters = actual.filters;
+        let inner = match actual.inner {
             DataInner::Error(err) => DataInner::Error(err),
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
