@@ -3,29 +3,46 @@ use crate::data::DataInner;
 use crate::Data;
 
 /// Adjust `actual` based on `expected`
-///
-/// As part of this, [`Redactions`] will be used, if any.
-/// Additional built-in redactions:
-/// - `...` on a line of its own: match multiple complete lines
-/// - `[..]`: match multiple characters within a line
 pub struct NormalizeToExpected<'a> {
-    substitutions: &'a crate::Redactions,
+    substitutions: Option<&'a crate::Redactions>,
 }
 
 impl<'a> NormalizeToExpected<'a> {
     pub fn new() -> Self {
-        static REDACTIONS: Redactions = Redactions::new();
         Self {
-            substitutions: &REDACTIONS,
+            substitutions: None,
         }
     }
 
+    /// Apply built-in redactions.
+    ///
+    /// Built-in redactions:
+    /// - `...` on a line of its own: match multiple complete lines
+    /// - `[..]`: match multiple characters within a line
+    ///
+    /// Built-ins cannot automatically be applied to `actual` but are inferred from `expected`
+    pub fn redact(mut self) -> Self {
+        static REDACTIONS: Redactions = Redactions::new();
+        self.substitutions = Some(&REDACTIONS);
+        self
+    }
+
+    /// Apply built-in and user [`Redactions`]
+    ///
+    /// Built-in redactions:
+    /// - `...` on a line of its own: match multiple complete lines
+    /// - `[..]`: match multiple characters within a line
+    ///
+    /// Built-ins cannot automatically be applied to `actual` but are inferred from `expected`
     pub fn redact_with(mut self, redactions: &'a crate::Redactions) -> Self {
-        self.substitutions = redactions;
+        self.substitutions = Some(redactions);
         self
     }
 
     pub fn normalize(&self, actual: Data, expected: &Data) -> Data {
+        let Some(substitutions) = self.substitutions else {
+            return actual;
+        };
         let source = actual.source;
         let filters = actual.filters;
         let inner = match actual.inner {
@@ -33,7 +50,7 @@ impl<'a> NormalizeToExpected<'a> {
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 if let Some(pattern) = expected.render() {
-                    let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
+                    let lines = normalize_to_pattern(&text, &pattern, substitutions);
                     DataInner::Text(lines)
                 } else {
                     DataInner::Text(text)
@@ -43,7 +60,7 @@ impl<'a> NormalizeToExpected<'a> {
             DataInner::Json(value) => {
                 let mut value = value;
                 if let DataInner::Json(exp) = &expected.inner {
-                    normalize_value_matches(&mut value, exp, self.substitutions);
+                    normalize_value_matches(&mut value, exp, substitutions);
                 }
                 DataInner::Json(value)
             }
@@ -51,14 +68,14 @@ impl<'a> NormalizeToExpected<'a> {
             DataInner::JsonLines(value) => {
                 let mut value = value;
                 if let DataInner::Json(exp) = &expected.inner {
-                    normalize_value_matches(&mut value, exp, self.substitutions);
+                    normalize_value_matches(&mut value, exp, substitutions);
                 }
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 if let Some(pattern) = expected.render() {
-                    let lines = normalize_to_pattern(&text, &pattern, self.substitutions);
+                    let lines = normalize_to_pattern(&text, &pattern, substitutions);
                     DataInner::TermSvg(lines)
                 } else {
                     DataInner::TermSvg(text)

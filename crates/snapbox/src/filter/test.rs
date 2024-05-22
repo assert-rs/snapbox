@@ -125,7 +125,9 @@ fn json_normalize_matches_string() {
     let exp = json!({"name": "{...}"});
     let expected = Data::json(exp);
     let actual = json!({"name": "JohnDoe"});
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -144,7 +146,9 @@ fn json_normalize_matches_array() {
             }
         ]
     });
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -161,7 +165,9 @@ fn json_normalize_matches_obj() {
             "nickname": "John",
         }
     });
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -177,7 +183,9 @@ fn json_normalize_matches_diff_order_array() {
     let actual = json!({
         "people": ["Jane", "John"]
     });
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_ne!(exp, act);
     }
@@ -260,7 +268,9 @@ fn json_normalize_wildcard_key() {
         "c": "value-c",
     });
     let actual = Data::json(actual);
-    let actual = NormalizeToExpected::new().normalize(actual, &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(actual, &expected);
 
     let expected_actual = json!({
         "a": "value-a",
@@ -300,7 +310,9 @@ fn json_normalize_wildcard_object_first() {
             }
         ]
     });
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -331,7 +343,9 @@ fn json_normalize_wildcard_array_first() {
             "nickname": "3",
         }
     ]);
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -367,7 +381,9 @@ fn json_normalize_wildcard_array_first_last() {
             "nickname": "4",
         }
     ]);
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -411,7 +427,9 @@ fn json_normalize_wildcard_array_middle_last() {
             "nickname": "5",
         }
     ]);
-    let actual = NormalizeToExpected::new().normalize(Data::json(actual), &expected);
+    let actual = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual), &expected);
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_eq!(exp, act);
     }
@@ -451,8 +469,9 @@ fn json_normalize_wildcard_array_middle_last_early_return() {
             "nickname": "5",
         }
     ]);
-    let actual_normalized =
-        NormalizeToExpected::new().normalize(Data::json(actual.clone()), &expected);
+    let actual_normalized = NormalizeToExpected::new()
+        .redact()
+        .normalize(Data::json(actual.clone()), &expected);
     if let DataInner::Json(act) = actual_normalized.inner {
         assert_eq!(act, actual);
     }
