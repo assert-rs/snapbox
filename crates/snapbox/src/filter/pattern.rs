@@ -43,56 +43,64 @@ impl<'a> NormalizeToExpected<'a> {
         let Some(substitutions) = self.substitutions else {
             return actual;
         };
-        let source = actual.source;
-        let filters = actual.filters;
-        let inner = match actual.inner {
-            DataInner::Error(err) => DataInner::Error(err),
-            DataInner::Binary(bin) => DataInner::Binary(bin),
-            DataInner::Text(text) => {
-                if let Some(pattern) = expected.render() {
-                    let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
-                    DataInner::Text(lines)
-                } else {
-                    DataInner::Text(text)
-                }
-            }
-            #[cfg(feature = "json")]
-            DataInner::Json(value) => {
-                let mut value = value;
-                if let DataInner::Json(exp) = &expected.inner {
-                    normalize_value_to_redactions(&mut value, exp, substitutions);
-                }
-                DataInner::Json(value)
-            }
-            #[cfg(feature = "json")]
-            DataInner::JsonLines(value) => {
-                let mut value = value;
-                if let DataInner::Json(exp) = &expected.inner {
-                    normalize_value_to_redactions(&mut value, exp, substitutions);
-                }
-                DataInner::JsonLines(value)
-            }
-            #[cfg(feature = "term-svg")]
-            DataInner::TermSvg(text) => {
-                if let Some(pattern) = expected.render() {
-                    let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
-                    DataInner::TermSvg(lines)
-                } else {
-                    DataInner::TermSvg(text)
-                }
-            }
-        };
-        Data {
-            inner,
-            source,
-            filters,
-        }
+        normalize_data_to_redactions(actual, expected, substitutions)
     }
 }
 
 impl Default for NormalizeToExpected<'_> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn normalize_data_to_redactions(
+    actual: Data,
+    expected: &Data,
+    substitutions: &crate::Redactions,
+) -> Data {
+    let source = actual.source;
+    let filters = actual.filters;
+    let inner = match actual.inner {
+        DataInner::Error(err) => DataInner::Error(err),
+        DataInner::Binary(bin) => DataInner::Binary(bin),
+        DataInner::Text(text) => {
+            if let Some(pattern) = expected.render() {
+                let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
+                DataInner::Text(lines)
+            } else {
+                DataInner::Text(text)
+            }
+        }
+        #[cfg(feature = "json")]
+        DataInner::Json(value) => {
+            let mut value = value;
+            if let DataInner::Json(exp) = &expected.inner {
+                normalize_value_to_redactions(&mut value, exp, substitutions);
+            }
+            DataInner::Json(value)
+        }
+        #[cfg(feature = "json")]
+        DataInner::JsonLines(value) => {
+            let mut value = value;
+            if let DataInner::Json(exp) = &expected.inner {
+                normalize_value_to_redactions(&mut value, exp, substitutions);
+            }
+            DataInner::JsonLines(value)
+        }
+        #[cfg(feature = "term-svg")]
+        DataInner::TermSvg(text) => {
+            if let Some(pattern) = expected.render() {
+                let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
+                DataInner::TermSvg(lines)
+            } else {
+                DataInner::TermSvg(text)
+            }
+        }
+    };
+    Data {
+        inner,
+        source,
+        filters,
     }
 }
 
