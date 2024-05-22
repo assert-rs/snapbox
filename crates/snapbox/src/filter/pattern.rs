@@ -50,7 +50,7 @@ impl<'a> NormalizeToExpected<'a> {
             DataInner::Binary(bin) => DataInner::Binary(bin),
             DataInner::Text(text) => {
                 if let Some(pattern) = expected.render() {
-                    let lines = normalize_to_pattern(&text, &pattern, substitutions);
+                    let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
                     DataInner::Text(lines)
                 } else {
                     DataInner::Text(text)
@@ -60,7 +60,7 @@ impl<'a> NormalizeToExpected<'a> {
             DataInner::Json(value) => {
                 let mut value = value;
                 if let DataInner::Json(exp) = &expected.inner {
-                    normalize_value_matches(&mut value, exp, substitutions);
+                    normalize_value_to_redactions(&mut value, exp, substitutions);
                 }
                 DataInner::Json(value)
             }
@@ -68,14 +68,14 @@ impl<'a> NormalizeToExpected<'a> {
             DataInner::JsonLines(value) => {
                 let mut value = value;
                 if let DataInner::Json(exp) = &expected.inner {
-                    normalize_value_matches(&mut value, exp, substitutions);
+                    normalize_value_to_redactions(&mut value, exp, substitutions);
                 }
                 DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 if let Some(pattern) = expected.render() {
-                    let lines = normalize_to_pattern(&text, &pattern, substitutions);
+                    let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
                     DataInner::TermSvg(lines)
                 } else {
                     DataInner::TermSvg(text)
@@ -97,7 +97,7 @@ impl Default for NormalizeToExpected<'_> {
 }
 
 #[cfg(feature = "structured-data")]
-fn normalize_value_matches(
+fn normalize_value_to_redactions(
     actual: &mut serde_json::Value,
     expected: &serde_json::Value,
     substitutions: &crate::Redactions,
@@ -112,7 +112,7 @@ fn normalize_value_matches(
             *act = serde_json::json!(VALUE_WILDCARD);
         }
         (String(act), String(exp)) => {
-            *act = normalize_to_pattern(act, exp, substitutions);
+            *act = normalize_str_to_redactions(act, exp, substitutions);
         }
         (Array(act), Array(exp)) => {
             let mut sections = exp.split(|e| e == VALUE_WILDCARD).peekable();
@@ -122,7 +122,7 @@ fn normalize_value_matches(
                 if !expected_subset.is_empty() {
                     let actual_subset = &mut act[processed..processed + expected_subset.len()];
                     for (a, e) in actual_subset.iter_mut().zip(expected_subset) {
-                        normalize_value_matches(a, e, substitutions);
+                        normalize_value_to_redactions(a, e, substitutions);
                     }
                     processed += expected_subset.len();
                 }
@@ -154,7 +154,7 @@ fn normalize_value_matches(
             for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
                 let actual_key = substitutions.redact(&actual_key);
                 if let Some(expected_value) = exp.get(&actual_key) {
-                    normalize_value_matches(&mut actual_value, expected_value, substitutions)
+                    normalize_value_to_redactions(&mut actual_value, expected_value, substitutions)
                 } else if has_key_wildcard {
                     continue;
                 }
@@ -168,7 +168,7 @@ fn normalize_value_matches(
     }
 }
 
-fn normalize_to_pattern(input: &str, pattern: &str, redactions: &Redactions) -> String {
+fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
@@ -261,7 +261,7 @@ mod test {
         let input = "";
         let pattern = "";
         let expected = "";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -270,7 +270,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -279,7 +279,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -288,7 +288,7 @@ mod test {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -297,7 +297,7 @@ mod test {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -306,7 +306,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -315,7 +315,7 @@ mod test {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
         let expected = "Hello [..]\n...\nGoodbye [..]";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -324,7 +324,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -333,7 +333,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -342,7 +342,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -351,7 +351,7 @@ mod test {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -360,7 +360,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\nSir";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -369,7 +369,7 @@ mod test {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
-        let actual = normalize_to_pattern(input, pattern, &Redactions::new());
+        let actual = normalize_str_to_redactions(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
 
@@ -424,7 +424,7 @@ mod test {
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
         sub.insert("[OBJECT]", "world").unwrap();
-        let actual = normalize_to_pattern(input, pattern, &sub);
+        let actual = normalize_str_to_redactions(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
 
@@ -436,7 +436,7 @@ mod test {
         let sep = std::path::MAIN_SEPARATOR.to_string();
         let redacted = PathBuf::from(sep).join("home").join("epage");
         sub.insert("[HOME]", redacted).unwrap();
-        let actual = normalize_to_pattern(input, pattern, &sub);
+        let actual = normalize_str_to_redactions(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
 
@@ -457,7 +457,7 @@ b: [B]";
             .join("epage")
             .join("snapbox");
         sub.insert("[B]", redacted).unwrap();
-        let actual = normalize_to_pattern(input, pattern, &sub);
+        let actual = normalize_str_to_redactions(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
 
@@ -467,7 +467,7 @@ b: [B]";
         let pattern = "cargo[EXE]";
         let mut sub = Redactions::new();
         sub.insert("[EXE]", "").unwrap();
-        let actual = normalize_to_pattern(input, pattern, &sub);
+        let actual = normalize_str_to_redactions(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
 
@@ -479,7 +479,7 @@ b: [B]";
         let mut sub = Redactions::new();
         sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
             .unwrap();
-        let actual = normalize_to_pattern(input, pattern, &sub);
+        let actual = normalize_str_to_redactions(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
 
@@ -494,7 +494,7 @@ b: [B]";
             regex::Regex::new("(?<redacted>world)!").unwrap(),
         )
         .unwrap();
-        let actual = normalize_to_pattern(input, pattern, &sub);
+        let actual = normalize_str_to_redactions(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }
 }
