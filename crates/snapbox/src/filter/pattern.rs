@@ -265,7 +265,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn empty() {
+    fn str_normalize_redactions_empty() {
         let input = "";
         let pattern = "";
         let expected = "";
@@ -274,7 +274,7 @@ mod test {
     }
 
     #[test]
-    fn literals_match() {
+    fn str_normalize_redactions_literals_match() {
         let input = "Hello\nWorld";
         let pattern = "Hello\nWorld";
         let expected = "Hello\nWorld";
@@ -283,7 +283,7 @@ mod test {
     }
 
     #[test]
-    fn pattern_shorter() {
+    fn str_normalize_redactions_pattern_shorter() {
         let input = "Hello\nWorld";
         let pattern = "Hello\n";
         let expected = "Hello\nWorld";
@@ -292,7 +292,7 @@ mod test {
     }
 
     #[test]
-    fn input_shorter() {
+    fn str_normalize_redactions_input_shorter() {
         let input = "Hello\n";
         let pattern = "Hello\nWorld";
         let expected = "Hello\n";
@@ -301,7 +301,7 @@ mod test {
     }
 
     #[test]
-    fn all_different() {
+    fn str_normalize_redactions_all_different() {
         let input = "Hello\nWorld";
         let pattern = "Goodbye\nMoon";
         let expected = "Hello\nWorld";
@@ -310,7 +310,7 @@ mod test {
     }
 
     #[test]
-    fn middles_diverge() {
+    fn str_normalize_redactions_middles_diverge() {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\nMoon\nGoodbye";
         let expected = "Hello\nWorld\nGoodbye";
@@ -319,7 +319,7 @@ mod test {
     }
 
     #[test]
-    fn elide_delimited_with_sub() {
+    fn str_normalize_redactions_elide_delimited_with_sub() {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
         let expected = "Hello [..]\n...\nGoodbye [..]";
@@ -328,7 +328,7 @@ mod test {
     }
 
     #[test]
-    fn leading_elide() {
+    fn str_normalize_redactions_leading_elide() {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "...\nGoodbye";
         let expected = "...\nGoodbye";
@@ -337,7 +337,7 @@ mod test {
     }
 
     #[test]
-    fn trailing_elide() {
+    fn str_normalize_redactions_trailing_elide() {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...";
         let expected = "Hello\n...";
@@ -346,7 +346,7 @@ mod test {
     }
 
     #[test]
-    fn middle_elide() {
+    fn str_normalize_redactions_middle_elide() {
         let input = "Hello\nWorld\nGoodbye";
         let pattern = "Hello\n...\nGoodbye";
         let expected = "Hello\n...\nGoodbye";
@@ -355,7 +355,7 @@ mod test {
     }
 
     #[test]
-    fn post_elide_diverge() {
+    fn str_normalize_redactions_post_elide_diverge() {
         let input = "Hello\nSun\nAnd\nWorld";
         let pattern = "Hello\n...\nMoon";
         let expected = "Hello\nSun\nAnd\nWorld";
@@ -364,7 +364,7 @@ mod test {
     }
 
     #[test]
-    fn post_diverge_elide() {
+    fn str_normalize_redactions_post_diverge_elide() {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
         let expected = "Hello\nWorld\nGoodbye\nSir";
@@ -373,7 +373,7 @@ mod test {
     }
 
     #[test]
-    fn inline_elide() {
+    fn str_normalize_redactions_inline_elide() {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nW[..]d\nGoodbye\nSir";
         let expected = "Hello\nW[..]d\nGoodbye\nSir";
@@ -382,7 +382,7 @@ mod test {
     }
 
     #[test]
-    fn line_matches_cases() {
+    fn str_normalize_redactions_line_matches_cases() {
         let cases = [
             ("", "", true),
             ("", "[..]", true),
@@ -427,7 +427,7 @@ mod test {
     }
 
     #[test]
-    fn substitute_literal() {
+    fn str_normalize_redactions_user_literal() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
@@ -437,7 +437,7 @@ mod test {
     }
 
     #[test]
-    fn substitute_path() {
+    fn str_normalize_redactions_user_path() {
         let input = "input: /home/epage";
         let pattern = "input: [HOME]";
         let mut sub = Redactions::new();
@@ -449,7 +449,7 @@ mod test {
     }
 
     #[test]
-    fn substitute_overlapping_path() {
+    fn str_normalize_redactions_user_overlapping_path() {
         let input = "\
 a: /home/epage
 b: /home/epage/snapbox";
@@ -470,7 +470,7 @@ b: [B]";
     }
 
     #[test]
-    fn substitute_disabled() {
+    fn str_normalize_redactions_user_disabled() {
         let input = "cargo";
         let pattern = "cargo[EXE]";
         let mut sub = Redactions::new();
@@ -481,7 +481,7 @@ b: [B]";
 
     #[test]
     #[cfg(feature = "regex")]
-    fn substitute_regex_unnamed() {
+    fn str_normalize_redactions_user_regex_unnamed() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
@@ -493,7 +493,7 @@ b: [B]";
 
     #[test]
     #[cfg(feature = "regex")]
-    fn substitute_regex_named() {
+    fn str_normalize_redactions_user_regex_named() {
         let input = "Hello world!";
         let pattern = "Hello [OBJECT]!";
         let mut sub = Redactions::new();
