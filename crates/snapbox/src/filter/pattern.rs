@@ -9,21 +9,21 @@ use crate::Data;
 /// Additional built-in redactions:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
-pub struct FilterRedactions<'a> {
+pub struct NormalizeToExpected<'a> {
     substitutions: &'a crate::Redactions,
     pattern: &'a Data,
 }
 
-impl<'a> FilterRedactions<'a> {
+impl<'a> NormalizeToExpected<'a> {
     pub fn new(substitutions: &'a crate::Redactions, pattern: &'a Data) -> Self {
-        FilterRedactions {
+        NormalizeToExpected {
             substitutions,
             pattern,
         }
     }
 }
 
-impl Filter for FilterRedactions<'_> {
+impl Filter for NormalizeToExpected<'_> {
     fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;

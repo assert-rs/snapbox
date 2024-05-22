@@ -12,7 +12,7 @@ mod test;
 use crate::data::DataInner;
 use crate::Data;
 
-pub use pattern::FilterRedactions;
+pub use pattern::NormalizeToExpected;
 pub use redactions::RedactedValue;
 pub use redactions::Redactions;
 
