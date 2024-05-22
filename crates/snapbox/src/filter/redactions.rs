@@ -9,10 +9,6 @@ use std::path::PathBuf;
 /// - Making special characters more obvious (e.g. redacting a tab a `[TAB]`)
 /// - Normalizing platform-specific data like [`std::env::consts::EXE_SUFFIX`]
 ///
-/// Built-in placeholders:
-/// - `...` on a line of its own: match multiple complete lines
-/// - `[..]`: match multiple characters within a line
-///
 /// # Examples
 ///
 /// ```rust
@@ -96,21 +92,6 @@ impl Redactions {
             !placeholders.is_empty()
         });
         Ok(())
-    }
-
-    /// Apply match pattern to `input`
-    ///
-    /// If `pattern` matches `input`, then `pattern` is returned.
-    ///
-    /// Otherwise, `input`, with as many patterns replaced as possible, will be returned.
-    ///
-    /// ```rust
-    /// let subst = snapbox::Redactions::new();
-    /// let output = subst.normalize("Hello World!", "Hello [..]!");
-    /// assert_eq!(output, "Hello [..]!");
-    /// ```
-    pub fn normalize(&self, input: &str, pattern: &str) -> String {
-        super::normalize_to_pattern(input, pattern, self)
     }
 
     /// Apply redaction only, no pattern-dependent globs

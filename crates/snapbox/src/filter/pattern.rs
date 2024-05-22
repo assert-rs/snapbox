@@ -3,6 +3,12 @@ use super::Redactions;
 use crate::data::DataInner;
 use crate::Data;
 
+/// Adjust `actual` based on `expected`
+///
+/// As part of this, [`Redactions`] will be used, if any.
+/// Additional built-in redactions:
+/// - `...` on a line of its own: match multiple complete lines
+/// - `[..]`: match multiple characters within a line
 pub struct FilterRedactions<'a> {
     substitutions: &'a crate::Redactions,
     pattern: &'a Data,
@@ -138,7 +144,7 @@ fn normalize_value_matches(
     }
 }
 
-pub(crate) fn normalize_to_pattern(input: &str, pattern: &str, redactions: &Redactions) -> String {
+fn normalize_to_pattern(input: &str, pattern: &str, redactions: &Redactions) -> String {
     if input == pattern {
         return input.to_owned();
     }
