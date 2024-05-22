@@ -160,7 +160,8 @@ impl PathDiff {
                     if normalize_paths {
                         actual = FilterPaths.filter(actual);
                     }
-                    actual = NormalizeToExpected::new(substitutions)
+                    actual = NormalizeToExpected::new()
+                        .redact_with(substitutions)
                         .normalize(FilterNewlines.filter(actual), &expected);
 
                     if expected != actual {

@@ -439,8 +439,9 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            stream.content =
-                NormalizeToExpected::new(substitutions).normalize(stream.content, expected_content);
+            stream.content = NormalizeToExpected::new()
+                .redact_with(substitutions)
+                .normalize(stream.content, expected_content);
 
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());

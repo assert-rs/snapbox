@@ -13,8 +13,16 @@ pub struct NormalizeToExpected<'a> {
 }
 
 impl<'a> NormalizeToExpected<'a> {
-    pub fn new(substitutions: &'a crate::Redactions) -> Self {
-        NormalizeToExpected { substitutions }
+    pub fn new() -> Self {
+        static REDACTIONS: Redactions = Redactions::new();
+        Self {
+            substitutions: &REDACTIONS,
+        }
+    }
+
+    pub fn redact_with(mut self, redactions: &'a crate::Redactions) -> Self {
+        self.substitutions = redactions;
+        self
     }
 
     pub fn normalize(&self, actual: Data, expected: &Data) -> Data {
@@ -62,6 +70,12 @@ impl<'a> NormalizeToExpected<'a> {
             source,
             filters,
         }
+    }
+}
+
+impl Default for NormalizeToExpected<'_> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
