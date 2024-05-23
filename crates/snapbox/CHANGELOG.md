@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- Deprecated `filter::NormalizePaths` in favor of `filter::FilterPaths`
+- Deprecated `filter::NormalizeNewlines` in favor of `filter::FilterNewlines`
+
 ## [0.5.13] - 2024-05-21
 
 ### Documentation
