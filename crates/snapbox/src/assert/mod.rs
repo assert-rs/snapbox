@@ -26,7 +26,7 @@ pub use error::Result;
 /// # use snapbox::Assert;
 /// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().eq_(actual, file!["output.txt"]);
+/// Assert::new().eq(actual, file!["output.txt"]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -49,6 +49,8 @@ impl Assert {
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
     /// - `[EXE]` matches `.exe` on Windows
+    /// - `"{...}"` is a JSON value wildcard
+    /// - `"...": "{...}"` is a JSON key-value wildcard
     /// - `\` to `/`
     /// - Newlines
     ///
@@ -60,7 +62,7 @@ impl Assert {
     /// # use snapbox::Assert;
     /// let actual = "something";
     /// let expected = "so[..]g";
-    /// Assert::new().eq_(actual, expected);
+    /// Assert::new().eq(actual, expected);
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -68,10 +70,10 @@ impl Assert {
     /// # use snapbox::Assert;
     /// # use snapbox::file;
     /// let actual = "something";
-    /// Assert::new().eq_(actual, file!["output.txt"]);
+    /// Assert::new().eq(actual, file!["output.txt"]);
     /// ```
     #[track_caller]
-    pub fn eq_(&self, actual: impl IntoData, expected: impl IntoData) {
+    pub fn eq(&self, actual: impl IntoData, expected: impl IntoData) {
         let expected = expected.into_data();
         let actual = actual.into_data();
         if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected) {
@@ -79,73 +81,10 @@ impl Assert {
         }
     }
 
-    /// Check if a value is the same as an expected value
-    ///
-    /// When the content is text, newlines are normalized.
-    ///
-    /// ```rust
-    /// # use snapbox::Assert;
-    /// let actual = "something";
-    /// let expected = "something";
-    /// Assert::new().eq(expected, actual);
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// # use snapbox::Assert;
-    /// # use snapbox::file;
-    /// let actual = "something";
-    /// Assert::new().eq(file!["output.txt"], actual);
-    /// ```
     #[track_caller]
-    #[deprecated(
-        since = "0.5.11",
-        note = "Replaced with `Assert::eq_(actual, expected.raw())`"
-    )]
-    pub fn eq(&self, expected: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-        let expected = expected.into();
-        let actual = actual.into();
-        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, expected.raw()) {
-            err.panic();
-        }
-    }
-
-    /// Check if a value matches a pattern
-    ///
-    /// Pattern syntax:
-    /// - `...` is a line-wildcard when on a line by itself
-    /// - `[..]` is a character-wildcard when inside a line
-    /// - `[EXE]` matches `.exe` on Windows
-    ///
-    /// Normalization:
-    /// - Newlines
-    /// - `\` to `/`
-    ///
-    /// ```rust
-    /// # use snapbox::Assert;
-    /// let actual = "something";
-    /// let expected = "so[..]g";
-    /// Assert::new().matches(expected, actual);
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// # use snapbox::Assert;
-    /// # use snapbox::file;
-    /// let actual = "something";
-    /// Assert::new().matches(file!["output.txt"], actual);
-    /// ```
-    #[track_caller]
-    #[deprecated(
-        since = "0.5.11",
-        note = "Replaced with `Assert::eq_(actual, expected)`"
-    )]
-    pub fn matches(&self, pattern: impl Into<crate::Data>, actual: impl Into<crate::Data>) {
-        let pattern = pattern.into();
-        let actual = actual.into();
-        if let Err(err) = self.try_eq(Some(&"In-memory"), actual, pattern) {
-            err.panic();
-        }
+    #[deprecated(since = "0.6.0", note = "Replaced with `Assert::eq`")]
+    pub fn eq_(&self, actual: impl IntoData, expected: impl IntoData) {
+        self.eq(actual, expected)
     }
 
     pub fn try_eq(

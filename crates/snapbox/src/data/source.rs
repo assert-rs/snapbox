@@ -76,75 +76,17 @@ pub struct Inline {
     pub position: Position,
     #[doc(hidden)]
     pub data: &'static str,
-    #[doc(hidden)]
-    pub indent: bool,
 }
 
 impl Inline {
-    /// Indent to quote-level when overwriting the string literal (default)
-    pub fn indent(mut self, yes: bool) -> Self {
-        self.indent = yes;
-        self
-    }
-
-    /// Initialize `Self` as [`format`][crate::data::DataFormat] or [`Error`][crate::data::DataFormat::Error]
-    ///
-    /// This is generally used for `expected` data
-    ///
-    /// ```rust
-    /// # #[cfg(feature = "json")] {
-    /// use snapbox::str;
-    ///
-    /// let expected = str![[r#"{"hello": "world"}"#]]
-    ///     .is(snapbox::data::DataFormat::Json);
-    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
-    /// # }
-    /// ```
-    // #[deprecated(since = "0.5.11", note = "Replaced with `IntoData::is`")]   // can't deprecate
-    // because trait will always be preferred
-    pub fn is(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.is(format)
-    }
-
-    /// Deprecated, replaced with [`Inline::is`]
-    #[deprecated(since = "0.5.2", note = "Replaced with `Inline::is`")]
-    pub fn coerce_to(self, format: super::DataFormat) -> super::Data {
-        let data: super::Data = self.into();
-        data.coerce_to(format)
-    }
-
     pub(crate) fn trimmed(&self) -> String {
         let mut data = self.data;
         if data.contains('\n') {
-            if data.starts_with('\n') {
-                data = &data[1..]
-            }
-            if self.indent {
-                return trim_indent(data);
-            }
+            data = data.strip_prefix('\n').unwrap_or(data);
+            data = data.strip_suffix('\n').unwrap_or(data);
         }
         data.to_owned()
     }
-}
-
-fn trim_indent(text: &str) -> String {
-    let indent = text
-        .lines()
-        .filter(|it| !it.trim().is_empty())
-        .map(|it| it.len() - it.trim_start().len())
-        .min()
-        .unwrap_or(0);
-
-    crate::utils::LinesWithTerminator::new(text)
-        .map(|line| {
-            if line.len() <= indent {
-                line.trim_start_matches(' ')
-            } else {
-                &line[indent..]
-            }
-        })
-        .collect()
 }
 
 impl std::fmt::Display for Inline {

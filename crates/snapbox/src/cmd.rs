@@ -594,6 +594,8 @@ impl OutputAssert {
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
     /// - `[EXE]` matches `.exe` on Windows
+    /// - `"{...}"` is a JSON value wildcard
+    /// - `"...": "{...}"` is a JSON key-value wildcard
     /// - `\` to `/`
     /// - Newlines
     ///
@@ -609,38 +611,7 @@ impl OutputAssert {
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stdout_eq_("he[..]o");
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::file;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stdout_eq_(file!["stdout.log"]);
-    /// ```
-    #[track_caller]
-    pub fn stdout_eq_(self, expected: impl IntoData) -> Self {
-        let expected = expected.into_data();
-        self.stdout_eq_inner(expected)
-    }
-
-    /// Ensure the command wrote the expected data to `stdout`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stdout_eq("hello");
+    ///     .stdout_eq("he[..]o");
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -656,48 +627,15 @@ impl OutputAssert {
     ///     .stdout_eq(file!["stdout.log"]);
     /// ```
     #[track_caller]
-    #[deprecated(
-        since = "0.5.11",
-        note = "Replaced with `OutputAssert::stdout_eq_(expected.raw())`"
-    )]
-    pub fn stdout_eq(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
-        self.stdout_eq_inner(expected.raw())
+    pub fn stdout_eq(self, expected: impl IntoData) -> Self {
+        let expected = expected.into_data();
+        self.stdout_eq_inner(expected)
     }
 
-    /// Ensure the command wrote the expected data to `stdout`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stdout_matches("he[..]o");
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::file;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stdout_matches(file!["stdout.log"]);
-    /// ```
     #[track_caller]
-    #[deprecated(
-        since = "0.5.11",
-        note = "Replaced with `OutputAssert::stdout_eq_(expected)`"
-    )]
-    pub fn stdout_matches(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
-        self.stdout_eq_inner(expected)
+    #[deprecated(since = "0.6.0", note = "Replaced with `OutputAssert::stdout_eq`")]
+    pub fn stdout_eq_(self, expected: impl IntoData) -> Self {
+        self.stdout_eq(expected)
     }
 
     #[track_caller]
@@ -716,6 +654,8 @@ impl OutputAssert {
     /// - `...` is a line-wildcard when on a line by itself
     /// - `[..]` is a character-wildcard when inside a line
     /// - `[EXE]` matches `.exe` on Windows
+    /// - `"{...}"` is a JSON value wildcard
+    /// - `"...": "{...}"` is a JSON key-value wildcard
     /// - `\` to `/`
     /// - Newlines
     ///
@@ -731,38 +671,7 @@ impl OutputAssert {
     ///     .env("stdout", "hello")
     ///     .env("stderr", "world")
     ///     .assert()
-    ///     .stderr_eq_("wo[..]d");
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::file;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stderr_eq_(file!["stderr.log"]);
-    /// ```
-    #[track_caller]
-    pub fn stderr_eq_(self, expected: impl IntoData) -> Self {
-        let expected = expected.into_data();
-        self.stderr_eq_inner(expected)
-    }
-
-    /// Ensure the command wrote the expected data to `stderr`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stderr_eq("world");
+    ///     .stderr_eq("wo[..]d");
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -778,48 +687,15 @@ impl OutputAssert {
     ///     .stderr_eq(file!["stderr.log"]);
     /// ```
     #[track_caller]
-    #[deprecated(
-        since = "0.5.11",
-        note = "Replaced with `OutputAssert::stderr_eq_(expected.raw())`"
-    )]
-    pub fn stderr_eq(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
-        self.stderr_eq_inner(expected.raw())
+    pub fn stderr_eq(self, expected: impl IntoData) -> Self {
+        let expected = expected.into_data();
+        self.stderr_eq_inner(expected)
     }
 
-    /// Ensure the command wrote the expected data to `stderr`.
-    ///
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stderr_matches("wo[..]d");
-    /// ```
-    ///
-    /// Can combine this with [`file!`][crate::file]
-    /// ```rust,no_run
-    /// use snapbox::cmd::Command;
-    /// use snapbox::cmd::cargo_bin;
-    /// use snapbox::file;
-    ///
-    /// let assert = Command::new(cargo_bin("snap-fixture"))
-    ///     .env("stdout", "hello")
-    ///     .env("stderr", "world")
-    ///     .assert()
-    ///     .stderr_matches(file!["stderr.log"]);
-    /// ```
     #[track_caller]
-    #[deprecated(
-        since = "0.5.11",
-        note = "Replaced with `OutputAssert::stderr_eq_(expected)`"
-    )]
-    pub fn stderr_matches(self, expected: impl Into<crate::Data>) -> Self {
-        let expected = expected.into();
-        self.stderr_eq_inner(expected)
+    #[deprecated(since = "0.6.0", note = "Replaced with `OutputAssert::stderr_eq`")]
+    pub fn stderr_eq_(self, expected: impl IntoData) -> Self {
+        self.stderr_eq(expected)
     }
 
     #[track_caller]

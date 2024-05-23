@@ -15,35 +15,12 @@ pub use redactions::RedactedValue;
 pub use redactions::Redactions;
 
 pub trait Filter {
-    #[deprecated(since = "0.5.11", note = "Replaced with `Filter::filter`")]
-    fn normalize(&self, data: Data) -> Data;
-    fn filter(&self, data: Data) -> Data {
-        #[allow(deprecated)]
-        self.normalize(data)
-    }
-}
-
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterNewlines")]
-pub struct NormalizeNewlines;
-#[allow(deprecated)]
-impl Filter for NormalizeNewlines {
-    fn normalize(&self, data: Data) -> Data {
-        FilterNewlines.normalize(data)
-    }
-}
-
-#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterPaths")]
-pub struct NormalizePaths;
-#[allow(deprecated)]
-impl Filter for NormalizePaths {
-    fn normalize(&self, data: Data) -> Data {
-        FilterPaths.normalize(data)
-    }
+    fn filter(&self, data: Data) -> Data;
 }
 
 pub struct FilterNewlines;
 impl Filter for FilterNewlines {
-    fn normalize(&self, data: Data) -> Data {
+    fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
         let inner = match data.inner {
@@ -56,8 +33,14 @@ impl Filter for FilterNewlines {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, normalize_lines);
+                normalize_json_string(&mut value, normalize_lines);
                 DataInner::Json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_json_string(&mut value, normalize_lines);
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
@@ -84,7 +67,7 @@ fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 
 pub struct FilterPaths;
 impl Filter for FilterPaths {
-    fn normalize(&self, data: Data) -> Data {
+    fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
         let inner = match data.inner {
@@ -97,8 +80,14 @@ impl Filter for FilterPaths {
             #[cfg(feature = "json")]
             DataInner::Json(value) => {
                 let mut value = value;
-                normalize_value(&mut value, normalize_paths);
+                normalize_json_string(&mut value, normalize_paths);
                 DataInner::Json(value)
+            }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                normalize_json_string(&mut value, normalize_paths);
+                DataInner::JsonLines(value)
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
@@ -143,7 +132,7 @@ impl<'a> FilterRedactions<'a> {
 }
 
 impl Filter for FilterRedactions<'_> {
-    fn normalize(&self, data: Data) -> Data {
+    fn filter(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
         let inner = match data.inner {
@@ -165,6 +154,14 @@ impl Filter for FilterRedactions<'_> {
                 }
                 DataInner::Json(value)
             }
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(value) => {
+                let mut value = value;
+                if let DataInner::Json(exp) = &self.pattern.inner {
+                    normalize_value_matches(&mut value, exp, self.substitutions);
+                }
+                DataInner::JsonLines(value)
+            }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
                 if let Some(pattern) = self.pattern.render() {
@@ -184,19 +181,21 @@ impl Filter for FilterRedactions<'_> {
 }
 
 #[cfg(feature = "structured-data")]
-fn normalize_value(value: &mut serde_json::Value, op: fn(&str) -> String) {
+fn normalize_json_string(value: &mut serde_json::Value, op: fn(&str) -> String) {
     match value {
         serde_json::Value::String(str) => {
             *str = op(str);
         }
         serde_json::Value::Array(arr) => {
             for value in arr.iter_mut() {
-                normalize_value(value, op)
+                normalize_json_string(value, op)
             }
         }
         serde_json::Value::Object(obj) => {
-            for (_, value) in obj.iter_mut() {
-                normalize_value(value, op)
+            for (key, mut value) in std::mem::replace(obj, serde_json::Map::new()) {
+                let key = op(&key);
+                normalize_json_string(&mut value, op);
+                obj.insert(key, value);
             }
         }
         _ => {}
@@ -211,6 +210,7 @@ fn normalize_value_matches(
 ) {
     use serde_json::Value::*;
 
+    const KEY_WILDCARD: &str = "...";
     const VALUE_WILDCARD: &str = "{...}";
 
     match (actual, expected) {
@@ -255,8 +255,19 @@ fn normalize_value_matches(
             }
         }
         (Object(act), Object(exp)) => {
-            for (a, e) in act.iter_mut().zip(exp).filter(|(a, e)| a.0 == e.0) {
-                normalize_value_matches(a.1, e.1, substitutions)
+            let has_key_wildcard =
+                exp.get(KEY_WILDCARD).and_then(|v| v.as_str()) == Some(VALUE_WILDCARD);
+            for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
+                let actual_key = substitutions.redact(&actual_key);
+                if let Some(expected_value) = exp.get(&actual_key) {
+                    normalize_value_matches(&mut actual_value, expected_value, substitutions)
+                } else if has_key_wildcard {
+                    continue;
+                }
+                act.insert(actual_key, actual_value);
+            }
+            if has_key_wildcard {
+                act.insert(KEY_WILDCARD.to_owned(), String(VALUE_WILDCARD.to_owned()));
             }
         }
         (_, _) => {}

@@ -18,7 +18,7 @@ fn json_normalize_paths_and_lines() {
 
 #[test]
 #[cfg(feature = "json")]
-fn json_normalize_obj_paths_and_lines() {
+fn json_normalize_obj_value_paths_and_lines() {
     let json = json!({
         "person": {
             "name": "John\\Doe\r\n",
@@ -39,6 +39,34 @@ fn json_normalize_obj_paths_and_lines() {
         "person": {
             "name": "John/Doe\n",
             "nickname": "Jo/hn\n",
+        }
+    });
+    assert_eq!(Data::json(assert), data);
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn json_normalize_obj_key_paths_and_lines() {
+    let json = json!({
+        "person": {
+            "John\\Doe\r\n": "name",
+            "Jo\\hn\r\n": "nickname",
+        }
+    });
+    let data = Data::json(json);
+    let data = FilterPaths.filter(data);
+    let assert = json!({
+        "person": {
+            "John/Doe\r\n": "name",
+            "Jo/hn\r\n": "nickname",
+        }
+    });
+    assert_eq!(Data::json(assert), data);
+    let data = FilterNewlines.filter(data);
+    let assert = json!({
+        "person": {
+            "John/Doe\n": "name",
+            "Jo/hn\n": "nickname",
         }
     });
     assert_eq!(Data::json(assert), data);
@@ -153,6 +181,90 @@ fn json_normalize_matches_diff_order_array() {
     if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
         assert_ne!(exp, act);
     }
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn json_obj_redact_keys() {
+    let expected = json!({
+        "[A]": "value-a",
+        "[B]": "value-b",
+        "[C]": "value-c",
+    });
+    let expected = Data::json(expected);
+    let actual = json!({
+        "key-a": "value-a",
+        "key-b": "value-b",
+        "key-c": "value-c",
+    });
+    let actual = Data::json(actual);
+    let mut sub = Redactions::new();
+    sub.insert("[A]", "key-a").unwrap();
+    sub.insert("[B]", "key-b").unwrap();
+    sub.insert("[C]", "key-c").unwrap();
+    let actual = FilterRedactions::new(&sub, &expected).filter(actual);
+
+    let expected_actual = json!({
+        "[A]": "value-a",
+        "[B]": "value-b",
+        "[C]": "value-c",
+    });
+    let expected_actual = Data::json(expected_actual);
+    assert_eq!(actual, expected_actual);
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn json_obj_redact_with_disparate_keys() {
+    let expected = json!({
+        "a": "[A]",
+        "b": "[B]",
+        "c": "[C]",
+    });
+    let expected = Data::json(expected);
+    let actual = json!({
+        "a": "value-a",
+        "c": "value-c",
+    });
+    let actual = Data::json(actual);
+    let mut sub = Redactions::new();
+    sub.insert("[A]", "value-a").unwrap();
+    sub.insert("[B]", "value-b").unwrap();
+    sub.insert("[C]", "value-c").unwrap();
+    let actual = FilterRedactions::new(&sub, &expected).filter(actual);
+
+    let expected_actual = json!({
+        "a": "[A]",
+        "c": "[C]",
+    });
+    let expected_actual = Data::json(expected_actual);
+    assert_eq!(actual, expected_actual);
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn json_normalize_wildcard_key() {
+    let expected = json!({
+        "a": "value-a",
+        "c": "value-c",
+        "...": "{...}",
+    });
+    let expected = Data::json(expected);
+    let actual = json!({
+        "a": "value-a",
+        "b": "value-b",
+        "c": "value-c",
+    });
+    let actual = Data::json(actual);
+    let actual = FilterRedactions::new(&Default::default(), &expected).filter(actual);
+
+    let expected_actual = json!({
+        "a": "value-a",
+        "c": "value-c",
+        "...": "{...}",
+    });
+    let expected_actual = Data::json(expected_actual);
+    assert_eq!(actual, expected_actual);
 }
 
 #[test]

@@ -1,13 +1,15 @@
 use std::borrow::Cow;
+use std::path::Path;
+use std::path::PathBuf;
 
-/// Match pattern expressions, see [`Assert`][crate::Assert]
+/// Replace data with placeholders
 ///
 /// Built-in placeholders:
 /// - `...` on a line of its own: match multiple complete lines
 /// - `[..]`: match multiple characters within a line
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct Redactions {
-    vars: std::collections::BTreeMap<&'static str, std::collections::BTreeSet<RedactedValueInner>>,
+    vars: std::collections::BTreeMap<RedactedValueInner, std::collections::BTreeSet<&'static str>>,
     unused: std::collections::BTreeSet<RedactedValueInner>,
 }
 
@@ -32,6 +34,17 @@ impl Redactions {
     /// let mut subst = snapbox::Redactions::new();
     /// subst.insert("[EXE]", std::env::consts::EXE_SUFFIX);
     /// ```
+    ///
+    /// With the `regex` feature, you can define patterns using regexes.
+    /// You can choose to replace a subset of the regex by giving it the named capture group
+    /// `redacted`.
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "regex")] {
+    /// let mut subst = snapbox::Redactions::new();
+    /// subst.insert("[OBJECT]", regex::Regex::new("(?<redacted>(world|moon))").unwrap());
+    /// # }
+    /// ```
     pub fn insert(
         &mut self,
         placeholder: &'static str,
@@ -39,8 +52,8 @@ impl Redactions {
     ) -> crate::assert::Result<()> {
         let placeholder = validate_placeholder(placeholder)?;
         let value = value.into();
-        if let Some(inner) = value.inner {
-            self.vars.entry(placeholder).or_default().insert(inner);
+        if let Some(value) = value.inner {
+            self.vars.entry(value).or_default().insert(placeholder);
         } else {
             self.unused.insert(RedactedValueInner::Str(placeholder));
         }
@@ -49,7 +62,7 @@ impl Redactions {
 
     /// Insert additional match patterns
     ///
-    /// placeholders must be enclosed in `[` and `]`.
+    /// Placeholders must be enclosed in `[` and `]`.
     pub fn extend(
         &mut self,
         vars: impl IntoIterator<Item = (&'static str, impl Into<RedactedValue>)>,
@@ -62,7 +75,10 @@ impl Redactions {
 
     pub fn remove(&mut self, placeholder: &'static str) -> crate::assert::Result<()> {
         let placeholder = validate_placeholder(placeholder)?;
-        self.vars.remove(placeholder);
+        self.vars.retain(|_value, placeholders| {
+            placeholders.retain(|p| *p != placeholder);
+            !placeholders.is_empty()
+        });
         Ok(())
     }
 
@@ -81,15 +97,18 @@ impl Redactions {
         normalize(input, pattern, self)
     }
 
-    fn substitute<'v>(&self, input: &'v str) -> Cow<'v, str> {
+    /// Apply redaction only, no pattern-dependent globs
+    pub fn redact(&self, input: &str) -> String {
         let mut input = input.to_owned();
         replace_many(
             &mut input,
-            self.vars
-                .iter()
-                .flat_map(|(var, replaces)| replaces.iter().map(|replace| (replace, *var))),
+            self.vars.iter().flat_map(|(value, placeholders)| {
+                placeholders
+                    .iter()
+                    .map(move |placeholder| (value, *placeholder))
+            }),
         );
-        Cow::Owned(input)
+        input
     }
 
     fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
@@ -108,10 +127,16 @@ pub struct RedactedValue {
     inner: Option<RedactedValueInner>,
 }
 
-#[derive(Clone, Debug, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 enum RedactedValueInner {
     Str(&'static str),
     String(String),
+    Path {
+        native: String,
+        normalized: String,
+    },
+    #[cfg(feature = "regex")]
+    Regex(regex::Regex),
 }
 
 impl RedactedValueInner {
@@ -119,28 +144,146 @@ impl RedactedValueInner {
         match self {
             Self::Str(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
             Self::String(s) => buffer.find(s).map(|offset| offset..(offset + s.len())),
+            Self::Path { native, normalized } => {
+                match (buffer.find(native), buffer.find(normalized)) {
+                    (Some(native_offset), Some(normalized_offset)) => {
+                        if native_offset <= normalized_offset {
+                            Some(native_offset..(native_offset + native.len()))
+                        } else {
+                            Some(normalized_offset..(normalized_offset + normalized.len()))
+                        }
+                    }
+                    (Some(offset), None) => Some(offset..(offset + native.len())),
+                    (None, Some(offset)) => Some(offset..(offset + normalized.len())),
+                    (None, None) => None,
+                }
+            }
+            #[cfg(feature = "regex")]
+            Self::Regex(r) => {
+                let captures = r.captures(buffer)?;
+                let m = captures.name("redacted").or_else(|| captures.get(0))?;
+                Some(m.range())
+            }
         }
     }
-}
 
-impl<C> From<C> for RedactedValue
-where
-    C: Into<Cow<'static, str>>,
-{
-    fn from(inner: C) -> Self {
-        let inner = inner.into();
-        if inner.is_empty() {
-            Self { inner: None }
-        } else {
-            #[allow(deprecated)]
-            Self {
-                inner: Some(RedactedValueInner::String(crate::utils::normalize_text(
-                    &inner,
-                ))),
+    fn as_cmp(&self) -> (usize, std::cmp::Reverse<usize>, &str) {
+        match self {
+            Self::Str(s) => (0, std::cmp::Reverse(s.len()), s),
+            Self::String(s) => (0, std::cmp::Reverse(s.len()), s),
+            Self::Path { normalized: s, .. } => (0, std::cmp::Reverse(s.len()), s),
+            #[cfg(feature = "regex")]
+            Self::Regex(r) => {
+                let s = r.as_str();
+                (1, std::cmp::Reverse(s.len()), s)
             }
         }
     }
 }
+
+impl From<&'static str> for RedactedValue {
+    fn from(inner: &'static str) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(RedactedValueInner::Str(inner)),
+            }
+        }
+    }
+}
+
+impl From<String> for RedactedValue {
+    fn from(inner: String) -> Self {
+        if inner.is_empty() {
+            Self { inner: None }
+        } else {
+            Self {
+                inner: Some(RedactedValueInner::String(inner)),
+            }
+        }
+    }
+}
+
+impl From<&'_ String> for RedactedValue {
+    fn from(inner: &'_ String) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl From<Cow<'static, str>> for RedactedValue {
+    fn from(inner: Cow<'static, str>) -> Self {
+        match inner {
+            Cow::Borrowed(s) => s.into(),
+            Cow::Owned(s) => s.into(),
+        }
+    }
+}
+
+impl From<&'static Path> for RedactedValue {
+    fn from(inner: &'static Path) -> Self {
+        inner.to_owned().into()
+    }
+}
+
+impl From<PathBuf> for RedactedValue {
+    fn from(inner: PathBuf) -> Self {
+        if inner.as_os_str().is_empty() {
+            Self { inner: None }
+        } else {
+            let native = match inner.into_os_string().into_string() {
+                Ok(s) => s,
+                Err(os) => PathBuf::from(os).display().to_string(),
+            };
+            let normalized = crate::filter::normalize_paths(&native);
+            Self {
+                inner: Some(RedactedValueInner::Path { native, normalized }),
+            }
+        }
+    }
+}
+
+impl From<&'_ PathBuf> for RedactedValue {
+    fn from(inner: &'_ PathBuf) -> Self {
+        inner.clone().into()
+    }
+}
+
+#[cfg(feature = "regex")]
+impl From<regex::Regex> for RedactedValue {
+    fn from(inner: regex::Regex) -> Self {
+        Self {
+            inner: Some(RedactedValueInner::Regex(inner)),
+        }
+    }
+}
+
+#[cfg(feature = "regex")]
+impl From<&'_ regex::Regex> for RedactedValue {
+    fn from(inner: &'_ regex::Regex) -> Self {
+        inner.clone().into()
+    }
+}
+
+impl PartialOrd for RedactedValueInner {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.as_cmp().cmp(&other.as_cmp()))
+    }
+}
+
+impl Ord for RedactedValueInner {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_cmp().cmp(&other.as_cmp())
+    }
+}
+
+impl PartialEq for RedactedValueInner {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_cmp().eq(&other.as_cmp())
+    }
+}
+
+impl Eq for RedactedValueInner {}
 
 /// Replacements is `(from, to)`
 fn replace_many<'a>(
@@ -177,97 +320,50 @@ fn normalize(input: &str, pattern: &str, redactions: &Redactions) -> String {
         return input.to_owned();
     }
 
-    let mut normalized: Vec<Cow<str>> = Vec::new();
-    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(input).collect();
-    let pattern_lines: Vec<_> = crate::utils::LinesWithTerminator::new(pattern).collect();
+    let input = redactions.redact(input);
 
+    let mut normalized: Vec<&str> = Vec::new();
     let mut input_index = 0;
-    let mut pattern_index = 0;
-    'outer: loop {
-        let pattern_line = if let Some(pattern_line) = pattern_lines.get(pattern_index) {
-            *pattern_line
-        } else {
-            normalized.extend(
-                input_lines[input_index..]
-                    .iter()
-                    .copied()
-                    .map(|s| redactions.substitute(s)),
-            );
-            break 'outer;
-        };
-        let next_pattern_index = pattern_index + 1;
-
-        let input_line = if let Some(input_line) = input_lines.get(input_index) {
-            *input_line
-        } else {
-            break 'outer;
-        };
-        let next_input_index = input_index + 1;
-
-        if line_matches(input_line, pattern_line, redactions) {
-            pattern_index = next_pattern_index;
-            input_index = next_input_index;
-            normalized.push(Cow::Borrowed(pattern_line));
-            continue 'outer;
-        } else if is_line_elide(pattern_line) {
-            let next_pattern_line: &str =
-                if let Some(pattern_line) = pattern_lines.get(next_pattern_index) {
-                    pattern_line
-                } else {
-                    normalized.push(Cow::Borrowed(pattern_line));
-                    break 'outer;
-                };
-            if let Some(future_input_index) = input_lines[input_index..]
-                .iter()
-                .enumerate()
-                .find(|(_, l)| **l == next_pattern_line)
-                .map(|(i, _)| input_index + i)
-            {
-                normalized.push(Cow::Borrowed(pattern_line));
-                pattern_index = next_pattern_index;
-                input_index = future_input_index;
-                continue 'outer;
-            } else {
-                normalized.extend(
-                    input_lines[input_index..]
-                        .iter()
-                        .copied()
-                        .map(|s| redactions.substitute(s)),
-                );
-                break 'outer;
-            }
-        } else {
-            // Find where we can pick back up for normalizing
-            for future_input_index in next_input_index..input_lines.len() {
-                let future_input_line = input_lines[future_input_index];
-                if let Some(future_pattern_index) = pattern_lines[next_pattern_index..]
-                    .iter()
-                    .enumerate()
-                    .find(|(_, l)| **l == future_input_line || is_line_elide(l))
-                    .map(|(i, _)| next_pattern_index + i)
+    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(&input).collect();
+    let mut pattern_lines = crate::utils::LinesWithTerminator::new(pattern).peekable();
+    'outer: while let Some(pattern_line) = pattern_lines.next() {
+        if is_line_elide(pattern_line) {
+            if let Some(next_pattern_line) = pattern_lines.peek() {
+                for (index_offset, next_input_line) in
+                    input_lines[input_index..].iter().copied().enumerate()
                 {
-                    normalized.extend(
-                        input_lines[input_index..future_input_index]
-                            .iter()
-                            .copied()
-                            .map(|s| redactions.substitute(s)),
-                    );
-                    pattern_index = future_pattern_index;
-                    input_index = future_input_index;
-                    continue 'outer;
+                    if line_matches(next_input_line, next_pattern_line, redactions) {
+                        normalized.push(pattern_line);
+                        input_index += index_offset;
+                        continue 'outer;
+                    }
                 }
+                // Give up doing further normalization
+                break;
+            } else {
+                // Give up doing further normalization
+                normalized.push(pattern_line);
+                // captured rest so don't copy remaining lines over
+                input_index = input_lines.len();
+                break;
             }
+        } else {
+            let Some(input_line) = input_lines.get(input_index) else {
+                // Give up doing further normalization
+                break;
+            };
 
-            normalized.extend(
-                input_lines[input_index..]
-                    .iter()
-                    .copied()
-                    .map(|s| redactions.substitute(s)),
-            );
-            break 'outer;
+            if line_matches(input_line, pattern_line, redactions) {
+                input_index += 1;
+                normalized.push(pattern_line);
+            } else {
+                // Give up doing further normalization
+                break;
+            }
         }
     }
 
+    normalized.extend(input_lines[input_index..].iter().copied());
     normalized.join("")
 }
 
@@ -275,24 +371,20 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(line: &str, pattern: &str, redactions: &Redactions) -> bool {
-    if line == pattern {
+fn line_matches(mut input: &str, pattern: &str, redactions: &Redactions) -> bool {
+    if input == pattern {
         return true;
     }
 
-    let subbed = redactions.substitute(line);
-    let mut line = subbed.as_ref();
-
     let pattern = redactions.clear(pattern);
-
     let mut sections = pattern.split("[..]").peekable();
     while let Some(section) = sections.next() {
-        if let Some(remainder) = line.strip_prefix(section) {
+        if let Some(remainder) = input.strip_prefix(section) {
             if let Some(next_section) = sections.peek() {
                 if next_section.is_empty() {
-                    line = "";
+                    input = "";
                 } else if let Some(restart_index) = remainder.find(next_section) {
-                    line = &remainder[restart_index..];
+                    input = &remainder[restart_index..];
                 }
             } else {
                 return remainder.is_empty();
@@ -367,7 +459,7 @@ mod test {
     fn elide_delimited_with_sub() {
         let input = "Hello World\nHow are you?\nGoodbye World";
         let pattern = "Hello [..]\n...\nGoodbye [..]";
-        let expected = "Hello [..]\nHow are you?\nGoodbye World";
+        let expected = "Hello [..]\n...\nGoodbye [..]";
         let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
@@ -412,7 +504,7 @@ mod test {
     fn post_diverge_elide() {
         let input = "Hello\nWorld\nGoodbye\nSir";
         let pattern = "Hello\nMoon\nGoodbye\n...";
-        let expected = "Hello\nWorld\nGoodbye\n...";
+        let expected = "Hello\nWorld\nGoodbye\nSir";
         let actual = normalize(input, pattern, &Redactions::new());
         assert_eq!(expected, actual);
     }
@@ -497,11 +589,71 @@ mod test {
     }
 
     #[test]
+    fn substitute_path() {
+        let input = "input: /home/epage";
+        let pattern = "input: [HOME]";
+        let mut sub = Redactions::new();
+        let sep = std::path::MAIN_SEPARATOR.to_string();
+        let redacted = PathBuf::from(sep).join("home").join("epage");
+        sub.insert("[HOME]", redacted).unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    fn substitute_overlapping_path() {
+        let input = "\
+a: /home/epage
+b: /home/epage/snapbox";
+        let pattern = "\
+a: [A]
+b: [B]";
+        let mut sub = Redactions::new();
+        let sep = std::path::MAIN_SEPARATOR.to_string();
+        let redacted = PathBuf::from(&sep).join("home").join("epage");
+        sub.insert("[A]", redacted).unwrap();
+        let redacted = PathBuf::from(sep)
+            .join("home")
+            .join("epage")
+            .join("snapbox");
+        sub.insert("[B]", redacted).unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
     fn substitute_disabled() {
         let input = "cargo";
         let pattern = "cargo[EXE]";
         let mut sub = Redactions::new();
         sub.insert("[EXE]", "").unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    #[cfg(feature = "regex")]
+    fn substitute_regex_unnamed() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Redactions::new();
+        sub.insert("[OBJECT]", regex::Regex::new("world").unwrap())
+            .unwrap();
+        let actual = normalize(input, pattern, &sub);
+        assert_eq!(actual, pattern);
+    }
+
+    #[test]
+    #[cfg(feature = "regex")]
+    fn substitute_regex_named() {
+        let input = "Hello world!";
+        let pattern = "Hello [OBJECT]!";
+        let mut sub = Redactions::new();
+        sub.insert(
+            "[OBJECT]",
+            regex::Regex::new("(?<redacted>world)!").unwrap(),
+        )
+        .unwrap();
         let actual = normalize(input, pattern, &sub);
         assert_eq!(actual, pattern);
     }

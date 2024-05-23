@@ -15,22 +15,10 @@ line1
   line2
 ",
         str![[r#"
-            line1
-              line2
-        "#]]
-        .indent(true),
-    );
+line1
+  line2
 
-    assert_data_eq!(
-        "\
-line1
-  line2
-",
-        str![[r#"
-line1
-  line2
-"#]]
-        .indent(false),
+"#]],
     );
 }
 

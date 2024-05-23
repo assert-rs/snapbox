@@ -4,6 +4,8 @@
 /// - `...` is a line-wildcard when on a line by itself
 /// - `[..]` is a character-wildcard when inside a line
 /// - `[EXE]` matches `.exe` on Windows
+/// - `"{...}"` is a JSON value wildcard
+/// - `"...": "{...}"` is a JSON key-value wildcard
 /// - `\` to `/`
 /// - Newlines
 ///
@@ -41,7 +43,7 @@ macro_rules! assert_data_eq {
         let expected = $crate::IntoData::into_data($expected);
         $crate::Assert::new()
             .action_env($crate::assert::DEFAULT_ACTION_ENV)
-            .eq_(actual, expected);
+            .eq(actual, expected);
     }};
 }
 

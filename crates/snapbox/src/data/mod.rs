@@ -2,20 +2,12 @@
 
 mod filters;
 mod format;
-mod normalize;
 mod runtime;
 mod source;
 #[cfg(test)]
 mod tests;
 
 pub use format::DataFormat;
-pub use normalize::Normalize;
-#[allow(deprecated)]
-pub use normalize::NormalizeMatches;
-#[allow(deprecated)]
-pub use normalize::NormalizeNewlines;
-#[allow(deprecated)]
-pub use normalize::NormalizePaths;
 pub use source::DataSource;
 pub use source::Inline;
 #[doc(hidden)]
@@ -112,12 +104,52 @@ pub trait IntoData: Sized {
     fn into_data(self) -> Data;
 }
 
-impl<D> IntoData for D
-where
-    D: Into<Data>,
-{
+impl IntoData for Data {
     fn into_data(self) -> Data {
-        self.into()
+        self
+    }
+}
+
+impl IntoData for &'_ Data {
+    fn into_data(self) -> Data {
+        self.clone()
+    }
+}
+
+impl IntoData for Vec<u8> {
+    fn into_data(self) -> Data {
+        Data::binary(self)
+    }
+}
+
+impl IntoData for &'_ [u8] {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for String {
+    fn into_data(self) -> Data {
+        Data::text(self)
+    }
+}
+
+impl IntoData for &'_ String {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for &'_ str {
+    fn into_data(self) -> Data {
+        self.to_owned().into_data()
+    }
+}
+
+impl IntoData for Inline {
+    fn into_data(self) -> Data {
+        let trimmed = self.trimmed();
+        super::Data::text(trimmed).with_source(self)
     }
 }
 
@@ -170,8 +202,6 @@ macro_rules! file {
 /// "]];
 /// str![r#"{"Foo": 92}"#];
 /// ```
-///
-/// Leading indentation is stripped.
 #[macro_export]
 macro_rules! str {
     [$data:literal] => { $crate::str![[$data]] };
@@ -184,7 +214,6 @@ macro_rules! str {
         let inline = $crate::data::Inline {
             position,
             data: $data,
-            indent: true,
         };
         inline
     }};
@@ -209,6 +238,9 @@ pub(crate) enum DataInner {
     Text(String),
     #[cfg(feature = "json")]
     Json(serde_json::Value),
+    // Always a `Value::Array` but using `Value` for easier bookkeeping
+    #[cfg(feature = "json")]
+    JsonLines(serde_json::Value),
     #[cfg(feature = "term-svg")]
     TermSvg(String),
 }
@@ -236,6 +268,11 @@ impl Data {
     #[cfg(feature = "json")]
     pub fn json(raw: impl Into<serde_json::Value>) -> Self {
         Self::with_inner(DataInner::Json(raw.into()))
+    }
+
+    #[cfg(feature = "json")]
+    pub fn jsonlines(raw: impl Into<Vec<serde_json::Value>>) -> Self {
+        Self::with_inner(DataInner::JsonLines(serde_json::Value::Array(raw.into())))
     }
 
     fn error(raw: impl Into<crate::assert::Error>, intended: DataFormat) -> Self {
@@ -301,7 +338,7 @@ impl Data {
                 let inferred_format = DataFormat::from(path);
                 match inferred_format {
                     #[cfg(feature = "json")]
-                    DataFormat::Json => data.coerce_to(inferred_format),
+                    DataFormat::Json | DataFormat::JsonLines => data.coerce_to(inferred_format),
                     #[cfg(feature = "term-svg")]
                     DataFormat::TermSvg => {
                         let data = data.coerce_to(DataFormat::Text);
@@ -336,14 +373,6 @@ impl Data {
             .map_err(|e| format!("Failed to write {}: {}", path.display(), e).into())
     }
 
-    /// Post-process text
-    ///
-    /// See [utils][crate::utils]
-    #[deprecated(since = "0.5.11", note = "Replaced with `Normalize::normalize`")]
-    pub fn normalize(self, op: impl Normalize) -> Self {
-        op.filter(self)
-    }
-
     /// Return the underlying `String`
     ///
     /// Note: this will not inspect binary data for being a valid `String`.
@@ -353,7 +382,9 @@ impl Data {
             DataInner::Binary(_) => None,
             DataInner::Text(data) => Some(data.to_owned()),
             #[cfg(feature = "json")]
-            DataInner::Json(value) => Some(serde_json::to_string_pretty(value).unwrap()),
+            DataInner::Json(_) => Some(self.to_string()),
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => Some(self.to_string()),
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => Some(data.to_owned()),
         }
@@ -365,9 +396,9 @@ impl Data {
             DataInner::Binary(data) => Ok(data.clone()),
             DataInner::Text(data) => Ok(data.clone().into_bytes()),
             #[cfg(feature = "json")]
-            DataInner::Json(value) => {
-                serde_json::to_vec_pretty(value).map_err(|err| format!("{err}").into())
-            }
+            DataInner::Json(_) => Ok(self.to_string().into_bytes()),
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => Ok(self.to_string().into_bytes()),
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => Ok(data.clone().into_bytes()),
         }
@@ -393,6 +424,8 @@ impl Data {
             (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
             #[cfg(feature = "json")]
             (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
@@ -404,6 +437,11 @@ impl Data {
                 let inner = serde_json::from_str::<serde_json::Value>(&inner)
                     .map_err(|err| err.to_string())?;
                 DataInner::Json(inner)
+            }
+            #[cfg(feature = "json")]
+            (DataInner::Text(inner), DataFormat::JsonLines) => {
+                let inner = parse_jsonlines(&inner).map_err(|err| err.to_string())?;
+                DataInner::JsonLines(serde_json::Value::Array(inner))
             }
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
@@ -442,6 +480,8 @@ impl Data {
             (DataInner::Text(inner), DataFormat::Text) => DataInner::Text(inner),
             #[cfg(feature = "json")]
             (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
@@ -475,6 +515,14 @@ impl Data {
                     DataInner::Text(inner)
                 }
             }
+            #[cfg(feature = "json")]
+            (DataInner::Text(inner), DataFormat::JsonLines) => {
+                if let Ok(jsonlines) = parse_jsonlines(&inner) {
+                    DataInner::JsonLines(serde_json::Value::Array(jsonlines))
+                } else {
+                    DataInner::Text(inner)
+                }
+            }
             #[cfg(feature = "term-svg")]
             (DataInner::Text(inner), DataFormat::TermSvg) => {
                 DataInner::TermSvg(anstyle_svg::Term::new().render_svg(&inner))
@@ -497,6 +545,10 @@ impl Data {
             #[allow(unreachable_patterns)]
             #[cfg(feature = "json")]
             (inner, DataFormat::Json) => inner,
+            // reachable if more than one structured data format is enabled
+            #[allow(unreachable_patterns)]
+            #[cfg(feature = "json")]
+            (inner, DataFormat::JsonLines) => inner,
             // reachable if more than one structured data format is enabled
             #[allow(unreachable_patterns)]
             #[cfg(feature = "term-svg")]
@@ -522,6 +574,8 @@ impl Data {
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
             DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => DataFormat::JsonLines,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
@@ -534,6 +588,8 @@ impl Data {
             DataInner::Text(_) => DataFormat::Text,
             #[cfg(feature = "json")]
             DataInner::Json(_) => DataFormat::Json,
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => DataFormat::JsonLines,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
@@ -546,6 +602,8 @@ impl Data {
             DataInner::Text(_) => None,
             #[cfg(feature = "json")]
             DataInner::Json(_) => None,
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(_) => None,
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => text_elem(data),
         }
@@ -560,6 +618,14 @@ impl std::fmt::Display for Data {
             DataInner::Text(data) => data.fmt(f),
             #[cfg(feature = "json")]
             DataInner::Json(data) => serde_json::to_string_pretty(data).unwrap().fmt(f),
+            #[cfg(feature = "json")]
+            DataInner::JsonLines(data) => {
+                let array = data.as_array().expect("jsonlines is always an array");
+                for value in array {
+                    writeln!(f, "{}", serde_json::to_string(value).unwrap())?;
+                }
+                Ok(())
+            }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(data) => data.fmt(f),
         }
@@ -574,6 +640,8 @@ impl PartialEq for Data {
             (DataInner::Text(left), DataInner::Text(right)) => left == right,
             #[cfg(feature = "json")]
             (DataInner::Json(left), DataInner::Json(right)) => left == right,
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(left), DataInner::JsonLines(right)) => left == right,
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(left), DataInner::TermSvg(right)) => {
                 // HACK: avoid including `width` and `height` in the comparison
@@ -596,6 +664,20 @@ impl std::fmt::Display for DataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.error.fmt(f)
     }
+}
+
+#[cfg(feature = "json")]
+fn parse_jsonlines(text: &str) -> Result<Vec<serde_json::Value>, serde_json::Error> {
+    let mut lines = Vec::new();
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let json = serde_json::from_str::<serde_json::Value>(line)?;
+        lines.push(json);
+    }
+    Ok(lines)
 }
 
 #[cfg(feature = "term-svg")]
@@ -628,44 +710,43 @@ impl Default for Data {
 
 impl<'d> From<&'d Data> for Data {
     fn from(other: &'d Data) -> Self {
-        other.clone()
+        other.into_data()
     }
 }
 
 impl From<Vec<u8>> for Data {
     fn from(other: Vec<u8>) -> Self {
-        Self::binary(other)
+        other.into_data()
     }
 }
 
 impl<'b> From<&'b [u8]> for Data {
     fn from(other: &'b [u8]) -> Self {
-        other.to_owned().into()
+        other.into_data()
     }
 }
 
 impl From<String> for Data {
     fn from(other: String) -> Self {
-        Self::text(other)
+        other.into_data()
     }
 }
 
 impl<'s> From<&'s String> for Data {
     fn from(other: &'s String) -> Self {
-        other.clone().into()
+        other.into_data()
     }
 }
 
 impl<'s> From<&'s str> for Data {
     fn from(other: &'s str) -> Self {
-        other.to_owned().into()
+        other.into_data()
     }
 }
 
 impl From<Inline> for super::Data {
-    fn from(inline: Inline) -> Self {
-        let trimmed = inline.trimmed();
-        super::Data::text(trimmed).with_source(inline)
+    fn from(other: Inline) -> Self {
+        other.into_data()
     }
 }
 
@@ -705,4 +786,90 @@ pub fn generate_snapshot_path(fn_path: &str, format: Option<DataFormat>) -> std:
     path.push('.');
     path.push_str(format.unwrap_or(DataFormat::Text).ext());
     path.into()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[track_caller]
+    fn validate_cases(cases: &[(&str, bool)], input_format: DataFormat) {
+        for (input, valid) in cases.iter().copied() {
+            let (expected_is_format, expected_coerced_format) = if valid {
+                (input_format, input_format)
+            } else {
+                (DataFormat::Error, DataFormat::Text)
+            };
+
+            let actual_is = Data::text(input).is(input_format);
+            assert_eq!(
+                actual_is.format(),
+                expected_is_format,
+                "\n{input}\n{actual_is}"
+            );
+
+            let actual_coerced = Data::text(input).coerce_to(input_format);
+            assert_eq!(
+                actual_coerced.format(),
+                expected_coerced_format,
+                "\n{input}\n{actual_coerced}"
+            );
+
+            if valid {
+                assert_eq!(actual_is, actual_coerced);
+
+                let rendered = actual_is.render().unwrap();
+                let bytes = actual_is.to_bytes().unwrap();
+                assert_eq!(rendered, std::str::from_utf8(&bytes).unwrap());
+
+                assert_eq!(Data::text(&rendered).is(input_format), actual_is);
+            }
+        }
+    }
+
+    #[test]
+    fn text() {
+        let cases = [("", true), ("good", true), ("{}", true), ("\"\"", true)];
+        validate_cases(&cases, DataFormat::Text);
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn json() {
+        let cases = [("", false), ("bad", false), ("{}", true), ("\"\"", true)];
+        validate_cases(&cases, DataFormat::Json);
+    }
+
+    #[cfg(feature = "json")]
+    #[test]
+    fn jsonlines() {
+        let cases = [
+            ("", true),
+            ("bad", false),
+            ("{}", true),
+            ("\"\"", true),
+            (
+                "
+{}
+{}
+", true,
+            ),
+            (
+                "
+{}
+
+{}
+", true,
+            ),
+            (
+                "
+{}
+bad
+{}
+",
+                false,
+            ),
+        ];
+        validate_cases(&cases, DataFormat::JsonLines);
+    }
 }
