@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+Breaking
+- Removed deprecated functionality
+- Removed `str![[]]` indent support
+- Added trailing newline to `str![[]]`
+- Made `DataFormat` future-proof
+- `...` / `[..]` processing has been tweaked
+- Redactions no longer normalize the value (except the new `Path` redactions)
+- Change `FilterRedactions` into `NormalizedToExpected`
+
+Other
+- Deprecate `eq_` fn's in favor of `eq`
+
+### Features
+
+- jsonlines support
+- Regex redactions
+- `Path` redactions
+- Json "all keys" wildcard support
+- Unordered lines / json array support
+
+### Fixes
+
+- Handle more cases with `...`
+- Be smarter about which redactions are processed first
+- Redact json values on mismatch
+- Filter and redact json keys
+
 ## [0.5.14] - 2024-05-23
 
 ### Compatibility
