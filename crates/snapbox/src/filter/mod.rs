@@ -8,6 +8,8 @@ mod pattern;
 mod redactions;
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_redactions;
 
 use crate::data::DataInner;
 use crate::Data;
