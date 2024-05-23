@@ -80,6 +80,29 @@ pub trait IntoData: Sized {
         self.into_data().raw()
     }
 
+    /// Treat lines and json arrays as unordered
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    /// use snapbox::assert_data_eq;
+    ///
+    /// let actual = str![[r#"["world", "hello"]"#]]
+    ///     .is(snapbox::data::DataFormat::Json)
+    ///     .unordered();
+    /// let expected = str![[r#"["hello", "world"]"#]]
+    ///     .is(snapbox::data::DataFormat::Json)
+    ///     .unordered();
+    /// assert_data_eq!(actual, expected);
+    /// # }
+    /// ```
+    fn unordered(self) -> Data {
+        self.into_data().unordered()
+    }
+
     /// Initialize as [`format`][DataFormat] or [`Error`][DataFormat::Error]
     ///
     /// This is generally used for `expected` data
@@ -299,6 +322,12 @@ impl Data {
     /// Remove default [`filters`][crate::filter] from this `expected` result
     pub fn raw(mut self) -> Self {
         self.filters = FilterSet::empty().newlines();
+        self
+    }
+
+    /// Treat lines and json arrays as unordered
+    pub fn unordered(mut self) -> Self {
+        self.filters = FilterSet::empty().unordered();
         self
     }
 }

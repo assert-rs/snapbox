@@ -14,7 +14,7 @@ use std::io::stderr;
 use rayon::prelude::*;
 use snapbox::data::DataFormat;
 use snapbox::dir::FileType;
-use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
+use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
 use snapbox::IntoData;
 
 #[derive(Debug)]
@@ -439,8 +439,9 @@ impl Case {
         }
 
         if let Some(expected_content) = expected_content {
-            stream.content =
-                FilterRedactions::new(substitutions, expected_content).filter(stream.content);
+            stream.content = NormalizeToExpected::new()
+                .redact_with(substitutions)
+                .normalize(stream.content, expected_content);
 
             if stream.content != *expected_content {
                 stream.status = StreamStatus::Expected(expected_content.clone());
