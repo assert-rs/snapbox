@@ -1,5 +1,5 @@
 #[cfg(feature = "dir")]
-use crate::filter::{Filter as _, FilterRedactions, NormalizeNewlines, NormalizePaths};
+use crate::filter::{Filter as _, FilterNewlines, FilterPaths, FilterRedactions};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PathDiff {
@@ -78,9 +78,9 @@ impl PathDiff {
                         crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected =
-                        NormalizeNewlines.filter(crate::Data::read_from(&expected_path, None));
+                        FilterNewlines.filter(crate::Data::read_from(&expected_path, None));
 
-                    actual = NormalizeNewlines.filter(actual.coerce_to(expected.intended_format()));
+                    actual = FilterNewlines.filter(actual.coerce_to(expected.intended_format()));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {
@@ -154,14 +154,14 @@ impl PathDiff {
                         crate::Data::try_read_from(&actual_path, None).map_err(Self::Failure)?;
 
                     let expected =
-                        NormalizeNewlines.filter(crate::Data::read_from(&expected_path, None));
+                        FilterNewlines.filter(crate::Data::read_from(&expected_path, None));
 
                     actual = actual.coerce_to(expected.intended_format());
                     if normalize_paths {
-                        actual = NormalizePaths.filter(actual);
+                        actual = FilterPaths.filter(actual);
                     }
                     actual = FilterRedactions::new(substitutions, &expected)
-                        .filter(NormalizeNewlines.filter(actual));
+                        .filter(FilterNewlines.filter(actual));
 
                     if expected != actual {
                         return Err(Self::ContentMismatch {
