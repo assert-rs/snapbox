@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.5.14] - 2024-05-23
+
 ### Compatibility
 
 - Deprecated `filter::NormalizePaths` in favor of `filter::FilterPaths`
@@ -361,7 +363,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.13...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.14...HEAD
+[0.5.14]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.13...snapbox-v0.5.14
 [0.5.13]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.12...snapbox-v0.5.13
 [0.5.12]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.11...snapbox-v0.5.12
 [0.5.11]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.5.10...snapbox-v0.5.11
