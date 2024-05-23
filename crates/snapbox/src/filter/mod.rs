@@ -23,8 +23,26 @@ pub trait Filter {
     }
 }
 
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterNewlines")]
 pub struct NormalizeNewlines;
+#[allow(deprecated)]
 impl Filter for NormalizeNewlines {
+    fn normalize(&self, data: Data) -> Data {
+        FilterNewlines.normalize(data)
+    }
+}
+
+#[deprecated(since = "0.5.11", note = "Replaced with `filter::FilterPaths")]
+pub struct NormalizePaths;
+#[allow(deprecated)]
+impl Filter for NormalizePaths {
+    fn normalize(&self, data: Data) -> Data {
+        FilterPaths.normalize(data)
+    }
+}
+
+pub struct FilterNewlines;
+impl Filter for FilterNewlines {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
@@ -64,8 +82,8 @@ fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
     normalize_line_endings::normalized(data)
 }
 
-pub struct NormalizePaths;
-impl Filter for NormalizePaths {
+pub struct FilterPaths;
+impl Filter for FilterPaths {
     fn normalize(&self, data: Data) -> Data {
         let source = data.source;
         let filters = data.filters;
