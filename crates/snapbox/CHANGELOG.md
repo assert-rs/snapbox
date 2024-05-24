@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Apply redactions to `.term.svg` files
+
 ## [0.6.0] - 2024-05-23
 
 ### Compatibility
