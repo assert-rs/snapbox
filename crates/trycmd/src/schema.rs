@@ -350,7 +350,7 @@ fn overwrite_toml_output(
             let raw = std::fs::read_to_string(path)
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             let mut doc = raw
-                .parse::<toml_edit::Document>()
+                .parse::<toml_edit::DocumentMut>()
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             if let Some(output_value) = doc.get_mut(output_field) {
                 *output_value = toml_edit::value(output);
@@ -363,7 +363,7 @@ fn overwrite_toml_output(
             let raw = std::fs::read_to_string(path)
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             let mut doc = raw
-                .parse::<toml_edit::Document>()
+                .parse::<toml_edit::DocumentMut>()
                 .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
             doc[output_field] = toml_edit::Item::None;
             std::fs::write(path, doc.to_string())
@@ -378,7 +378,7 @@ fn overwrite_toml_status(
     status: std::process::ExitStatus,
     raw: String,
 ) -> Result<String, toml_edit::TomlError> {
-    let mut doc = raw.parse::<toml_edit::Document>()?;
+    let mut doc = raw.parse::<toml_edit::DocumentMut>()?;
     if let Some(code) = status.code() {
         if status.success() {
             match doc.get("status") {
