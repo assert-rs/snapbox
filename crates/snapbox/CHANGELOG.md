@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- Deprecated `Assert::substitutions` in favor of `Assert::redact_with`
+
 ## [0.6.1] - 2024-05-24
 
 ### Fixes
