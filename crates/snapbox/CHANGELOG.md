@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Make diff headers consistent line str's showing relative paths like file-backed expected
+
 ## [0.6.2] - 2024-05-24
 
 ### Compatibility
