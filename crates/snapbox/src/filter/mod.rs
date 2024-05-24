@@ -151,7 +151,7 @@ impl Filter for NormalizeRedactions<'_> {
             }
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(text) => {
-                let lines = normalize_lines(&text);
+                let lines = self.redactions.redact(&text);
                 DataInner::TermSvg(lines)
             }
         };
