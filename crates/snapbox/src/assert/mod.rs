@@ -399,9 +399,15 @@ impl Assert {
     }
 
     /// Override the default [`Redactions`][crate::Redactions]
-    pub fn substitutions(mut self, substitutions: crate::Redactions) -> Self {
+    pub fn redact_with(mut self, substitutions: crate::Redactions) -> Self {
         self.substitutions = substitutions;
         self
+    }
+
+    /// Override the default [`Redactions`][crate::Redactions]
+    #[deprecated(since = "0.6.2", note = "Replaced with `Assert::redact_with`")]
+    pub fn substitutions(self, substitutions: crate::Redactions) -> Self {
+        self.redact_with(substitutions)
     }
 
     /// Specify whether text should have path separators normalized
@@ -428,6 +434,6 @@ impl Default for Assert {
             substitutions: Default::default(),
             palette: crate::report::Palette::color(),
         }
-        .substitutions(crate::Redactions::with_exe())
+        .redact_with(crate::Redactions::with_exe())
     }
 }
