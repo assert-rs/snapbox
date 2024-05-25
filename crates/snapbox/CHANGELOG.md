@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- `data.unordered()` should be additive and not clear other filters
+
 ## [0.6.3] - 2024-05-24
 
 ### Fixes
