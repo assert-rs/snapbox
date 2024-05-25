@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.4] - 2024-05-25
+
 ### Fixes
 
 - `data.unordered()` should be additive and not clear other filters
@@ -416,7 +418,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.3...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.4...HEAD
+[0.6.4]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.3...snapbox-v0.6.4
 [0.6.3]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.2...snapbox-v0.6.3
 [0.6.2]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.1...snapbox-v0.6.2
 [0.6.1]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.0...snapbox-v0.6.1

@@ -793,7 +793,7 @@ checksum = "fa42c91313f1d05da9b26f267f931cf178d4aba455b4c4622dd7355eb80c6640"
 
 [[package]]
 name = "snapbox"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anstream 0.6.14",
  "anstyle",
