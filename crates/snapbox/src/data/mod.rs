@@ -327,7 +327,7 @@ impl Data {
 
     /// Treat lines and json arrays as unordered
     pub fn unordered(mut self) -> Self {
-        self.filters = FilterSet::empty().unordered();
+        self.filters = self.filters.unordered();
         self
     }
 }
