@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Don't stop `.term.svg` redactions just because the document widths are different
+
 ## [0.6.4] - 2024-05-25
 
 ### Fixes
