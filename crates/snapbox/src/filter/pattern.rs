@@ -104,13 +104,9 @@ fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
             DataInner::JsonLines(value)
         }
         #[cfg(feature = "term-svg")]
-        (DataInner::TermSvg(text), _) => {
-            if let Some(pattern) = expected.render() {
-                let lines = normalize_str_to_unordered(&text, &pattern);
-                DataInner::TermSvg(lines)
-            } else {
-                DataInner::TermSvg(text)
-            }
+        (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
+            let lines = normalize_str_to_unordered(&text, exp);
+            DataInner::TermSvg(lines)
         }
         // reachable if more than one structured data format is enabled
         #[allow(unreachable_patterns)]
@@ -231,13 +227,9 @@ fn normalize_data_to_unordered_redactions(
             DataInner::JsonLines(value)
         }
         #[cfg(feature = "term-svg")]
-        (DataInner::TermSvg(text), _) => {
-            if let Some(pattern) = expected.render() {
-                let lines = normalize_str_to_unordered_redactions(&text, &pattern, substitutions);
-                DataInner::TermSvg(lines)
-            } else {
-                DataInner::TermSvg(text)
-            }
+        (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
+            let lines = normalize_str_to_unordered_redactions(&text, exp, substitutions);
+            DataInner::TermSvg(lines)
         }
         // reachable if more than one structured data format is enabled
         #[allow(unreachable_patterns)]
@@ -391,13 +383,9 @@ fn normalize_data_to_redactions(
             DataInner::JsonLines(value)
         }
         #[cfg(feature = "term-svg")]
-        (DataInner::TermSvg(text), _) => {
-            if let Some(pattern) = expected.render() {
-                let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
-                DataInner::TermSvg(lines)
-            } else {
-                DataInner::TermSvg(text)
-            }
+        (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
+            let lines = normalize_str_to_redactions(&text, exp, substitutions);
+            DataInner::TermSvg(lines)
         }
         // reachable if more than one structured data format is enabled
         #[allow(unreachable_patterns)]
