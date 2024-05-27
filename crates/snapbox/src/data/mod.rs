@@ -716,7 +716,7 @@ fn term_svg_body(svg: &str) -> Option<&str> {
 }
 
 #[cfg(feature = "term-svg")]
-fn split_term_svg(svg: &str) -> Option<(&str, &str, &str)> {
+pub(crate) fn split_term_svg(svg: &str) -> Option<(&str, &str, &str)> {
     let open_elem_start_idx = svg.find("<text")?;
     _ = svg[open_elem_start_idx..].find('>')?;
     let open_elem_line_start_idx = svg[..open_elem_start_idx]

@@ -105,8 +105,15 @@ fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
         }
         #[cfg(feature = "term-svg")]
         (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
-            let lines = normalize_str_to_unordered(&text, exp);
-            DataInner::TermSvg(lines)
+            if let (Some((header, body, footer)), Some((_, exp, _))) = (
+                crate::data::split_term_svg(&text),
+                crate::data::split_term_svg(exp),
+            ) {
+                let lines = normalize_str_to_unordered(body, exp);
+                DataInner::TermSvg(format!("{header}{lines}{footer}"))
+            } else {
+                DataInner::TermSvg(text)
+            }
         }
         // reachable if more than one structured data format is enabled
         #[allow(unreachable_patterns)]
@@ -228,8 +235,15 @@ fn normalize_data_to_unordered_redactions(
         }
         #[cfg(feature = "term-svg")]
         (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
-            let lines = normalize_str_to_unordered_redactions(&text, exp, substitutions);
-            DataInner::TermSvg(lines)
+            if let (Some((header, body, footer)), Some((_, exp, _))) = (
+                crate::data::split_term_svg(&text),
+                crate::data::split_term_svg(exp),
+            ) {
+                let lines = normalize_str_to_unordered_redactions(body, exp, substitutions);
+                DataInner::TermSvg(format!("{header}{lines}{footer}"))
+            } else {
+                DataInner::TermSvg(text)
+            }
         }
         // reachable if more than one structured data format is enabled
         #[allow(unreachable_patterns)]
@@ -384,8 +398,15 @@ fn normalize_data_to_redactions(
         }
         #[cfg(feature = "term-svg")]
         (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
-            let lines = normalize_str_to_redactions(&text, exp, substitutions);
-            DataInner::TermSvg(lines)
+            if let (Some((header, body, footer)), Some((_, exp, _))) = (
+                crate::data::split_term_svg(&text),
+                crate::data::split_term_svg(exp),
+            ) {
+                let lines = normalize_str_to_redactions(body, exp, substitutions);
+                DataInner::TermSvg(format!("{header}{lines}{footer}"))
+            } else {
+                DataInner::TermSvg(text)
+            }
         }
         // reachable if more than one structured data format is enabled
         #[allow(unreachable_patterns)]
