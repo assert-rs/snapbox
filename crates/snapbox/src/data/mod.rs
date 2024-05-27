@@ -674,8 +674,8 @@ impl PartialEq for Data {
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(left), DataInner::TermSvg(right)) => {
                 // HACK: avoid including `width` and `height` in the comparison
-                let left = term_svg_body(left.as_str());
-                let right = term_svg_body(right.as_str());
+                let left = term_svg_body(left.as_str()).unwrap_or(left.as_str());
+                let right = term_svg_body(right.as_str()).unwrap_or(right.as_str());
                 left == right
             }
             (_, _) => false,
