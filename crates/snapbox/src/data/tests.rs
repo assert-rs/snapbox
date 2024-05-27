@@ -216,14 +216,14 @@ fn json_to_text_coerce_equals_render() {
 }
 
 #[cfg(feature = "term-svg")]
-mod text_elem {
+mod term_svg_body {
     use super::super::*;
 
     #[test]
     fn empty() {
         let input = "";
         let expected = None;
-        let actual = text_elem(input);
+        let actual = term_svg_body(input);
         assert_eq!(expected, actual);
     }
 
@@ -233,7 +233,7 @@ mod text_elem {
 </text>
 world!";
         let expected = None;
-        let actual = text_elem(input);
+        let actual = term_svg_body(input);
         assert_eq!(expected, actual);
     }
 
@@ -244,7 +244,7 @@ Hello
 <text
 world!";
         let expected = None;
-        let actual = text_elem(input);
+        let actual = term_svg_body(input);
         assert_eq!(expected, actual);
     }
 
@@ -262,7 +262,7 @@ world
 </text>
 ",
         );
-        let actual = text_elem(input);
+        let actual = term_svg_body(input);
         assert_eq!(expected, actual);
     }
 
@@ -276,7 +276,7 @@ world";
             "<text>
 world",
         );
-        let actual = text_elem(input);
+        let actual = term_svg_body(input);
         assert_eq!(expected, actual);
     }
 }

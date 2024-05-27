@@ -634,7 +634,7 @@ impl Data {
             #[cfg(feature = "json")]
             DataInner::JsonLines(_) => None,
             #[cfg(feature = "term-svg")]
-            DataInner::TermSvg(data) => text_elem(data),
+            DataInner::TermSvg(data) => term_svg_body(data),
         }
     }
 }
@@ -674,8 +674,8 @@ impl PartialEq for Data {
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(left), DataInner::TermSvg(right)) => {
                 // HACK: avoid including `width` and `height` in the comparison
-                let left = text_elem(left.as_str());
-                let right = text_elem(right.as_str());
+                let left = term_svg_body(left.as_str());
+                let right = term_svg_body(right.as_str());
                 left == right
             }
             (_, _) => false,
@@ -710,7 +710,13 @@ fn parse_jsonlines(text: &str) -> Result<Vec<serde_json::Value>, serde_json::Err
 }
 
 #[cfg(feature = "term-svg")]
-fn text_elem(svg: &str) -> Option<&str> {
+fn term_svg_body(svg: &str) -> Option<&str> {
+    let (_header, body, _footer) = split_term_svg(svg)?;
+    Some(body)
+}
+
+#[cfg(feature = "term-svg")]
+fn split_term_svg(svg: &str) -> Option<(&str, &str, &str)> {
     let open_elem_start_idx = svg.find("<text")?;
     _ = svg[open_elem_start_idx..].find('>')?;
     let open_elem_line_start_idx = svg[..open_elem_start_idx]
@@ -725,8 +731,10 @@ fn text_elem(svg: &str) -> Option<&str> {
         .map(|idx| idx + close_elem_start_idx + 1)
         .unwrap_or(svg.len());
 
+    let header = &svg[..open_elem_line_start_idx];
     let body = &svg[open_elem_line_start_idx..close_elem_line_end_idx];
-    Some(body)
+    let footer = &svg[close_elem_line_end_idx..];
+    Some((header, body, footer))
 }
 
 impl Eq for Data {}
