@@ -172,7 +172,7 @@ impl IntoData for &'_ str {
 impl IntoData for Inline {
     fn into_data(self) -> Data {
         let trimmed = self.trimmed();
-        super::Data::text(trimmed).with_source(self)
+        Data::text(trimmed).with_source(self)
     }
 }
 
@@ -781,7 +781,7 @@ impl<'s> From<&'s str> for Data {
     }
 }
 
-impl From<Inline> for super::Data {
+impl From<Inline> for Data {
     fn from(other: Inline) -> Self {
         other.into_data()
     }

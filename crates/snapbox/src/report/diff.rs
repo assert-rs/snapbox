@@ -216,7 +216,7 @@ fn write_diff_inner(
 #[allow(clippy::too_many_arguments)]
 fn write_change(
     writer: &mut dyn std::fmt::Write,
-    change: similar::InlineChange<str>,
+    change: similar::InlineChange<'_, str>,
     sign: &str,
     em_style: crate::report::Style,
     style: crate::report::Style,

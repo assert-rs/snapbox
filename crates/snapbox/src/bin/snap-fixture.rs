@@ -21,7 +21,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     }
 
     if env::var("echo_cwd").as_deref() == Ok("1") {
-        if let Ok(cwd) = std::env::current_dir() {
+        if let Ok(cwd) = env::current_dir() {
             eprintln!("{}", cwd.display());
         }
     }

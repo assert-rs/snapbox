@@ -316,7 +316,7 @@ impl Case {
 
         let mut bin = step.bin.take();
         if bin.is_none() {
-            bin = self.default_bin.clone()
+            bin.clone_from(&self.default_bin);
         }
         bin = bin
             .map(|name| bins.resolve_bin(name))
@@ -1016,12 +1016,12 @@ fn fs_context(
     path: &std::path::Path,
     cwd: Option<&std::path::Path>,
     sandbox: bool,
-    mode: &crate::Mode,
+    mode: &Mode,
 ) -> Result<snapbox::dir::DirRoot, crate::Error> {
     if sandbox {
         #[cfg(feature = "filesystem")]
         match mode {
-            crate::Mode::Dump(root) => {
+            Mode::Dump(root) => {
                 let target = root.join(path.with_extension("out").file_name().unwrap());
                 let mut context = snapbox::dir::DirRoot::mutable_at(&target)?;
                 if let Some(cwd) = cwd {
@@ -1029,7 +1029,7 @@ fn fs_context(
                 }
                 Ok(context)
             }
-            crate::Mode::Fail | crate::Mode::Overwrite => {
+            Mode::Fail | Mode::Overwrite => {
                 let mut context = snapbox::dir::DirRoot::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;

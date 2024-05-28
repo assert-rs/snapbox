@@ -120,7 +120,7 @@ mod test {
     fn closure_fn_path() {
         (|| {
             assert_eq!(fn_path!(), "snapbox::macros::test::closure_fn_path");
-        })()
+        })();
     }
 
     #[test]
@@ -128,6 +128,6 @@ mod test {
         fn nested() {
             assert_eq!(fn_path!(), "snapbox::macros::test::nested_fn_path::nested");
         }
-        nested()
+        nested();
     }
 }
