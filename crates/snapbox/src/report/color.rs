@@ -1,11 +1,11 @@
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Palette {
-    pub(crate) info: anstyle::Style,
-    pub(crate) warn: anstyle::Style,
-    pub(crate) error: anstyle::Style,
-    pub(crate) hint: anstyle::Style,
-    pub(crate) expected: anstyle::Style,
-    pub(crate) actual: anstyle::Style,
+    pub(crate) info: Style,
+    pub(crate) warn: Style,
+    pub(crate) error: Style,
+    pub(crate) hint: Style,
+    pub(crate) expected: Style,
+    pub(crate) actual: Style,
 }
 
 impl Palette {
@@ -58,11 +58,11 @@ pub(crate) use anstyle::Style;
 #[derive(Debug)]
 pub struct Styled<D> {
     display: D,
-    style: anstyle::Style,
+    style: Style,
 }
 
 impl<D: std::fmt::Display> Styled<D> {
-    pub(crate) fn new(display: D, style: anstyle::Style) -> Self {
+    pub(crate) fn new(display: D, style: Style) -> Self {
         Self { display, style }
     }
 }

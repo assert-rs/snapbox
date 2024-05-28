@@ -84,7 +84,7 @@ impl Assert {
     #[track_caller]
     #[deprecated(since = "0.6.0", note = "Replaced with `Assert::eq`")]
     pub fn eq_(&self, actual: impl IntoData, expected: impl IntoData) {
-        self.eq(actual, expected)
+        self.eq(actual, expected);
     }
 
     pub fn try_eq(
@@ -193,7 +193,7 @@ impl Assert {
         actual_name: Option<&dyn std::fmt::Display>,
         actual: &crate::Data,
         expected: &crate::Data,
-    ) -> crate::assert::Result<()> {
+    ) -> Result<()> {
         if actual != expected {
             let mut buf = String::new();
             crate::report::write_diff(
@@ -223,7 +223,7 @@ impl Assert {
     ) {
         let expected_root = expected_root.into();
         let actual_root = actual_root.into();
-        self.subset_eq_inner(expected_root, actual_root)
+        self.subset_eq_inner(expected_root, actual_root);
     }
 
     #[track_caller]
@@ -248,7 +248,7 @@ impl Assert {
     ) {
         let pattern_root = pattern_root.into();
         let actual_root = actual_root.into();
-        self.subset_matches_inner(pattern_root, actual_root)
+        self.subset_matches_inner(pattern_root, actual_root);
     }
 
     #[track_caller]

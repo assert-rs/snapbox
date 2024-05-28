@@ -95,11 +95,11 @@ impl TryCmd {
             if base_path.exists() {
                 sequence.fs.base = Some(base_path);
             } else if sequence.fs.cwd.is_some() {
-                sequence.fs.base = sequence.fs.cwd.clone();
+                sequence.fs.base.clone_from(&sequence.fs.cwd);
             }
         }
         if sequence.fs.cwd.is_none() {
-            sequence.fs.cwd = sequence.fs.base.clone();
+            sequence.fs.cwd.clone_from(&sequence.fs.base);
         }
         if sequence.fs.sandbox.is_none() {
             sequence.fs.sandbox = Some(path.with_extension("out").exists());
@@ -198,7 +198,7 @@ impl TryCmd {
                     .find_map(|(i, c)| (c != '`').then_some(i))
                     .unwrap_or(line.len());
                 if 3 <= tick_end {
-                    fence_pattern = line[..tick_end].to_owned();
+                    line[..tick_end].clone_into(&mut fence_pattern);
                     let raw = line[tick_end..].trim();
                     if raw.is_empty() {
                         // Assuming a trycmd block
@@ -613,7 +613,7 @@ impl Step {
             cmd = cmd.stderr_to_stdout();
         }
         if let Some(timeout) = self.timeout {
-            cmd = cmd.timeout(timeout)
+            cmd = cmd.timeout(timeout);
         }
         cmd = self.env.apply(cmd);
 

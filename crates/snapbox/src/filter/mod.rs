@@ -171,7 +171,7 @@ fn normalize_json_string(value: &mut serde_json::Value, op: &dyn Fn(&str) -> Str
         }
         serde_json::Value::Array(arr) => {
             for value in arr.iter_mut() {
-                normalize_json_string(value, op)
+                normalize_json_string(value, op);
             }
         }
         serde_json::Value::Object(obj) => {

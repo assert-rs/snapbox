@@ -4,7 +4,7 @@ use crate::Data;
 
 /// Adjust `actual` based on `expected`
 pub struct NormalizeToExpected<'a> {
-    substitutions: Option<&'a crate::Redactions>,
+    substitutions: Option<&'a Redactions>,
     unordered: bool,
 }
 
@@ -44,7 +44,7 @@ impl<'a> NormalizeToExpected<'a> {
     /// - `[..]`: match multiple characters within a line
     ///
     /// Built-ins cannot automatically be applied to `actual` but are inferred from `expected`
-    pub fn redact_with(mut self, redactions: &'a crate::Redactions) -> Self {
+    pub fn redact_with(mut self, redactions: &'a Redactions) -> Self {
         self.substitutions = Some(redactions);
         self
     }
@@ -128,7 +128,7 @@ fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
 
 #[cfg(feature = "structured-data")]
 fn normalize_value_to_unordered(actual: &mut serde_json::Value, expected: &serde_json::Value) {
-    use serde_json::Value::*;
+    use serde_json::Value::{Array, Object, String};
 
     match (actual, expected) {
         (String(act), String(exp)) => {
@@ -159,7 +159,7 @@ fn normalize_value_to_unordered(actual: &mut serde_json::Value, expected: &serde
         (Object(act), Object(exp)) => {
             for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
                 if let Some(expected_value) = exp.get(&actual_key) {
-                    normalize_value_to_unordered(&mut actual_value, expected_value)
+                    normalize_value_to_unordered(&mut actual_value, expected_value);
                 }
                 act.insert(actual_key, actual_value);
             }
@@ -206,7 +206,7 @@ const VALUE_WILDCARD: &str = "{...}";
 fn normalize_data_to_unordered_redactions(
     actual: Data,
     expected: &Data,
-    substitutions: &crate::Redactions,
+    substitutions: &Redactions,
 ) -> Data {
     let source = actual.source;
     let filters = actual.filters;
@@ -260,9 +260,9 @@ fn normalize_data_to_unordered_redactions(
 fn normalize_value_to_unordered_redactions(
     actual: &mut serde_json::Value,
     expected: &serde_json::Value,
-    substitutions: &crate::Redactions,
+    substitutions: &Redactions,
 ) {
-    use serde_json::Value::*;
+    use serde_json::Value::{Array, Object, String};
 
     match (actual, expected) {
         (act, String(exp)) if exp == VALUE_WILDCARD => {
@@ -310,7 +310,7 @@ fn normalize_value_to_unordered_redactions(
                         &mut actual_value,
                         expected_value,
                         substitutions,
-                    )
+                    );
                 } else if has_key_wildcard {
                     continue;
                 }
@@ -327,7 +327,7 @@ fn normalize_value_to_unordered_redactions(
 fn normalize_str_to_unordered_redactions(
     actual: &str,
     expected: &str,
-    substitutions: &crate::Redactions,
+    substitutions: &Redactions,
 ) -> String {
     if actual == expected {
         return actual.to_owned();
@@ -366,11 +366,7 @@ fn normalize_str_to_unordered_redactions(
     normalized.join("")
 }
 
-fn normalize_data_to_redactions(
-    actual: Data,
-    expected: &Data,
-    substitutions: &crate::Redactions,
-) -> Data {
+fn normalize_data_to_redactions(actual: Data, expected: &Data, substitutions: &Redactions) -> Data {
     let source = actual.source;
     let filters = actual.filters;
     let inner = match (actual.inner, &expected.inner) {
@@ -423,9 +419,9 @@ fn normalize_data_to_redactions(
 fn normalize_value_to_redactions(
     actual: &mut serde_json::Value,
     expected: &serde_json::Value,
-    substitutions: &crate::Redactions,
+    substitutions: &Redactions,
 ) {
-    use serde_json::Value::*;
+    use serde_json::Value::{Array, Object, String};
 
     match (actual, expected) {
         (act, String(exp)) if exp == VALUE_WILDCARD => {
@@ -473,7 +469,7 @@ fn normalize_value_to_redactions(
                 exp.get(KEY_WILDCARD).and_then(|v| v.as_str()) == Some(VALUE_WILDCARD);
             for (actual_key, mut actual_value) in std::mem::replace(act, serde_json::Map::new()) {
                 if let Some(expected_value) = exp.get(&actual_key) {
-                    normalize_value_to_redactions(&mut actual_value, expected_value, substitutions)
+                    normalize_value_to_redactions(&mut actual_value, expected_value, substitutions);
                 } else if has_key_wildcard {
                     continue;
                 }

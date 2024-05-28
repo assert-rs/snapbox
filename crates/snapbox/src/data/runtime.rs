@@ -376,7 +376,7 @@ world
 
     #[test]
     fn test_patchwork() {
-        let mut patchwork = Patchwork::new("one two three".to_string());
+        let mut patchwork = Patchwork::new("one two three".to_owned());
         patchwork.patch(4..7, "zwei");
         patchwork.patch(0..3, "один");
         patchwork.patch(8..13, "3");

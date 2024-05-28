@@ -740,7 +740,7 @@ pub fn display_exit_status(status: std::process::ExitStatus) -> String {
 pub fn display_exit_status(status: std::process::ExitStatus) -> String {
     #[cfg(unix)]
     fn detailed_exit_status(status: std::process::ExitStatus) -> Option<String> {
-        use std::os::unix::process::*;
+        use std::os::unix::process::ExitStatusExt;
 
         let signal = status.signal()?;
         let name = match signal as libc::c_int {
@@ -963,7 +963,7 @@ pub(crate) mod examples {
 
     #[allow(clippy::type_complexity)]
     fn decode_example_message<'m>(
-        message: &'m escargot::format::Message,
+        message: &'m escargot::format::Message<'_>,
     ) -> Option<crate::assert::Result<(&'m str, crate::assert::Result<std::path::PathBuf>)>> {
         match message {
             escargot::format::Message::CompilerMessage(msg) => {
@@ -1003,7 +1003,7 @@ pub(crate) mod examples {
         }
     }
 
-    fn is_example_target(target: &escargot::format::Target) -> bool {
+    fn is_example_target(target: &escargot::format::Target<'_>) -> bool {
         target.crate_types == ["bin"] && target.kind == ["example"]
     }
 }
