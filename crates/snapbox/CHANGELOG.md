@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.6] - 2024-05-29
+
 ### Fixes
 
 - Don't stop redacting on first mismatch
@@ -428,7 +430,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.5...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.6...HEAD
+[0.6.6]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.5...snapbox-v0.6.6
 [0.6.5]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.4...snapbox-v0.6.5
 [0.6.4]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.3...snapbox-v0.6.4
 [0.6.3]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.2...snapbox-v0.6.3
