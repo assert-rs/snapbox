@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Allow `_` in redaction placeholder
+
 ## [0.6.6] - 2024-05-29
 
 ### Fixes
