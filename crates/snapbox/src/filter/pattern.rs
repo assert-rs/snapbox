@@ -523,8 +523,9 @@ fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactio
                 input_index += 1;
                 normalized.push(pattern_line);
             } else {
-                // Give up doing further normalization
-                break;
+                // Skip this line and keep processing
+                input_index += 1;
+                normalized.push(input_line);
             }
         }
     }

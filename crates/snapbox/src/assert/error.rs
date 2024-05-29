@@ -96,7 +96,7 @@ impl Backtrace {
 
 #[cfg(not(feature = "debug"))]
 impl std::fmt::Display for Backtrace {
-    fn fmt(&self, _: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Ok(())
     }
 }

@@ -131,7 +131,7 @@ fn str_normalize_post_elide_diverge() {
 fn str_normalize_post_diverge_elide() {
     let input = "Hello\nWorld\nGoodbye\nSir";
     let pattern = "Hello\nMoon\nGoodbye\n...";
-    let expected = "Hello\nWorld\nGoodbye\nSir";
+    let expected = "Hello\nWorld\nGoodbye\n...";
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(input.into(), &pattern.into());
