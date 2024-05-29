@@ -331,7 +331,7 @@ fn validate_placeholder(placeholder: &'static str) -> crate::assert::Result<&'st
     }
 
     if placeholder[1..(placeholder.len() - 1)]
-        .find(|c: char| !c.is_ascii_uppercase())
+        .find(|c: char| !c.is_ascii_uppercase() && c != '_')
         .is_some()
     {
         return Err(format!("Key `{}` can only be A-Z but ", placeholder).into());
@@ -350,6 +350,7 @@ mod test {
             ("[HELLO", false),
             ("HELLO]", false),
             ("[HELLO]", true),
+            ("[HELLO_WORLD]", true),
             ("[hello]", false),
             ("[HE  O]", false),
         ];
