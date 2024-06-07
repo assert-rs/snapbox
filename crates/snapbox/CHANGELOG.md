@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Allow overwriting if `Data::is` fails
+
 ## [0.6.8] - 2024-06-07
 
 ### Features
