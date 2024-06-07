@@ -487,9 +487,21 @@ impl Data {
     ///
     /// This is generally used for `expected` data
     pub fn is(self, format: DataFormat) -> Self {
+        let filters = self.filters;
+        let source = self.source.clone();
         match self.try_is(format) {
             Ok(new) => new,
-            Err(err) => Self::error(err, format),
+            Err(err) => {
+                let inner = DataInner::Error(DataError {
+                    error: err,
+                    intended: format,
+                });
+                Self {
+                    inner,
+                    source,
+                    filters,
+                }
+            }
         }
     }
 
