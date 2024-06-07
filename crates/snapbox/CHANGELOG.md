@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.9] - 2024-06-07
+
 ### Fixes
 
 - Allow overwriting if `Data::is` fails
@@ -446,7 +448,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.8...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.9...HEAD
+[0.6.9]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.8...snapbox-v0.6.9
 [0.6.8]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.7...snapbox-v0.6.8
 [0.6.7]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.6...snapbox-v0.6.7
 [0.6.6]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.5...snapbox-v0.6.6
