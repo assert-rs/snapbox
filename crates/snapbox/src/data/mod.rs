@@ -123,6 +123,56 @@ pub trait IntoData: Sized {
         self.into_data().is(format)
     }
 
+    /// Initialize as json or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .json();
+    /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
+    /// # }
+    /// ```
+    #[cfg(feature = "json")]
+    fn json(self) -> Data {
+        self.is(DataFormat::Json)
+    }
+
+    /// Initialize as json lines or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .json_lines();
+    /// assert_eq!(expected.format(), snapbox::data::DataFormat::JsonLines);
+    /// # }
+    /// ```
+    #[cfg(feature = "json")]
+    fn json_lines(self) -> Data {
+        self.is(DataFormat::JsonLines)
+    }
+
+    /// Initialize as Term SVG
+    ///
+    /// This is generally used for `expected` data
+    #[cfg(feature = "term-svg")]
+    fn term_svg(self) -> Data {
+        self.is(DataFormat::TermSvg)
+    }
+
     /// Convert to [`Data`], applying defaults
     fn into_data(self) -> Data;
 }
