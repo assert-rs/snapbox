@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Add data format helpers to `IntoData`
+
 ## [0.6.7] - 2024-05-29
 
 ### Fixes
