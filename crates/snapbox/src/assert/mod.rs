@@ -108,7 +108,7 @@ impl Assert {
         self.do_action(actual_name, actual, expected)
     }
 
-    fn normalize(
+    pub fn normalize(
         &self,
         mut actual: crate::Data,
         mut expected: crate::Data,
