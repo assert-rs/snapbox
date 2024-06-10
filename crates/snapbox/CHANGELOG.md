@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Expose `Assert::normalize`
+
 ## [0.6.9] - 2024-06-07
 
 ### Fixes
