@@ -1,6 +1,6 @@
 [package]
 name = "snapbox"
-version = "0.6.9"
+version = "0.6.10"
 description = "Snapshot testing toolbox"
 repository = "https://github.com/assert-rs/trycmd/"
 homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
