@@ -5,6 +5,12 @@ use std::io::Write;
 use std::process;
 
 fn run() -> Result<(), Box<dyn Error>> {
+    if env::var("lines-from-stdin").as_deref() == Ok("1") {
+        for line in std::io::stdin().lines() {
+            println!("read line from stdin: {}", line.unwrap());
+        }
+    }
+
     if let Ok(text) = env::var("stdout") {
         println!("{}", text);
     }

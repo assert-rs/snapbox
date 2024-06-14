@@ -292,6 +292,29 @@ impl TryCmd {
                     stdout.pop();
                 }
 
+                let mut stdin = None;
+                if cmdline.first().is_some_and(|s| s == "echo") {
+                    // No full piping / POSIX shell implemented, but this is a frequent and
+                    // important tool
+                    //
+                    // If no pipe is found, this is not processed any further: echo is then treated
+                    // as the binary, as it would have been if there were no special handling.
+                    if let Some(index) = cmdline.iter().position(|s| s == &"|") {
+                        let (echo_part, actual_command) = cmdline.split_at(index);
+                        let echo_args = &echo_part[1..];
+                        if echo_args.first().is_some_and(|f| f == "-n")
+                            || echo_args.iter().any(|s| s.contains("\\"))
+                        {
+                            return Err(
+                                "Behavior of echo with -n or backslashes is not defined in POSIX"
+                                    .into(),
+                            );
+                        }
+                        stdin = Some(crate::Data::text(format!("{}\n", echo_args.join(" "))));
+                        cmdline = actual_command[1..].into();
+                    }
+                };
+
                 let mut env = Env::default();
 
                 let bin = loop {
@@ -310,7 +333,7 @@ impl TryCmd {
                     bin: Some(Bin::Name(bin)),
                     args: cmdline,
                     env,
-                    stdin: None,
+                    stdin,
                     stderr_to_stdout: true,
                     expected_status_source,
                     expected_status,

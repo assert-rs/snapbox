@@ -1,0 +1,6 @@
+```
+$ echo "hello" "second argument" | \
+> lines-from-stdin=1 bin-fixture
+read line from stdin: hello second argument
+
+```
