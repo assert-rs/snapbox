@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use super::Data;
 use super::Inline;
 use super::Position;
@@ -74,7 +76,7 @@ impl SourceFileRuntime {
     fn update(&mut self, actual: &str, inline: &Inline) -> std::io::Result<()> {
         let span = Span::from_pos(&inline.position, &self.original_text);
         let patch = format_patch(actual);
-        self.patchwork.patch(span.literal_range, &patch);
+        self.patchwork.patch(span.literal_range, &patch)?;
         std::fs::write(&inline.position.file, &self.patchwork.text)
     }
 }
@@ -82,25 +84,39 @@ impl SourceFileRuntime {
 #[derive(Debug)]
 struct Patchwork {
     text: String,
-    indels: Vec<(std::ops::Range<usize>, usize)>,
+    indels: BTreeMap<OrdRange, (usize, String)>,
 }
 
 impl Patchwork {
     fn new(text: String) -> Patchwork {
         Patchwork {
             text,
-            indels: Vec::new(),
+            indels: BTreeMap::new(),
         }
     }
-    fn patch(&mut self, mut range: std::ops::Range<usize>, patch: &str) {
-        self.indels.push((range.clone(), patch.len()));
-        self.indels.sort_by_key(|(delete, _insert)| delete.start);
+    fn patch(&mut self, mut range: std::ops::Range<usize>, patch: &str) -> std::io::Result<()> {
+        let key: OrdRange = range.clone().into();
+        match self.indels.entry(key) {
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                entry.insert((patch.len(), patch.to_owned()));
+            }
+            std::collections::btree_map::Entry::Occupied(entry) => {
+                if entry.get().1 == patch {
+                    return Ok(());
+                } else {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "cannot update as it was already modified",
+                    ));
+                }
+            }
+        }
 
         let (delete, insert) = self
             .indels
             .iter()
             .take_while(|(delete, _)| delete.start < range.start)
-            .map(|(delete, insert)| (delete.end - delete.start, insert))
+            .map(|(delete, (insert, _))| (delete.end - delete.start, insert))
             .fold((0usize, 0usize), |(x1, y1), (x2, y2)| (x1 + x2, y1 + y2));
 
         for pos in &mut [&mut range.start, &mut range.end] {
@@ -109,6 +125,22 @@ impl Patchwork {
         }
 
         self.text.replace_range(range, patch);
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct OrdRange {
+    start: usize,
+    end: usize,
+}
+
+impl From<std::ops::Range<usize>> for OrdRange {
+    fn from(other: std::ops::Range<usize>) -> Self {
+        Self {
+            start: other.start,
+            end: other.end,
+        }
     }
 }
 
@@ -377,28 +409,87 @@ world
     #[test]
     fn test_patchwork() {
         let mut patchwork = Patchwork::new("one two three".to_owned());
-        patchwork.patch(4..7, "zwei");
-        patchwork.patch(0..3, "один");
-        patchwork.patch(8..13, "3");
+        patchwork.patch(4..7, "zwei").unwrap();
+        patchwork.patch(0..3, "один").unwrap();
+        patchwork.patch(8..13, "3").unwrap();
         assert_data_eq!(
             patchwork.to_debug(),
             str![[r#"
 Patchwork {
     text: "один zwei 3",
-    indels: [
-        (
-            0..3,
+    indels: {
+        OrdRange {
+            start: 0,
+            end: 3,
+        }: (
             8,
+            "один",
         ),
-        (
-            4..7,
+        OrdRange {
+            start: 4,
+            end: 7,
+        }: (
             4,
+            "zwei",
         ),
-        (
-            8..13,
+        OrdRange {
+            start: 8,
+            end: 13,
+        }: (
             1,
+            "3",
         ),
-    ],
+    },
+}
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn test_patchwork_overlap_diverge() {
+        let mut patchwork = Patchwork::new("one two three".to_owned());
+        patchwork.patch(4..7, "zwei").unwrap();
+        patchwork.patch(4..7, "abcd").unwrap_err();
+        assert_data_eq!(
+            patchwork.to_debug(),
+            str![[r#"
+Patchwork {
+    text: "one zwei three",
+    indels: {
+        OrdRange {
+            start: 4,
+            end: 7,
+        }: (
+            4,
+            "zwei",
+        ),
+    },
+}
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn test_patchwork_overlap_converge() {
+        let mut patchwork = Patchwork::new("one two three".to_owned());
+        patchwork.patch(4..7, "zwei").unwrap();
+        patchwork.patch(4..7, "zwei").unwrap();
+        assert_data_eq!(
+            patchwork.to_debug(),
+            str![[r#"
+Patchwork {
+    text: "one zwei three",
+    indels: {
+        OrdRange {
+            start: 4,
+            end: 7,
+        }: (
+            4,
+            "zwei",
+        ),
+    },
 }
 
 "#]],

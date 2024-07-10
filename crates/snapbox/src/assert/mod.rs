@@ -178,9 +178,12 @@ impl Assert {
                 use std::io::Write;
 
                 if let Some(source) = expected.source() {
-                    let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
-                    actual.write_to(source).unwrap();
-                    Ok(())
+                    if let Err(message) = actual.write_to(source) {
+                        Err(Error::new(format_args!("{err}Update failed: {message}")))
+                    } else {
+                        let _ = writeln!(stderr(), "{}: {}", self.palette.warn("Fixing"), err);
+                        Ok(())
+                    }
                 } else {
                     Err(Error::new(format_args!("{err}")))
                 }
