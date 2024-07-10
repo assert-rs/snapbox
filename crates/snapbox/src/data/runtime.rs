@@ -84,7 +84,7 @@ impl SourceFileRuntime {
 #[derive(Debug)]
 struct Patchwork {
     text: String,
-    indels: BTreeMap<OrdRange, usize>,
+    indels: BTreeMap<OrdRange, (usize, String)>,
 }
 
 impl Patchwork {
@@ -98,13 +98,17 @@ impl Patchwork {
         let key: OrdRange = range.clone().into();
         match self.indels.entry(key) {
             std::collections::btree_map::Entry::Vacant(entry) => {
-                entry.insert(patch.len());
+                entry.insert((patch.len(), patch.to_owned()));
             }
-            std::collections::btree_map::Entry::Occupied(_) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "cannot update as it was already modified",
-                ));
+            std::collections::btree_map::Entry::Occupied(entry) => {
+                if entry.get().1 == patch {
+                    return Ok(());
+                } else {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "cannot update as it was already modified",
+                    ));
+                }
             }
         }
 
@@ -112,7 +116,7 @@ impl Patchwork {
             .indels
             .iter()
             .take_while(|(delete, _)| delete.start < range.start)
-            .map(|(delete, insert)| (delete.end - delete.start, insert))
+            .map(|(delete, (insert, _))| (delete.end - delete.start, insert))
             .fold((0usize, 0usize), |(x1, y1), (x2, y2)| (x1 + x2, y1 + y2));
 
         for pos in &mut [&mut range.start, &mut range.end] {
@@ -417,15 +421,24 @@ Patchwork {
         OrdRange {
             start: 0,
             end: 3,
-        }: 8,
+        }: (
+            8,
+            "один",
+        ),
         OrdRange {
             start: 4,
             end: 7,
-        }: 4,
+        }: (
+            4,
+            "zwei",
+        ),
         OrdRange {
             start: 8,
             end: 13,
-        }: 1,
+        }: (
+            1,
+            "3",
+        ),
     },
 }
 
@@ -447,7 +460,10 @@ Patchwork {
         OrdRange {
             start: 4,
             end: 7,
-        }: 4,
+        }: (
+            4,
+            "zwei",
+        ),
     },
 }
 
@@ -459,7 +475,7 @@ Patchwork {
     fn test_patchwork_overlap_converge() {
         let mut patchwork = Patchwork::new("one two three".to_owned());
         patchwork.patch(4..7, "zwei").unwrap();
-        patchwork.patch(4..7, "zwei").unwrap_err();
+        patchwork.patch(4..7, "zwei").unwrap();
         assert_data_eq!(
             patchwork.to_debug(),
             str![[r#"
@@ -469,7 +485,10 @@ Patchwork {
         OrdRange {
             start: 4,
             end: 7,
-        }: 4,
+        }: (
+            4,
+            "zwei",
+        ),
     },
 }
 
