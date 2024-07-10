@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- `str![]`: fail, rather than panic, on divergent overlapping overwrites
+
 ## [0.6.10] - 2024-06-10
 
 ### Features
