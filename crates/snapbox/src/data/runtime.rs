@@ -406,6 +406,58 @@ Patchwork {
     }
 
     #[test]
+    fn test_patchwork_overlap_diverge() {
+        let mut patchwork = Patchwork::new("one two three".to_owned());
+        patchwork.patch(4..7, "zwei");
+        patchwork.patch(4..7, "abcd");
+        assert_data_eq!(
+            patchwork.to_debug(),
+            str![[r#"
+Patchwork {
+    text: "one abcdi three",
+    indels: [
+        (
+            4..7,
+            4,
+        ),
+        (
+            4..7,
+            4,
+        ),
+    ],
+}
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn test_patchwork_overlap_converge() {
+        let mut patchwork = Patchwork::new("one two three".to_owned());
+        patchwork.patch(4..7, "zwei");
+        patchwork.patch(4..7, "zwei");
+        assert_data_eq!(
+            patchwork.to_debug(),
+            str![[r#"
+Patchwork {
+    text: "one zweii three",
+    indels: [
+        (
+            4..7,
+            4,
+        ),
+        (
+            4..7,
+            4,
+        ),
+    ],
+}
+
+"#]],
+        );
+    }
+
+    #[test]
     fn test_locate() {
         macro_rules! check_locate {
             ($( [[$s:literal]] ),* $(,)?) => {$({
