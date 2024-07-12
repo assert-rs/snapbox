@@ -35,6 +35,6 @@ color = ["snapbox/color"]
 color-auto = ["snapbox/color-auto"]
 
 [dependencies]
-snapbox = { path = "../snapbox", version = "0.6.12", default-features = false }
+snapbox = { path = "../snapbox", version = "0.6.13", default-features = false }
 libtest-mimic = "0.7.0"
 ignore = "0.4.11"
