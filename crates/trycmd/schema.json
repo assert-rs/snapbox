@@ -35,18 +35,21 @@
       ]
     },
     "stdin": {
+      "default": null,
       "type": [
         "string",
         "null"
       ]
     },
     "stdout": {
+      "default": null,
       "type": [
         "string",
         "null"
       ]
     },
     "stderr": {
+      "default": null,
       "type": [
         "string",
         "null"
@@ -71,6 +74,7 @@
       "type": "boolean"
     },
     "timeout": {
+      "default": null,
       "anyOf": [
         {
           "$ref": "#/definitions/Duration"
@@ -161,6 +165,7 @@
       "type": "object",
       "properties": {
         "inherit": {
+          "default": null,
           "type": [
             "boolean",
             "null"
