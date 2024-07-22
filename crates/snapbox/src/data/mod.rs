@@ -74,6 +74,7 @@ impl<S: serde::Serialize> IntoJson for S {
 }
 
 /// Convert to [`Data`] with modifiers for `expected` data
+#[allow(clippy::wrong_self_convention)]
 pub trait IntoData: Sized {
     /// Remove default [`filters`][crate::filter] from this `expected` result
     fn raw(self) -> Data {
@@ -140,8 +141,14 @@ pub trait IntoData: Sized {
     /// # }
     /// ```
     #[cfg(feature = "json")]
-    fn json(self) -> Data {
+    fn is_json(self) -> Data {
         self.is(DataFormat::Json)
+    }
+
+    #[cfg(feature = "json")]
+    #[deprecated(since = "0.6.13", note = "Replaced with `IntoData::is_json`")]
+    fn json(self) -> Data {
+        self.is_json()
     }
 
     /// Initialize as json lines or [`Error`][DataFormat::Error]
@@ -161,16 +168,28 @@ pub trait IntoData: Sized {
     /// # }
     /// ```
     #[cfg(feature = "json")]
-    fn json_lines(self) -> Data {
+    fn is_jsonlines(self) -> Data {
         self.is(DataFormat::JsonLines)
+    }
+
+    #[cfg(feature = "json")]
+    #[deprecated(since = "0.6.13", note = "Replaced with `IntoData::is_jsonlines`")]
+    fn json_lines(self) -> Data {
+        self.is_jsonlines()
     }
 
     /// Initialize as Term SVG
     ///
     /// This is generally used for `expected` data
     #[cfg(feature = "term-svg")]
-    fn term_svg(self) -> Data {
+    fn is_termsvg(self) -> Data {
         self.is(DataFormat::TermSvg)
+    }
+
+    #[cfg(feature = "term-svg")]
+    #[deprecated(since = "0.6.13", note = "Replaced with `IntoData::is_termsvg`")]
+    fn term_svg(self) -> Data {
+        self.is_termsvg()
     }
 
     /// Convert to [`Data`], applying defaults
