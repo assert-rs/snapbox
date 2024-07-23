@@ -1,4 +1,5 @@
 use snapbox::assert_data_eq;
+use snapbox::data::IntoData;
 use snapbox::file;
 use snapbox::str;
 
@@ -25,4 +26,30 @@ line1
 #[test]
 fn test_expect_file() {
     assert_data_eq!(include_str!("../../README.md"), file!["../../README.md"]);
+}
+
+#[test]
+#[cfg(feature = "json")]
+fn actual_expected_formats_differ() {
+    assert_data_eq!(
+        r#"{}
+{"order": 1}
+{"order": 2}
+{"order": 3}
+"#,
+        str![[r#"
+[
+  {},
+  {
+    "order": 1
+  },
+  {
+    "order": 2
+  },
+  {
+    "order": 3
+  }
+]
+"#]].is_json().against_jsonlines(),
+    );
 }

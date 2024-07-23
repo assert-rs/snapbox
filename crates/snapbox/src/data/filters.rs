@@ -1,6 +1,9 @@
+use crate::data::DataFormat;
+
 #[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub(crate) struct FilterSet {
     flags: usize,
+    against: Option<DataFormat>,
 }
 
 impl FilterSet {
@@ -9,7 +12,10 @@ impl FilterSet {
     }
 
     pub(crate) const fn empty() -> Self {
-        Self { flags: 0 }
+        Self {
+            flags: 0,
+            against: None,
+        }
     }
 
     pub(crate) fn redactions(mut self) -> Self {
@@ -32,6 +38,11 @@ impl FilterSet {
         self
     }
 
+    pub(crate) fn against(mut self, format: DataFormat) -> Self {
+        self.against = Some(format);
+        self
+    }
+
     pub(crate) const fn is_redaction_set(&self) -> bool {
         self.is_set(Self::REDACTIONS)
     }
@@ -46,6 +57,10 @@ impl FilterSet {
 
     pub(crate) const fn is_unordered_set(&self) -> bool {
         self.is_set(Self::UNORDERED)
+    }
+
+    pub(crate) const fn get_against(&self) -> Option<DataFormat> {
+        self.against
     }
 }
 
