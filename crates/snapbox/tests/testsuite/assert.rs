@@ -38,11 +38,18 @@ fn actual_expected_formats_differ() {
 {"order": 3}
 "#,
         str![[r#"
-{}
-{"order":1}
-{"order":2}
-{"order":3}
-
-"#]].is_jsonlines(),
+[
+  {},
+  {
+    "order": 1
+  },
+  {
+    "order": 2
+  },
+  {
+    "order": 3
+  }
+]
+"#]].is_json().against_jsonlines(),
     );
 }

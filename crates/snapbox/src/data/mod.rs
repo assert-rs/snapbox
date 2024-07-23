@@ -192,6 +192,67 @@ pub trait IntoData: Sized {
         self.is_termsvg()
     }
 
+    /// Override the type this snapshot will be compared against
+    ///
+    /// Normally, the `actual` data is coerced to [`IntoData::is`].
+    /// This allows overriding that so you can store your snapshot in a more readable, diffable
+    /// format.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .against(snapbox::data::DataFormat::JsonLines);
+    /// # }
+    /// ```
+    fn against(self, format: DataFormat) -> Data {
+        self.into_data().against(format)
+    }
+
+    /// Initialize as json or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .is_json();
+    /// # }
+    /// ```
+    #[cfg(feature = "json")]
+    fn against_json(self) -> Data {
+        self.against(DataFormat::Json)
+    }
+
+    /// Initialize as json lines or [`Error`][DataFormat::Error]
+    ///
+    /// This is generally used for `expected` data
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .against_jsonlines();
+    /// # }
+    /// ```
+    #[cfg(feature = "json")]
+    fn against_jsonlines(self) -> Data {
+        self.against(DataFormat::JsonLines)
+    }
+
     /// Convert to [`Data`], applying defaults
     fn into_data(self) -> Data;
 }
@@ -577,6 +638,29 @@ impl Data {
         })
     }
 
+    /// Override the type this snapshot will be compared against
+    ///
+    /// Normally, the `actual` data is coerced to [`Data::is`].
+    /// This allows overriding that so you can store your snapshot in a more readable, diffable
+    /// format.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "json")] {
+    /// use snapbox::prelude::*;
+    /// use snapbox::str;
+    ///
+    /// let expected = str![[r#"{"hello": "world"}"#]]
+    ///     .is(snapbox::data::DataFormat::Json)
+    ///     .against(snapbox::data::DataFormat::JsonLines);
+    /// # }
+    /// ```
+    fn against(mut self, format: DataFormat) -> Data {
+        self.filters = self.filters.against(format);
+        self
+    }
+
     /// Convert `Self` to [`format`][DataFormat] if possible
     ///
     /// This is generally used on `actual` data to make it match `expected`
@@ -592,6 +676,10 @@ impl Data {
             (DataInner::Json(inner), DataFormat::Json) => DataInner::Json(inner),
             #[cfg(feature = "json")]
             (DataInner::JsonLines(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
+            #[cfg(feature = "json")]
+            (DataInner::JsonLines(inner), DataFormat::Json) => DataInner::Json(inner),
+            #[cfg(feature = "json")]
+            (DataInner::Json(inner), DataFormat::JsonLines) => DataInner::JsonLines(inner),
             #[cfg(feature = "term-svg")]
             (DataInner::TermSvg(inner), DataFormat::TermSvg) => DataInner::TermSvg(inner),
             (DataInner::Binary(inner), _) => {
@@ -703,6 +791,12 @@ impl Data {
             #[cfg(feature = "term-svg")]
             DataInner::TermSvg(_) => DataFormat::TermSvg,
         }
+    }
+
+    pub(crate) fn against_format(&self) -> DataFormat {
+        self.filters
+            .get_against()
+            .unwrap_or_else(|| self.intended_format())
     }
 
     pub(crate) fn relevant(&self) -> Option<&str> {

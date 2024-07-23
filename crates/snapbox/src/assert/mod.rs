@@ -118,8 +118,8 @@ impl Assert {
         }
 
         // On `expected` being an error, make a best guess
-        let format = expected.intended_format();
-        actual = actual.coerce_to(format);
+        actual = actual.coerce_to(expected.against_format());
+        actual = actual.coerce_to(expected.intended_format());
 
         if self.normalize_paths && expected.filters.is_paths_set() {
             actual = FilterPaths.filter(actual);
