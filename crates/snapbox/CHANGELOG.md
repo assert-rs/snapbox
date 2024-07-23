@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- Deprecated `IntoData::json` in favor of `IntoData::is_json`
+- Deprecated `IntoData::json_lines` in favor of `IntoData::is_jsonlines`
+- Deprecated `IntoData::term_svg` in favor of `IntoData::is_termsvg`
+
+### Features
+
+- Added `IntoData::against`, with shortcuts for `json` and `jsonlines`, for different `actual` and `expected` formats
+
 ## [0.6.13] - 2024-07-12
 
 ## [0.6.12] - 2024-07-10
