@@ -136,7 +136,7 @@ pub trait IntoData: Sized {
     /// use snapbox::str;
     ///
     /// let expected = str![[r#"{"hello": "world"}"#]]
-    ///     .json();
+    ///     .is_json();
     /// assert_eq!(expected.format(), snapbox::data::DataFormat::Json);
     /// # }
     /// ```
@@ -163,7 +163,7 @@ pub trait IntoData: Sized {
     /// use snapbox::str;
     ///
     /// let expected = str![[r#"{"hello": "world"}"#]]
-    ///     .json_lines();
+    ///     .is_jsonlines();
     /// assert_eq!(expected.format(), snapbox::data::DataFormat::JsonLines);
     /// # }
     /// ```
