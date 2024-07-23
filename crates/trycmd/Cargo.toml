@@ -1,6 +1,6 @@
 [package]
 name = "trycmd"
-version = "0.15.4"
+version = "0.15.5"
 description = "Snapshot testing for a herd of CLI tests"
 authors = ["Ed Page <eopage@gmail.com>"]
 repository = "https://github.com/assert-rs/trycmd.git"

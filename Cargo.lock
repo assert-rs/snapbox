@@ -907,7 +907,7 @@ dependencies = [
 
 [[package]]
 name = "trycmd"
-version = "0.15.4"
+version = "0.15.5"
 dependencies = [
  "anstream 0.6.14",
  "automod",
@@ -926,7 +926,7 @@ dependencies = [
 
 [[package]]
 name = "tryfn"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "ignore",
  "libtest-mimic",
