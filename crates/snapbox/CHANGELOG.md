@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.15] - 2024-07-24
+
 ### Features
 
 - Provide `Assert::redactions`
@@ -480,7 +482,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.14...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.15...HEAD
+[0.6.15]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.14...snapbox-v0.6.15
 [0.6.14]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.13...snapbox-v0.6.14
 [0.6.13]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.12...snapbox-v0.6.13
 [0.6.12]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.11...snapbox-v0.6.12
