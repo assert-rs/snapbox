@@ -426,6 +426,10 @@ impl Assert {
     pub fn selected_action(&self) -> Action {
         self.action
     }
+
+    pub fn redactions(&self) -> &crate::Redactions {
+        &self.substitutions
+    }
 }
 
 impl Default for Assert {
