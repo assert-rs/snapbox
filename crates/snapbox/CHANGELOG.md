@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Provide `Assert::redactions`
+
 ## [0.6.14] - 2024-07-23
 
 ### Compatibility
