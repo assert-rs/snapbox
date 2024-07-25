@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.15.6] - 2024-07-25
+
 ## [0.15.5] - 2024-07-23
 
 ## [0.15.4] - 2024-05-24
@@ -433,7 +435,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.5...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.6...HEAD
+[0.15.6]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.5...trycmd-v0.15.6
 [0.15.5]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.4...trycmd-v0.15.5
 [0.15.4]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.3...trycmd-v0.15.4
 [0.15.3]: https://github.com/assert-rs/trycmd/compare/v0.15.2...trycmd-v0.15.3

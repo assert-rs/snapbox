@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.2.3] - 2024-07-25
+
 ## [0.2.2] - 2024-07-23
 
 ## [0.2.1] - 2024-05-23
@@ -26,7 +28,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [0.1.0] - 2024-05-17
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.2...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.3...HEAD
+[0.2.3]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.2...tryfn-v0.2.3
 [0.2.2]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.1...tryfn-v0.2.2
 [0.2.1]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.0...tryfn-v0.2.1
 [0.2.0]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.1.0...tryfn-v0.2.0
