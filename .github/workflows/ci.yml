@@ -34,7 +34,7 @@ jobs:
     name: Test
     strategy:
       matrix:
-        os: ["ubuntu-latest", "windows-latest", "macos-14"]
+        os: ["ubuntu-latest", "windows-latest", "macos-latest"]
         rust: ["stable"]
     continue-on-error: ${{ matrix.rust != 'stable' }}
     runs-on: ${{ matrix.os }}
@@ -72,9 +72,6 @@ jobs:
       run: cargo hack check --all-features --locked --rust-version --ignore-private --workspace --all-targets
     - name: No-default features
       run: cargo hack check --no-default-features --locked --rust-version --ignore-private --workspace --all-targets
-  # Make sure the library builds with all dependencies downgraded to their
-  # oldest versions allowed by the semver spec. This ensures we have not
-  # under-specified any dependency
   minimal-versions:
     name: Minimal versions
     runs-on: ubuntu-latest
