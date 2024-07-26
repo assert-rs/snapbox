@@ -3,6 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
+repository = "https://github.com/assert-rs/snapbox/"
 license = "MIT OR Apache-2.0"
 edition = "2021"
 rust-version = "1.65"  # MSRV
@@ -17,7 +18,7 @@ include = [
 ]
 
 [workspace.lints.rust]
-rust_2018_idioms = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
 unreachable_pub = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unused_lifetimes = "warn"
