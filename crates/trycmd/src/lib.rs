@@ -135,7 +135,7 @@
 //! - 1-to-1 with dumped results
 //! - `TRYCMD=overwrite` support
 //!
-//! [See full schema](https://github.com/assert-rs/trycmd/blob/main/schema.json):
+//! [See full schema](https://github.com/assert-rs/snapbox/blob/main/crates/trycmd/schema.json):
 //! Basic parameters:
 //! - `bin.name`: The name of the binary target from `Cargo.toml` to be used to find the file path
 //! - `args`: the arguments (including flags and option) passed to the binary
