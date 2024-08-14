@@ -473,10 +473,11 @@ fn normalize_array_to_redactions(
                 input_index = input.len();
                 break;
             };
-            let Some(index_offset) = input[input_index..]
-                .iter()
-                .position(|next_input_elem| next_input_elem == *next_pattern_elem)
-            else {
+            let Some(index_offset) = input[input_index..].iter().position(|next_input_elem| {
+                let mut next_input_elem = next_input_elem.clone();
+                normalize_value_to_redactions(&mut next_input_elem, next_pattern_elem, redactions);
+                next_input_elem == **next_pattern_elem
+            }) else {
                 // Give up as we can't find where the elide ends
                 break;
             };
