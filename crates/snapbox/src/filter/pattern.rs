@@ -492,29 +492,29 @@ fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactio
     let mut input_index = 0;
     let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(input).collect();
     let mut pattern_lines = crate::utils::LinesWithTerminator::new(pattern).peekable();
-    'outer: while let Some(pattern_line) = pattern_lines.next() {
+    while let Some(pattern_line) = pattern_lines.next() {
         if is_line_elide(pattern_line) {
             let Some(next_pattern_line) = pattern_lines.peek() else {
-                // Give up doing further normalization
+                // Stop as elide consumes to end
                 normalized.push(pattern_line);
-                // captured rest so don't copy remaining lines over
                 input_index = input_lines.len();
                 break;
             };
-            for (index_offset, next_input_line) in
-                input_lines[input_index..].iter().copied().enumerate()
-            {
-                if line_matches(next_input_line, next_pattern_line, redactions) {
-                    normalized.push(pattern_line);
-                    input_index += index_offset;
-                    continue 'outer;
-                }
-            }
-            // Give up doing further normalization
-            break;
+            let Some(index_offset) =
+                input_lines[input_index..]
+                    .iter()
+                    .position(|next_input_line| {
+                        line_matches(next_input_line, next_pattern_line, redactions)
+                    })
+            else {
+                // Give up as we can't find where the elide ends
+                break;
+            };
+            normalized.push(pattern_line);
+            input_index += index_offset;
         } else {
             let Some(input_line) = input_lines.get(input_index) else {
-                // Give up doing further normalization
+                // Give up as we have no more content to check
                 break;
             };
 
