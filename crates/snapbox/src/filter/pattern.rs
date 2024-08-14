@@ -431,38 +431,7 @@ fn normalize_value_to_redactions(
             *act = normalize_str_to_redactions(act, exp, substitutions);
         }
         (Array(act), Array(exp)) => {
-            let mut sections = exp.split(|e| e == VALUE_WILDCARD).peekable();
-            let mut processed = 0;
-            while let Some(expected_subset) = sections.next() {
-                // Process all values in the current section
-                if !expected_subset.is_empty() {
-                    let actual_subset = &mut act[processed..processed + expected_subset.len()];
-                    for (a, e) in actual_subset.iter_mut().zip(expected_subset) {
-                        normalize_value_to_redactions(a, e, substitutions);
-                    }
-                    processed += expected_subset.len();
-                }
-
-                if let Some(next_section) = sections.peek() {
-                    // If the next section has nothing in it, replace from processed to end with
-                    // a single "{...}"
-                    if next_section.is_empty() {
-                        act.splice(processed.., vec![String(VALUE_WILDCARD.to_owned())]);
-                        processed += 1;
-                    } else {
-                        let first = next_section.first().unwrap();
-                        // Replace everything up until the value we are looking for with
-                        // a single "{...}".
-                        if let Some(index) = act.iter().position(|v| v == first) {
-                            act.splice(processed..index, vec![String(VALUE_WILDCARD.to_owned())]);
-                            processed += 1;
-                        } else {
-                            // If we cannot find the value we are looking for return early
-                            break;
-                        }
-                    }
-                }
-            }
+            *act = normalize_array_to_redactions(act, exp, substitutions);
         }
         (Object(act), Object(exp)) => {
             let has_key_wildcard =
@@ -481,6 +450,53 @@ fn normalize_value_to_redactions(
         }
         (_, _) => {}
     }
+}
+
+#[cfg(feature = "structured-data")]
+fn normalize_array_to_redactions(
+    input: &[serde_json::Value],
+    pattern: &[serde_json::Value],
+    redactions: &Redactions,
+) -> Vec<serde_json::Value> {
+    if input == pattern {
+        return input.to_vec();
+    }
+
+    let mut normalized: Vec<serde_json::Value> = Vec::new();
+    let mut input_index = 0;
+    let mut pattern = pattern.iter().peekable();
+    while let Some(pattern_elem) = pattern.next() {
+        if pattern_elem == VALUE_WILDCARD {
+            let Some(next_pattern_elem) = pattern.peek() else {
+                // Stop as elide consumes to end
+                normalized.push(pattern_elem.clone());
+                input_index = input.len();
+                break;
+            };
+            let Some(index_offset) = input[input_index..]
+                .iter()
+                .position(|next_input_elem| next_input_elem == *next_pattern_elem)
+            else {
+                // Give up as we can't find where the elide ends
+                break;
+            };
+            normalized.push(pattern_elem.clone());
+            input_index += index_offset;
+        } else {
+            let Some(input_elem) = input.get(input_index) else {
+                // Give up as we have no more content to check
+                break;
+            };
+
+            input_index += 1;
+            let mut normalized_elem = input_elem.clone();
+            normalize_value_to_redactions(&mut normalized_elem, pattern_elem, redactions);
+            normalized.push(normalized_elem);
+        }
+    }
+
+    normalized.extend(input[input_index..].iter().cloned());
+    normalized
 }
 
 fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactions) -> String {
