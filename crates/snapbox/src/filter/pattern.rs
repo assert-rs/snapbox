@@ -494,25 +494,24 @@ fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactio
     let mut pattern_lines = crate::utils::LinesWithTerminator::new(pattern).peekable();
     'outer: while let Some(pattern_line) = pattern_lines.next() {
         if is_line_elide(pattern_line) {
-            if let Some(next_pattern_line) = pattern_lines.peek() {
-                for (index_offset, next_input_line) in
-                    input_lines[input_index..].iter().copied().enumerate()
-                {
-                    if line_matches(next_input_line, next_pattern_line, redactions) {
-                        normalized.push(pattern_line);
-                        input_index += index_offset;
-                        continue 'outer;
-                    }
-                }
-                // Give up doing further normalization
-                break;
-            } else {
+            let Some(next_pattern_line) = pattern_lines.peek() else {
                 // Give up doing further normalization
                 normalized.push(pattern_line);
                 // captured rest so don't copy remaining lines over
                 input_index = input_lines.len();
                 break;
+            };
+            for (index_offset, next_input_line) in
+                input_lines[input_index..].iter().copied().enumerate()
+            {
+                if line_matches(next_input_line, next_pattern_line, redactions) {
+                    normalized.push(pattern_line);
+                    input_index += index_offset;
+                    continue 'outer;
+                }
             }
+            // Give up doing further normalization
+            break;
         } else {
             let Some(input_line) = input_lines.get(input_index) else {
                 // Give up doing further normalization
