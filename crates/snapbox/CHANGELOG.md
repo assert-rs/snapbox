@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.17] - 2024-08-14
+
 ### Fixes
 
 - Take redactions into account when finding the end of an elided structured array
@@ -488,7 +490,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.16...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.17...HEAD
+[0.6.17]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.16...snapbox-v0.6.17
 [0.6.16]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.15...snapbox-v0.6.16
 [0.6.15]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.14...snapbox-v0.6.15
 [0.6.14]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.13...snapbox-v0.6.14
