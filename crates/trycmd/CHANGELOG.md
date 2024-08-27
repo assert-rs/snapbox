@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Strip colors on `TERM=dumb`
+
 ## [0.15.6] - 2024-07-25
 
 ## [0.15.5] - 2024-07-23
