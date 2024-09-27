@@ -146,7 +146,7 @@ impl TryCmd {
                 }
             } else if ext == std::ffi::OsStr::new("trycmd") || ext == std::ffi::OsStr::new("md") {
                 if stderr.is_some() && stderr != Some(&crate::Data::new()) {
-                    panic!("stderr should have been merged: {:?}", stderr);
+                    panic!("stderr should have been merged: {stderr:?}");
                 }
                 if let (Some(id), Some(stdout)) = (id, stdout) {
                     let step = self
@@ -245,9 +245,7 @@ impl TryCmd {
                         cmd_start = line_num;
                         stdout_start = line_num + 1;
                     } else {
-                        return Err(
-                            format!("Expected `$` on line {}, got `{}`", line_num, line).into()
-                        );
+                        return Err(format!("Expected `$` on line {line_num}, got `{line}`").into());
                     }
                 } else {
                     break 'outer;
@@ -296,7 +294,7 @@ impl TryCmd {
 
                 let bin = loop {
                     if cmdline.is_empty() {
-                        return Err(format!("No bin specified on line {}", cmd_start).into());
+                        return Err(format!("No bin specified on line {cmd_start}").into());
                     }
                     let next = cmdline.remove(0);
                     if let Some((key, value)) = next.split_once('=') {
@@ -593,7 +591,7 @@ impl Step {
     ) -> Result<snapbox::cmd::Command, crate::Error> {
         let bin = match &self.bin {
             Some(Bin::Path(path)) => Ok(path.clone()),
-            Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {}", name).into()),
+            Some(Bin::Name(name)) => Err(format!("Unknown bin.name = {name}").into()),
             Some(Bin::Ignore) => Err("Internal error: tried to run an ignored bin".into()),
             Some(Bin::Error(err)) => Err(err.clone()),
             None => Err("No bin specified".into()),
@@ -895,7 +893,7 @@ impl std::str::FromStr for CommandStatus {
             _ => s
                 .parse::<i32>()
                 .map(Self::Code)
-                .map_err(|_| crate::Error::new(format!("Expected an exit code, got {}", s))),
+                .map_err(|_| crate::Error::new(format!("Expected an exit code, got {s}"))),
         }
     }
 }

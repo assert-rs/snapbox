@@ -625,7 +625,7 @@ mod test {
         ];
         for (line, pattern, expected) in cases {
             let actual = line_matches(line, pattern, &Redactions::new());
-            assert_eq!(expected, actual, "line={:?}  pattern={:?}", line, pattern);
+            assert_eq!(expected, actual, "line={line:?}  pattern={pattern:?}");
         }
     }
 }

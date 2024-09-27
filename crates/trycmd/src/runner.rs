@@ -179,7 +179,7 @@ impl Case {
             Err(e) => {
                 let output = Output::step(self.path.clone(), "setup".into());
                 return vec![Err(
-                    output.error(format!("Failed to initialize sandbox: {}", e).into())
+                    output.error(format!("Failed to initialize sandbox: {e}").into())
                 )];
             }
         };
@@ -283,7 +283,7 @@ impl Case {
             if let Err(err) = fs_context.close() {
                 ok = false;
                 output.fs.context.push(FileStatus::Failure(
-                    format!("Failed to cleanup sandbox: {}", err).into(),
+                    format!("Failed to cleanup sandbox: {err}").into(),
                 ));
             }
 
@@ -758,7 +758,7 @@ impl std::fmt::Display for Stream {
                     f,
                     "{} {}:",
                     self.stream,
-                    palette.error(format_args!("({})", msg))
+                    palette.error(format_args!("({msg})"))
                 )?;
                 writeln!(f, "{}", palette.info(&self.content))?;
             }

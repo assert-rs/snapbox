@@ -496,7 +496,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            writeln!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{desc}").unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -526,7 +526,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            writeln!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{desc}").unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -548,7 +548,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            writeln!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{desc}").unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -580,7 +580,7 @@ impl OutputAssert {
 
             use std::fmt::Write;
             let mut buf = String::new();
-            writeln!(&mut buf, "{}", desc).unwrap();
+            writeln!(&mut buf, "{desc}").unwrap();
             self.write_stdout(&mut buf).unwrap();
             self.write_stderr(&mut buf).unwrap();
             panic!("{}", buf);
@@ -761,7 +761,7 @@ pub fn display_exit_status(status: std::process::ExitStatus) -> String {
             libc::SIGTRAP => ", SIGTRAP: trace/breakpoint trap",
             _ => "",
         };
-        Some(format!("signal: {}{}", signal, name))
+        Some(format!("signal: {signal}{name}"))
     }
 
     #[cfg(windows)]
@@ -914,8 +914,7 @@ pub(crate) mod examples {
         }
 
         Err(crate::assert::Error::new(format!(
-            "Unknown error building example {}",
-            target_name
+            "Unknown error building example {target_name}"
         )))
     }
 
