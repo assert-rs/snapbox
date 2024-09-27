@@ -38,7 +38,7 @@ pub trait ToDebug {
 
 impl<D: std::fmt::Debug> ToDebug for D {
     fn to_debug(&self) -> Data {
-        Data::text(format!("{:#?}\n", self))
+        Data::text(format!("{self:#?}\n"))
     }
 }
 

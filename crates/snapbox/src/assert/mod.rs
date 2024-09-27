@@ -168,7 +168,7 @@ impl Assert {
                     crate::report::Styled::new(String::new(), Default::default())
                 } else if let Some(action_var) = self.action_var.as_deref() {
                     self.palette
-                        .hint(format!("Update with {}=overwrite", action_var))
+                        .hint(format!("Update with {action_var}=overwrite"))
                 } else {
                     crate::report::Styled::new(String::new(), Default::default())
                 };
@@ -338,7 +338,7 @@ impl Assert {
             }
             if ok {
                 use std::io::Write;
-                let _ = write!(stderr(), "{}", buffer);
+                let _ = write!(stderr(), "{buffer}");
                 match self.action {
                     Action::Skip => unreachable!("Bailed out earlier"),
                     Action::Ignore => {
@@ -365,7 +365,7 @@ impl Assert {
                                 &mut buffer,
                                 "{}",
                                 self.palette
-                                    .hint(format_args!("Update with {}=overwrite", action_var))
+                                    .hint(format_args!("Update with {action_var}=overwrite"))
                             )
                             .unwrap();
                         }

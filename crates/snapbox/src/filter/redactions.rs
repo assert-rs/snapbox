@@ -327,14 +327,14 @@ fn replace_many<'a>(
 
 fn validate_placeholder(placeholder: &'static str) -> crate::assert::Result<&'static str> {
     if !placeholder.starts_with('[') || !placeholder.ends_with(']') {
-        return Err(format!("Key `{}` is not enclosed in []", placeholder).into());
+        return Err(format!("Key `{placeholder}` is not enclosed in []").into());
     }
 
     if placeholder[1..(placeholder.len() - 1)]
         .find(|c: char| !c.is_ascii_uppercase() && c != '_')
         .is_some()
     {
-        return Err(format!("Key `{}` can only be A-Z but ", placeholder).into());
+        return Err(format!("Key `{placeholder}` can only be A-Z but ").into());
     }
 
     Ok(placeholder)
@@ -356,7 +356,7 @@ mod test {
         ];
         for (placeholder, expected) in cases {
             let actual = validate_placeholder(placeholder).is_ok();
-            assert_eq!(expected, actual, "placeholder={:?}", placeholder);
+            assert_eq!(expected, actual, "placeholder={placeholder:?}");
         }
     }
 }

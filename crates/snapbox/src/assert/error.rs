@@ -38,7 +38,7 @@ impl std::fmt::Display for Error {
         if let Some(backtrace) = self.backtrace.as_ref() {
             writeln!(f)?;
             writeln!(f, "Backtrace:")?;
-            writeln!(f, "{}", backtrace)?;
+            writeln!(f, "{backtrace}")?;
         }
         Ok(())
     }
