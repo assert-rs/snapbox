@@ -454,99 +454,103 @@ fn normalize_value_to_redactions(
 
 #[cfg(feature = "structured-data")]
 fn normalize_array_to_redactions(
-    input: &[serde_json::Value],
-    pattern: &[serde_json::Value],
+    actual: &[serde_json::Value],
+    expected: &[serde_json::Value],
     redactions: &Redactions,
 ) -> Vec<serde_json::Value> {
-    if input == pattern {
-        return input.to_vec();
+    if actual == expected {
+        return actual.to_vec();
     }
 
     let mut normalized: Vec<serde_json::Value> = Vec::new();
-    let mut input_index = 0;
-    let mut pattern = pattern.iter().peekable();
-    while let Some(pattern_elem) = pattern.next() {
-        if pattern_elem == VALUE_WILDCARD {
-            let Some(next_pattern_elem) = pattern.peek() else {
+    let mut actual_index = 0;
+    let mut expected = expected.iter().peekable();
+    while let Some(expected_elem) = expected.next() {
+        if expected_elem == VALUE_WILDCARD {
+            let Some(next_expected_elem) = expected.peek() else {
                 // Stop as elide consumes to end
-                normalized.push(pattern_elem.clone());
-                input_index = input.len();
+                normalized.push(expected_elem.clone());
+                actual_index = actual.len();
                 break;
             };
-            let Some(index_offset) = input[input_index..].iter().position(|next_input_elem| {
-                let mut next_input_elem = next_input_elem.clone();
-                normalize_value_to_redactions(&mut next_input_elem, next_pattern_elem, redactions);
-                next_input_elem == **next_pattern_elem
+            let Some(index_offset) = actual[actual_index..].iter().position(|next_actual_elem| {
+                let mut next_actual_elem = next_actual_elem.clone();
+                normalize_value_to_redactions(
+                    &mut next_actual_elem,
+                    next_expected_elem,
+                    redactions,
+                );
+                next_actual_elem == **next_expected_elem
             }) else {
                 // Give up as we can't find where the elide ends
                 break;
             };
-            normalized.push(pattern_elem.clone());
-            input_index += index_offset;
+            normalized.push(expected_elem.clone());
+            actual_index += index_offset;
         } else {
-            let Some(input_elem) = input.get(input_index) else {
+            let Some(actual_elem) = actual.get(actual_index) else {
                 // Give up as we have no more content to check
                 break;
             };
 
-            input_index += 1;
-            let mut normalized_elem = input_elem.clone();
-            normalize_value_to_redactions(&mut normalized_elem, pattern_elem, redactions);
+            actual_index += 1;
+            let mut normalized_elem = actual_elem.clone();
+            normalize_value_to_redactions(&mut normalized_elem, expected_elem, redactions);
             normalized.push(normalized_elem);
         }
     }
 
-    normalized.extend(input[input_index..].iter().cloned());
+    normalized.extend(actual[actual_index..].iter().cloned());
     normalized
 }
 
-fn normalize_str_to_redactions(input: &str, pattern: &str, redactions: &Redactions) -> String {
-    if input == pattern {
-        return input.to_owned();
+fn normalize_str_to_redactions(actual: &str, expected: &str, redactions: &Redactions) -> String {
+    if actual == expected {
+        return actual.to_owned();
     }
 
     let mut normalized: Vec<&str> = Vec::new();
-    let mut input_index = 0;
-    let input_lines: Vec<_> = crate::utils::LinesWithTerminator::new(input).collect();
-    let mut pattern_lines = crate::utils::LinesWithTerminator::new(pattern).peekable();
-    while let Some(pattern_line) = pattern_lines.next() {
-        if is_line_elide(pattern_line) {
-            let Some(next_pattern_line) = pattern_lines.peek() else {
+    let mut actual_index = 0;
+    let actual_lines: Vec<_> = crate::utils::LinesWithTerminator::new(actual).collect();
+    let mut expected_lines = crate::utils::LinesWithTerminator::new(expected).peekable();
+    while let Some(expected_line) = expected_lines.next() {
+        if is_line_elide(expected_line) {
+            let Some(next_expected_line) = expected_lines.peek() else {
                 // Stop as elide consumes to end
-                normalized.push(pattern_line);
-                input_index = input_lines.len();
+                normalized.push(expected_line);
+                actual_index = actual_lines.len();
                 break;
             };
             let Some(index_offset) =
-                input_lines[input_index..]
+                actual_lines[actual_index..]
                     .iter()
-                    .position(|next_input_line| {
-                        line_matches(next_input_line, next_pattern_line, redactions)
+                    .position(|next_actual_line| {
+                        line_matches(next_actual_line, next_expected_line, redactions)
                     })
             else {
                 // Give up as we can't find where the elide ends
                 break;
             };
-            normalized.push(pattern_line);
-            input_index += index_offset;
+            normalized.push(expected_line);
+            actual_index += index_offset;
         } else {
-            let Some(input_line) = input_lines.get(input_index) else {
+            let Some(actual_line) = actual_lines.get(actual_index) else {
                 // Give up as we have no more content to check
                 break;
             };
 
-            if line_matches(input_line, pattern_line, redactions) {
-                input_index += 1;
-                normalized.push(pattern_line);
+            if line_matches(actual_line, expected_line, redactions) {
+                actual_index += 1;
+                normalized.push(expected_line);
             } else {
                 // Skip this line and keep processing
-                input_index += 1;
-                normalized.push(input_line);
+                actual_index += 1;
+                normalized.push(actual_line);
             }
         }
     }
 
-    normalized.extend(input_lines[input_index..].iter().copied());
+    normalized.extend(actual_lines[actual_index..].iter().copied());
     normalized.join("")
 }
 
@@ -554,20 +558,20 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(mut input: &str, pattern: &str, redactions: &Redactions) -> bool {
-    if input == pattern {
+fn line_matches(mut actual: &str, expected: &str, redactions: &Redactions) -> bool {
+    if actual == expected {
         return true;
     }
 
-    let pattern = redactions.clear(pattern);
-    let mut sections = pattern.split("[..]").peekable();
+    let expected = redactions.clear(expected);
+    let mut sections = expected.split("[..]").peekable();
     while let Some(section) = sections.next() {
-        if let Some(remainder) = input.strip_prefix(section) {
+        if let Some(remainder) = actual.strip_prefix(section) {
             if let Some(next_section) = sections.peek() {
                 if next_section.is_empty() {
-                    input = "";
+                    actual = "";
                 } else if let Some(restart_index) = remainder.find(next_section) {
-                    input = &remainder[restart_index..];
+                    actual = &remainder[restart_index..];
                 }
             } else {
                 return remainder.is_empty();
