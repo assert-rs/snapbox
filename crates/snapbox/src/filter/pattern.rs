@@ -302,6 +302,10 @@ fn normalize_array_to_unordered_redactions(
     actual: &[serde_json::Value],
     expected: &[serde_json::Value],
 ) -> Vec<serde_json::Value> {
+    if actual == expected {
+        return actual.to_owned();
+    }
+
     let mut normalized: Vec<serde_json::Value> = Vec::new();
     let mut actual_values = actual.to_owned();
     let mut expected_values = expected.to_owned();
