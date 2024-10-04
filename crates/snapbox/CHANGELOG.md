@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Take redactions into account when finding the end of an elided structured, unordered array
+
 ## [0.6.17] - 2024-08-14
 
 ### Fixes
