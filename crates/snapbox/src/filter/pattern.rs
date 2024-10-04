@@ -272,7 +272,7 @@ fn normalize_value_to_unordered_redactions(
             *act = normalize_str_to_unordered_redactions(act, exp, substitutions);
         }
         (Array(act), Array(exp)) => {
-            *act = normalize_array_to_unordered_redactions(act, exp);
+            *act = normalize_array_to_unordered_redactions(act, exp, substitutions);
         }
         (Object(act), Object(exp)) => {
             let has_key_wildcard =
@@ -301,6 +301,7 @@ fn normalize_value_to_unordered_redactions(
 fn normalize_array_to_unordered_redactions(
     actual: &[serde_json::Value],
     expected: &[serde_json::Value],
+    substitutions: &Redactions,
 ) -> Vec<serde_json::Value> {
     if actual == expected {
         return actual.to_owned();
@@ -317,7 +318,13 @@ fn normalize_array_to_unordered_redactions(
             elided = true;
         } else {
             actual_values.retain(|actual_value| {
-                if !matched && actual_value == expected_value {
+                let mut normalized_actual_value = actual_value.clone();
+                normalize_value_to_unordered_redactions(
+                    &mut normalized_actual_value,
+                    expected_value,
+                    substitutions,
+                );
+                if !matched && normalized_actual_value == *expected_value {
                     matched = true;
                     false
                 } else {
