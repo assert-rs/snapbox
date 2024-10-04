@@ -272,34 +272,7 @@ fn normalize_value_to_unordered_redactions(
             *act = normalize_str_to_unordered_redactions(act, exp, substitutions);
         }
         (Array(act), Array(exp)) => {
-            let mut actual_values = std::mem::take(act);
-            let mut expected_values = exp.clone();
-            let mut elided = false;
-            expected_values.retain(|expected_value| {
-                let mut matched = false;
-                if expected_value == VALUE_WILDCARD {
-                    matched = true;
-                    elided = true;
-                } else {
-                    actual_values.retain(|actual_value| {
-                        if !matched && actual_value == expected_value {
-                            matched = true;
-                            false
-                        } else {
-                            true
-                        }
-                    });
-                }
-                if matched {
-                    act.push(expected_value.clone());
-                }
-                !matched
-            });
-            if !elided {
-                for actual_value in actual_values {
-                    act.push(actual_value);
-                }
-            }
+            *act = normalize_array_to_unordered_redactions(act, exp);
         }
         (Object(act), Object(exp)) => {
             let has_key_wildcard =
@@ -322,6 +295,44 @@ fn normalize_value_to_unordered_redactions(
         }
         (_, _) => {}
     }
+}
+
+#[cfg(feature = "structured-data")]
+fn normalize_array_to_unordered_redactions(
+    actual: &[serde_json::Value],
+    expected: &[serde_json::Value],
+) -> Vec<serde_json::Value> {
+    let mut normalized: Vec<serde_json::Value> = Vec::new();
+    let mut actual_values = actual.to_owned();
+    let mut expected_values = expected.to_owned();
+    let mut elided = false;
+    expected_values.retain(|expected_value| {
+        let mut matched = false;
+        if expected_value == VALUE_WILDCARD {
+            matched = true;
+            elided = true;
+        } else {
+            actual_values.retain(|actual_value| {
+                if !matched && actual_value == expected_value {
+                    matched = true;
+                    false
+                } else {
+                    true
+                }
+            });
+        }
+        if matched {
+            normalized.push(expected_value.clone());
+        }
+        !matched
+    });
+    if !elided {
+        for actual_value in actual_values {
+            normalized.push(actual_value);
+        }
+    }
+
+    normalized
 }
 
 fn normalize_str_to_unordered_redactions(
