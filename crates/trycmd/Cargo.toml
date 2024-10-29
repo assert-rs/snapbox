@@ -1,6 +1,6 @@
 [package]
 name = "trycmd"
-version = "0.15.7"
+version = "0.15.8"
 description = "Snapshot testing for a herd of CLI tests"
 authors = ["Ed Page <eopage@gmail.com>"]
 homepage = "https://github.com/assert-rs/trycmd"
@@ -48,7 +48,7 @@ required-features = ["schema"]
 
 [dependencies]
 automod = "1.0.14"
-snapbox = { path = "../snapbox", version = "0.6.18", default-features = false, features = ["cmd"] }
+snapbox = { path = "../snapbox", version = "0.6.19", default-features = false, features = ["cmd"] }
 anstream = { version = "0.6.7", optional = true }
 
 glob = "0.3.0"

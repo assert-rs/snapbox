@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.19] - 2024-10-29
+
 ### Fixes
 
 - Pull in `escargot` fix
@@ -500,7 +502,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.18...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.19...HEAD
+[0.6.19]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.18...snapbox-v0.6.19
 [0.6.18]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.17...snapbox-v0.6.18
 [0.6.17]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.16...snapbox-v0.6.17
 [0.6.16]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.15...snapbox-v0.6.16
