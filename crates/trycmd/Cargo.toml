@@ -59,7 +59,7 @@ shlex = "1.1.0"
 humantime = "2"
 humantime-serde = "1"
 toml_edit = { version = "0.22.13", features = ["serde"] }
-escargot = { version = "0.5.7", optional = true }
+escargot = { version = "0.5.13", optional = true }
 
 schemars = { version = "0.8.21", features = ["preserve_order"], optional = true }
 serde_json = { version = "1.0", optional = true }

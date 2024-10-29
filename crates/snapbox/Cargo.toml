@@ -80,7 +80,7 @@ filetime = { version = "0.2.8", optional = true }
 
 os_pipe = { version = "1.0", optional = true }
 wait-timeout = { version = "0.2.0", optional = true }
-escargot = { version = "0.5.7", optional = true }
+escargot = { version = "0.5.13", optional = true }
 
 backtrace = { version = "0.3", optional = true }
 
