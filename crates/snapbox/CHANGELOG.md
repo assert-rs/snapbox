@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Pull in `escargot` fix
+
 ## [0.6.18] - 2024-10-04
 
 ### Fixes
