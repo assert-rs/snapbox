@@ -133,7 +133,12 @@ impl Redactions {
         input
     }
 
-    pub(crate) fn clear<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
+    /// Clear unused redactions from expected data
+    ///
+    /// Some redactions can be conditionally present, like redacting [`std::env::consts::EXE_SUFFIX`].
+    /// When the redaction is not present, it needs to be removed from the expected data so it can
+    /// be matched against the actual data.
+    pub fn clear_unused<'v>(&self, pattern: &'v str) -> Cow<'v, str> {
         if !self.unused.as_ref().map(|s| s.is_empty()).unwrap_or(false) && pattern.contains('[') {
             let mut pattern = pattern.to_owned();
             replace_many(
