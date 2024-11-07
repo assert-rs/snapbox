@@ -585,7 +585,7 @@ fn line_matches(mut actual: &str, expected: &str, redactions: &Redactions) -> bo
         return true;
     }
 
-    let expected = redactions.clear(expected);
+    let expected = redactions.clear_unused(expected);
     let mut sections = expected.split("[..]").peekable();
     while let Some(section) = sections.next() {
         if let Some(remainder) = actual.strip_prefix(section) {
