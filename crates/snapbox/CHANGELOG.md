@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.21] - 2024-12-16
+
 ### Features
 
 - In-source directory fixtures
@@ -512,7 +514,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.20...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.21...HEAD
+[0.6.21]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.20...snapbox-v0.6.21
 [0.6.20]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.19...snapbox-v0.6.20
 [0.6.19]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.18...snapbox-v0.6.19
 [0.6.18]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.17...snapbox-v0.6.18
