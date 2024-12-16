@@ -172,6 +172,50 @@ pub fn strip_trailing_slash(path: &std::path::Path) -> &std::path::Path {
     path.components().as_path()
 }
 
+/// Normalize a path, removing things like `.` and `..`.
+///
+/// CAUTION: This does not resolve symlinks (unlike
+/// [`std::fs::canonicalize`]). This may cause incorrect or surprising
+/// behavior at times. This should be used carefully. Unfortunately,
+/// [`std::fs::canonicalize`] can be hard to use correctly, since it can often
+/// fail, or on Windows returns annoying device paths. This is a problem Cargo
+/// needs to improve on.
+pub(crate) fn normalize_path(path: &std::path::Path) -> std::path::PathBuf {
+    use std::path::Component;
+
+    let mut components = path.components().peekable();
+    let mut ret = if let Some(c @ Component::Prefix(..)) = components.peek().cloned() {
+        components.next();
+        std::path::PathBuf::from(c.as_os_str())
+    } else {
+        std::path::PathBuf::new()
+    };
+
+    for component in components {
+        match component {
+            Component::Prefix(..) => unreachable!(),
+            Component::RootDir => {
+                ret.push(Component::RootDir);
+            }
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if ret.ends_with(Component::ParentDir) {
+                    ret.push(Component::ParentDir);
+                } else {
+                    let popped = ret.pop();
+                    if !popped && !ret.has_root() {
+                        ret.push(Component::ParentDir);
+                    }
+                }
+            }
+            Component::Normal(c) => {
+                ret.push(c);
+            }
+        }
+    }
+    ret
+}
+
 pub(crate) fn display_relpath(path: impl AsRef<std::path::Path>) -> String {
     let path = path.as_ref();
     let relpath = if let Ok(cwd) = std::env::current_dir() {
