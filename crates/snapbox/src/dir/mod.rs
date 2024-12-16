@@ -1,6 +1,7 @@
 //! Initialize working directories and assert on how they've changed
 
 mod diff;
+mod fixture;
 mod ops;
 mod root;
 #[cfg(test)]
@@ -8,6 +9,7 @@ mod tests;
 
 pub use diff::FileType;
 pub use diff::PathDiff;
+pub use fixture::DirFixture;
 #[cfg(feature = "dir")]
 pub use ops::copy_template;
 pub use ops::resolve_dir;

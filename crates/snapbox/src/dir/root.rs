@@ -43,10 +43,10 @@ impl DirRoot {
     }
 
     #[cfg(feature = "dir")]
-    pub fn with_template(
-        self,
-        template_root: &std::path::Path,
-    ) -> Result<Self, crate::assert::Error> {
+    pub fn with_template<F>(self, template: &F) -> Result<Self, crate::assert::Error>
+    where
+        F: crate::dir::DirFixture + ?Sized,
+    {
         match &self.0 {
             DirRootInner::None | DirRootInner::Immutable(_) => {
                 return Err("Sandboxing is disabled".into());
@@ -57,7 +57,7 @@ impl DirRoot {
                     path.display(),
                     template_root.display()
                 );
-                super::copy_template(template_root, path)?;
+                template.write_to_path(path)?;
             }
         }
 
