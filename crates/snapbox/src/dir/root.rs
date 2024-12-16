@@ -52,11 +52,7 @@ impl DirRoot {
                 return Err("Sandboxing is disabled".into());
             }
             DirRootInner::MutablePath(path) | DirRootInner::MutableTemp { path, .. } => {
-                crate::debug!(
-                    "Initializing {} from {}",
-                    path.display(),
-                    template_root.display()
-                );
+                crate::debug!("Initializing {} from {:?}", path.display(), template);
                 template.write_to_path(path)?;
             }
         }
