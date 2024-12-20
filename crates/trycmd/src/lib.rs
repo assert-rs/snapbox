@@ -191,8 +191,8 @@
 //!
 //! ## Examples
 //!
-//! - Simple cargo binary: [trycmd's integration tests](https://github.com/assert-rs/trycmd/blob/main/tests/cli_tests.rs)
-//! - Simple example: [trycmd's integration tests](https://github.com/assert-rs/trycmd/blob/main/tests/example_tests.rs)
+//! - Simple cargo binary: [trycmd's integration tests](https://github.com/assert-rs/snapbox/blob/main/crates/trycmd/tests/cli_tests.rs)
+//! - Simple example: [trycmd's integration tests](https://github.com/assert-rs/snapbox/blob/main/crates/trycmd/tests/example_tests.rs)
 //! - [typos](https://github.com/crate-ci/typos) (source code spell checker)
 //! - [clap](https://github.com/clap-rs/clap/) (CLI parser) to test examples
 //!
