@@ -230,11 +230,23 @@ fn parse_include(args: impl IntoIterator<Item = std::ffi::OsString>) -> Option<V
 }
 
 fn parse_mode(var: Option<&std::ffi::OsStr>) -> crate::Mode {
-    if var == Some(std::ffi::OsStr::new("overwrite")) {
-        crate::Mode::Overwrite
-    } else if var == Some(std::ffi::OsStr::new("dump")) {
-        crate::Mode::Dump("dump".into())
-    } else {
-        crate::Mode::Fail
+    use crate::Mode;
+    match var {
+        // [`OsStr`] implements [`PartialEq<str>`] so we can compare it with
+        // [`&str`] directly:
+        Some(x) if x == "overwrite" => Mode::Overwrite,
+        Some(x) if x == "dump" => Mode::Dump("dump".into()),
+        Some(x) if x == "status" => Mode::OnlyStatus,
+        None => Mode::Fail,
+        Some(x) => {
+            #[allow(clippy::print_stderr)]
+            if !x.is_empty() {
+                eprintln!(
+                    "Unknown mode: TRYCMD={}, using the default mode",
+                    x.to_string_lossy()
+                );
+            }
+            Mode::Fail
+        }
     }
 }

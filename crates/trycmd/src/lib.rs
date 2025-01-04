@@ -63,6 +63,12 @@
 //! ```
 //! This will overwrite any existing `.stdout` and `.stderr` file in `tests/cmd`
 //!
+//! To check only the exit status of tests (ignoring outputs), you can run:
+//! ```console
+//! $ TRYCMD=status cargo test --test cli_tests
+//! ```
+//! This may be useful if the command outputs are not reproducible.
+//!
 //! To filter the tests to those with `name1`, `name2`, etc in their file names, you can run:
 //! ```console
 //! cargo test --test cli_tests -- cli_tests trycmd=name1 trycmd=name2...

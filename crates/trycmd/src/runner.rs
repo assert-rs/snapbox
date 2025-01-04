@@ -218,7 +218,7 @@ impl Case {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
-            let step_status = self.run_step(step, cwd.as_deref(), bins, &substitutions);
+            let step_status = self.run_step(step, cwd.as_deref(), mode, bins, &substitutions);
             if fs_context.is_mutable() && step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
@@ -261,7 +261,7 @@ impl Case {
                     }
                 }
             }
-            Mode::Fail => {}
+            Mode::Fail | Mode::OnlyStatus => {}
         }
 
         if sequence.fs.sandbox() {
@@ -305,6 +305,7 @@ impl Case {
         &self,
         step: &mut crate::schema::Step,
         cwd: Option<&std::path::Path>,
+        mode: &Mode,
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Redactions,
     ) -> Result<Output, Output> {
@@ -362,7 +363,10 @@ impl Case {
 
         // For Mode::Dump's sake, allow running all
         let output = self.validate_spawn(output, step.expected_status());
-        let output = self.validate_streams(output, step, substitutions);
+        let output = match mode {
+            Mode::OnlyStatus => output,
+            _ => self.validate_streams(output, step, substitutions),
+        };
 
         if output.is_ok() {
             Ok(output)
@@ -991,6 +995,8 @@ impl std::fmt::Display for FileStatus {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Mode {
     Fail,
+    /// Only validate the return statuses of the commands
+    OnlyStatus,
     Overwrite,
     Dump(std::path::PathBuf),
 }
@@ -999,6 +1005,7 @@ impl Mode {
     pub(crate) fn initialize(&self) -> Result<(), std::io::Error> {
         match self {
             Self::Fail => {}
+            Self::OnlyStatus => {}
             Self::Overwrite => {}
             Self::Dump(root) => {
                 std::fs::create_dir_all(root)?;
@@ -1029,7 +1036,7 @@ fn fs_context(
                 }
                 Ok(context)
             }
-            Mode::Fail | Mode::Overwrite => {
+            Mode::Fail | Mode::Overwrite | Mode::OnlyStatus => {
                 let mut context = snapbox::dir::DirRoot::mutable_temp()?;
                 if let Some(cwd) = cwd {
                     context = context.with_template(cwd)?;
