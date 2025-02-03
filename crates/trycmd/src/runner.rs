@@ -39,6 +39,7 @@ impl Runner {
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Redactions,
     ) {
+        #![allow(unexpected_cfgs)] // HACK: until we upgrade the minimum anstream
         let palette = snapbox::report::Palette::color();
 
         if self.cases.is_empty() {

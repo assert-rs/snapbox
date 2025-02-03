@@ -20,6 +20,7 @@ pub use std::eprintln;
 #[macro_export]
 macro_rules! debug {
     ($($arg:tt)*) => ({
+        #![allow(unexpected_cfgs)]  // HACK: until we upgrade the minimum anstream
         $crate::eprint!("[{:>w$}] \t", module_path!(), w = 28);
         $crate::eprintln!($($arg)*);
     })
