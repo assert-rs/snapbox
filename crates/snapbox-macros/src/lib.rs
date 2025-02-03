@@ -2,6 +2,10 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
+#[doc = include_str!("../README.md")]
+#[cfg(doctest)]
+pub struct ReadmeDoctests;
+
 #[cfg(feature = "color")]
 pub use anstream::eprint;
 #[cfg(feature = "color")]
