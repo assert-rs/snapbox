@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Report test duration
+
 ## [0.15.8] - 2024-10-29
 
 ### Fixes
