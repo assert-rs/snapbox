@@ -60,13 +60,21 @@ impl Runner {
                             snapbox::debug!("Case: {:#?}", s);
                             match s {
                                 Ok(status) => {
-                                    let _ = writeln!(
+                                    let _ = write!(
                                         stderr,
                                         "{} {} ... {}",
                                         palette.hint("Testing"),
                                         status.name(),
-                                        status.spawn.status.summary()
+                                        status.spawn.status.summary(),
                                     );
+                                    if let Some(duration) = status.duration {
+                                        let _ = write!(
+                                            stderr,
+                                            " {}",
+                                            palette.hint(humantime::format_duration(duration)),
+                                        );
+                                    }
+                                    let _ = writeln!(stderr);
                                     if !status.is_ok() {
                                         // Assuming `status` will print the newline
                                         let _ = write!(stderr, "{}", &status);
@@ -74,13 +82,21 @@ impl Runner {
                                     None
                                 }
                                 Err(status) => {
-                                    let _ = writeln!(
+                                    let _ = write!(
                                         stderr,
                                         "{} {} ... {}",
                                         palette.hint("Testing"),
                                         status.name(),
                                         palette.error("failed"),
                                     );
+                                    if let Some(duration) = status.duration {
+                                        let _ = write!(
+                                            stderr,
+                                            " {}",
+                                            palette.hint(humantime::format_duration(duration)),
+                                        );
+                                    }
+                                    let _ = writeln!(stderr);
                                     // Assuming `status` will print the newline
                                     let _ = write!(stderr, "{}", &status);
                                     Some(status)
@@ -356,10 +372,13 @@ impl Case {
         }
 
         let cmd = step.to_command(cwd).map_err(|e| output.clone().error(e))?;
+        let timer = std::time::Instant::now();
         let cmd_output = cmd
             .output()
             .map_err(|e| output.clone().error(e.to_string().into()))?;
+
         let output = output.output(cmd_output);
+        let output = output.duration(timer.elapsed());
 
         // For Mode::Dump's sake, allow running all
         let output = self.validate_spawn(output, step.expected_status());
@@ -549,6 +568,7 @@ pub(crate) struct Output {
     stdout: Option<Stream>,
     stderr: Option<Stream>,
     fs: Filesystem,
+    duration: Option<std::time::Duration>,
 }
 
 impl Output {
@@ -563,6 +583,7 @@ impl Output {
             stdout: None,
             stderr: None,
             fs: Default::default(),
+            duration: Default::default(),
         }
     }
 
@@ -574,6 +595,7 @@ impl Output {
             stdout: None,
             stderr: None,
             fs: Default::default(),
+            duration: Default::default(),
         }
     }
 
@@ -596,6 +618,11 @@ impl Output {
 
     fn error(mut self, msg: crate::Error) -> Self {
         self.spawn.status = SpawnStatus::Failure(msg);
+        self
+    }
+
+    fn duration(mut self, duration: std::time::Duration) -> Self {
+        self.duration = Some(duration);
         self
     }
 
