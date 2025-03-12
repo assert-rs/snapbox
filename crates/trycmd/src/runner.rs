@@ -11,6 +11,7 @@ use std::eprintln;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
+use jiff::SignedDuration;
 use rayon::prelude::*;
 use snapbox::data::DataFormat;
 use snapbox::dir::FileType;
@@ -68,10 +69,11 @@ impl Runner {
                                         status.spawn.status.summary(),
                                     );
                                     if let Some(duration) = status.duration {
+                                        let duration = SignedDuration::try_from(duration).unwrap();
                                         let _ = write!(
                                             stderr,
                                             " {}",
-                                            palette.hint(humantime::format_duration(duration)),
+                                            palette.hint(format!("{duration:#}")),
                                         );
                                     }
                                     let _ = writeln!(stderr);
@@ -90,10 +92,11 @@ impl Runner {
                                         palette.error("failed"),
                                     );
                                     if let Some(duration) = status.duration {
+                                        let duration = SignedDuration::try_from(duration).unwrap();
                                         let _ = write!(
                                             stderr,
                                             " {}",
-                                            palette.hint(humantime::format_duration(duration)),
+                                            palette.hint(format!("{duration:#}")),
                                         );
                                     }
                                     let _ = writeln!(stderr);

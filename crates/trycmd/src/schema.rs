@@ -645,10 +645,30 @@ pub struct OneShot {
     #[serde(default)]
     pub(crate) binary: bool,
     #[serde(default)]
-    #[serde(deserialize_with = "humantime_serde::deserialize")]
+    #[serde(deserialize_with = "deserialize_jiff_duration")]
     pub(crate) timeout: Option<std::time::Duration>,
     #[serde(default)]
     pub(crate) fs: Filesystem,
+}
+
+fn deserialize_jiff_duration<'de, D>(
+    deserializer: D,
+) -> Result<Option<std::time::Duration>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Deserialize;
+
+    let buf = String::deserialize(deserializer)?;
+
+    if buf.is_empty() {
+        return Ok(None);
+    }
+
+    buf.parse::<jiff::SignedDuration>()
+        .and_then(std::time::Duration::try_from)
+        .map(Some)
+        .map_err(serde::de::Error::custom)
 }
 
 impl OneShot {

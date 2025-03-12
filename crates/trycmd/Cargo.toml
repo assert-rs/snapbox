@@ -55,8 +55,7 @@ rayon = "1.5.1"
 
 serde = { version = "1.0", features = ["derive"] }
 shlex = "1.1.0"
-humantime = "2"
-humantime-serde = "1"
+jiff = { version = "0.2.4", default-features = false }
 toml_edit = { version = "0.22.13", features = ["serde"] }
 escargot = { version = "0.5.13", optional = true }
 
