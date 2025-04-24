@@ -7,7 +7,7 @@ pub struct TestCases {
     bins: std::cell::RefCell<crate::BinRegistry>,
     substitutions: std::cell::RefCell<snapbox::Redactions>,
     has_run: std::cell::Cell<bool>,
-    fail_on_unresolved_bin: std::cell::Cell<bool>,
+    fail_unknown_bins: std::cell::Cell<bool>,
 }
 
 impl TestCases {
@@ -170,14 +170,14 @@ impl TestCases {
         Ok(self)
     }
 
-    /// Set rule to whether to fail on unresolved bin.
+    /// Set whether to fail on unknown binaries.
     ///
     /// If this flag is set to `true`, the test will fail if a bin cannot be resolved.
     /// By default, this is set to `false`.
     ///
     /// When set to `false`, the test will not fail if a bin cannot be resolved, but the case will just be ignored.
-    pub fn set_fail_on_unresolved_bin(&self, fail: bool) -> &Self {
-        self.fail_on_unresolved_bin.set(fail);
+    pub fn fail_unknown_bins(&self, fail: bool) -> &Self {
+        self.fail_unknown_bins.set(fail);
         self
     }
 
@@ -194,7 +194,7 @@ impl TestCases {
             .runner
             .borrow_mut()
             .prepare()
-            .fail_on_unresolved_bin(self.fail_on_unresolved_bin.get());
+            .fail_unknown_bins(self.fail_unknown_bins.get());
         runner.run(&mode, &self.bins.borrow(), &self.substitutions.borrow());
     }
 }
