@@ -43,10 +43,6 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
-#[doc = include_str!("../README.md")]
-#[cfg(doctest)]
-pub struct ReadmeDoctests;
-
 use libtest_mimic::Trial;
 
 pub use snapbox::data::DataFormat;
@@ -213,3 +209,7 @@ pub struct Case {
     /// Generally derived from `fixture` and loaded with [`Data::read_from`]
     pub expected: Data,
 }
+
+#[doc = include_str!("../README.md")]
+#[cfg(doctest)]
+pub struct ReadmeDoctests;

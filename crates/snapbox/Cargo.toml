@@ -2,9 +2,6 @@
 name = "snapbox"
 version = "0.6.21"
 description = "Snapshot testing toolbox"
-homepage = "https://github.com/assert-rs/trycmd/tree/main/crates/snapbox"
-documentation = "http://docs.rs/snapbox/"
-readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
 repository.workspace = true
