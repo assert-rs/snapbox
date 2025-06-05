@@ -64,10 +64,6 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
-#[doc = include_str!("../README.md")]
-#[cfg(doctest)]
-pub struct ReadmeDoctests;
-
 mod macros;
 
 pub mod assert;
@@ -143,3 +139,7 @@ pub fn assert_subset_matches(
         .action_env(assert::DEFAULT_ACTION_ENV)
         .subset_matches(pattern_root, actual_root);
 }
+
+#[doc = include_str!("../README.md")]
+#[cfg(doctest)]
+pub struct ReadmeDoctests;

@@ -229,10 +229,6 @@
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
-#[doc = include_str!("../README.md")]
-#[cfg(doctest)]
-pub struct ReadmeDoctests;
-
 pub mod cargo;
 pub mod schema;
 
@@ -249,3 +245,7 @@ pub(crate) use runner::{Case, Mode, Runner};
 pub(crate) use spec::RunnerSpec;
 
 pub(crate) use snapbox::Data;
+
+#[doc = include_str!("../README.md")]
+#[cfg(doctest)]
+pub struct ReadmeDoctests;

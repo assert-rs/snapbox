@@ -2,10 +2,6 @@
 name = "tryfn"
 version = "0.2.3"
 description = "File-driven snapshot testing for a function"
-authors = ["Ed Page <eopage@gmail.com>"]
-homepage = "https://github.com/assert-rs/trycmd"
-documentation = "http://docs.rs/tryfn/"
-readme = "README.md"
 categories = ["development-tools::testing"]
 keywords = ["test", "assert", "snapsjot"]
 repository.workspace = true
