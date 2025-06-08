@@ -7,6 +7,7 @@ pub struct TestCases {
     bins: std::cell::RefCell<crate::BinRegistry>,
     substitutions: std::cell::RefCell<snapbox::Redactions>,
     has_run: std::cell::Cell<bool>,
+    fail_unknown_bins: std::cell::Cell<bool>,
 }
 
 impl TestCases {
@@ -169,6 +170,17 @@ impl TestCases {
         Ok(self)
     }
 
+    /// Set whether to fail on unknown binaries.
+    ///
+    /// If this flag is set to `true`, the test will fail if a bin cannot be resolved.
+    /// By default, this is set to `false`.
+    ///
+    /// When set to `false`, the test will not fail if a bin cannot be resolved, but the case will just be ignored.
+    pub fn fail_unknown_bins(&self, fail: bool) -> &Self {
+        self.fail_unknown_bins.set(fail);
+        self
+    }
+
     /// Run tests
     ///
     /// This will happen on `drop` if not done explicitly
@@ -178,7 +190,11 @@ impl TestCases {
         let mode = parse_mode(std::env::var_os("TRYCMD").as_deref());
         mode.initialize().unwrap();
 
-        let runner = self.runner.borrow_mut().prepare();
+        let runner = self
+            .runner
+            .borrow_mut()
+            .prepare()
+            .fail_unknown_bins(self.fail_unknown_bins.get());
         runner.run(&mode, &self.bins.borrow(), &self.substitutions.borrow());
     }
 }
