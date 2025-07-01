@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "OneShot",
   "description": "Top-level data in `cmd.toml` files",
   "type": "object",
@@ -7,7 +7,7 @@
     "bin": {
       "anyOf": [
         {
-          "$ref": "#/definitions/Bin"
+          "$ref": "#/$defs/Bin"
         },
         {
           "type": "null"
@@ -15,54 +15,46 @@
       ]
     },
     "args": {
-      "default": [],
-      "allOf": [
-        {
-          "$ref": "#/definitions/Args"
-        }
-      ]
+      "$ref": "#/$defs/Args",
+      "default": []
     },
     "env": {
+      "$ref": "#/$defs/Env",
       "default": {
-        "add": {},
         "inherit": null,
+        "add": {},
         "remove": []
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/Env"
-        }
-      ]
+      }
     },
     "stdin": {
-      "default": null,
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "default": null
     },
     "stdout": {
-      "default": null,
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "default": null
     },
     "stderr": {
-      "default": null,
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "default": null
     },
     "stderr-to-stdout": {
-      "default": false,
-      "type": "boolean"
+      "type": "boolean",
+      "default": false
     },
     "status": {
       "anyOf": [
         {
-          "$ref": "#/definitions/CommandStatus"
+          "$ref": "#/$defs/CommandStatus"
         },
         {
           "type": "null"
@@ -70,34 +62,30 @@
       ]
     },
     "binary": {
-      "default": false,
-      "type": "boolean"
+      "type": "boolean",
+      "default": false
     },
     "timeout": {
-      "default": null,
       "anyOf": [
         {
-          "$ref": "#/definitions/Duration"
+          "$ref": "#/$defs/Duration"
         },
         {
           "type": "null"
         }
-      ]
+      ],
+      "default": null
     },
     "fs": {
+      "$ref": "#/$defs/Filesystem",
       "default": {
-        "base": null,
         "cwd": null,
+        "base": null,
         "sandbox": null
-      },
-      "allOf": [
-        {
-          "$ref": "#/definitions/Filesystem"
-        }
-      ]
+      }
     }
   },
-  "definitions": {
+  "$defs": {
     "Bin": {
       "description": "Target under test",
       "oneOf": [
@@ -109,26 +97,26 @@
         },
         {
           "type": "object",
-          "required": [
-            "path"
-          ],
           "properties": {
             "path": {
               "type": "string"
             }
           },
+          "required": [
+            "path"
+          ],
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": [
-            "name"
-          ],
           "properties": {
             "name": {
               "type": "string"
             }
           },
+          "required": [
+            "name"
+          ],
           "additionalProperties": false
         }
       ]
@@ -136,7 +124,7 @@
     "Args": {
       "anyOf": [
         {
-          "$ref": "#/definitions/JoinedArgs"
+          "$ref": "#/$defs/JoinedArgs"
         },
         {
           "type": "array",
@@ -148,9 +136,6 @@
     },
     "JoinedArgs": {
       "type": "object",
-      "required": [
-        "inner"
-      ],
       "properties": {
         "inner": {
           "type": "array",
@@ -158,32 +143,35 @@
             "type": "string"
           }
         }
-      }
+      },
+      "required": [
+        "inner"
+      ]
     },
     "Env": {
       "description": "Describe command's environment",
       "type": "object",
       "properties": {
         "inherit": {
-          "default": null,
           "type": [
             "boolean",
             "null"
-          ]
+          ],
+          "default": null
         },
         "add": {
-          "default": {},
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          }
+          },
+          "default": {}
         },
         "remove": {
-          "default": [],
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "default": []
         }
       }
     },
@@ -201,37 +189,37 @@
         },
         {
           "type": "object",
-          "required": [
-            "code"
-          ],
           "properties": {
             "code": {
               "type": "integer",
               "format": "int32"
             }
           },
+          "required": [
+            "code"
+          ],
           "additionalProperties": false
         }
       ]
     },
     "Duration": {
       "type": "object",
-      "required": [
-        "nanos",
-        "secs"
-      ],
       "properties": {
         "secs": {
           "type": "integer",
           "format": "uint64",
-          "minimum": 0.0
+          "minimum": 0
         },
         "nanos": {
           "type": "integer",
           "format": "uint32",
-          "minimum": 0.0
+          "minimum": 0
         }
-      }
+      },
+      "required": [
+        "secs",
+        "nanos"
+      ]
     },
     "Filesystem": {
       "description": "Describe the command's filesystem context",
