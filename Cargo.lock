@@ -920,6 +920,7 @@ dependencies = [
  "serde_json",
  "shlex",
  "snapbox",
+ "syn",
  "toml_edit",
 ]
 

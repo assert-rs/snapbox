@@ -869,6 +869,7 @@ impl std::fmt::Display for Filesystem {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 enum FileStatus {
     Ok {
         expected_path: std::path::PathBuf,

@@ -2,6 +2,7 @@
 use crate::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[allow(clippy::large_enum_variant)]
 pub enum PathDiff {
     Failure(crate::assert::Error),
     TypeMismatch {

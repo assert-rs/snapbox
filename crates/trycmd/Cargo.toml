@@ -59,5 +59,8 @@ escargot = { version = "0.5.13", optional = true }
 schemars = { version = "1.0.0", features = ["preserve_order"], optional = true }
 serde_json = { version = "1.0", optional = true }
 
+[target.'cfg(any())'.dependencies]
+syn = "2.0.104"  # HACK: bad minimal dep in schemars
+
 [lints]
 workspace = true
