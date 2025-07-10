@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Bump MSRV to 1.66
 
+### Internal
+
+- Update dependencies
+
 ## [0.15.9] - 2025-02-12
 
 ### Features
