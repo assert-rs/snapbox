@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.22] - 2025-10-15
+
 ### Fixes
 
 - Allow additional nesting of extensions when inferring data formats from a path
@@ -522,7 +524,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.21...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.22...HEAD
+[0.6.22]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.21...snapbox-v0.6.22
 [0.6.21]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.20...snapbox-v0.6.21
 [0.6.20]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.19...snapbox-v0.6.20
 [0.6.19]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.18...snapbox-v0.6.19
