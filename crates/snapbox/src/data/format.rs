@@ -42,19 +42,26 @@ impl From<&std::path::Path> for DataFormat {
             .file_name()
             .and_then(|e| e.to_str())
             .unwrap_or_default();
-        let (file_stem, mut ext) = file_name.split_once('.').unwrap_or((file_name, ""));
-        if file_stem.is_empty() {
-            (_, ext) = file_stem.split_once('.').unwrap_or((file_name, ""));
+        let mut ext = file_name.strip_prefix('.').unwrap_or(file_name);
+        while let Some((_, new_ext)) = ext.split_once('.') {
+            ext = new_ext;
+            match ext {
+                #[cfg(feature = "json")]
+                "json" => {
+                    return DataFormat::Json;
+                }
+                #[cfg(feature = "json")]
+                "jsonl" => {
+                    return DataFormat::JsonLines;
+                }
+                #[cfg(feature = "term-svg")]
+                "term.svg" => {
+                    return Self::TermSvg;
+                }
+                _ => {}
+            }
         }
-        match ext {
-            #[cfg(feature = "json")]
-            "json" => DataFormat::Json,
-            #[cfg(feature = "json")]
-            "jsonl" => DataFormat::JsonLines,
-            #[cfg(feature = "term-svg")]
-            "term.svg" => Self::TermSvg,
-            _ => DataFormat::Text,
-        }
+        DataFormat::Text
     }
 }
 
@@ -83,14 +90,14 @@ mod test {
             (".foo.txt", DataFormat::Text),
             ("foo.stdout.txt", DataFormat::Text),
             ("foo.json", json),
-            ("foo.stdout.json", DataFormat::Text),
-            (".foo.json", DataFormat::Text),
+            ("foo.stdout.json", json),
+            (".foo.json", json),
             ("foo.jsonl", jsonl),
-            ("foo.stdout.jsonl", DataFormat::Text),
-            (".foo.jsonl", DataFormat::Text),
+            ("foo.stdout.jsonl", jsonl),
+            (".foo.jsonl", jsonl),
             ("foo.term.svg", term_svg),
-            ("foo.stdout.term.svg", DataFormat::Text),
-            (".foo.term.svg", DataFormat::Text),
+            ("foo.stdout.term.svg", term_svg),
+            (".foo.term.svg", term_svg),
         ];
         for (input, output) in cases {
             let input = std::path::Path::new(input);
