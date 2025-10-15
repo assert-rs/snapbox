@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Allow additional nesting of extensions when inferring data formats from a path
+
 ### Compatibility
 
 - Bump MSRV to 1.66
