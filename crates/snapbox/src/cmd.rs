@@ -845,11 +845,16 @@ fn wait(
     child.wait()
 }
 
-pub use snapbox_macros::cargo_bin;
+#[doc(inline)]
+pub use crate::cargo_bin;
 
 /// Look up the path to a cargo-built binary within an integration test.
 ///
 /// **NOTE:** Prefer [`cargo_bin!`] as this makes assumptions about cargo
+#[deprecated(
+    since = "0.6.23",
+    note = "incompatible with a custom cargo build-dir, see instead `cmd::cargo_bin!`"
+)]
 pub fn cargo_bin(name: &str) -> std::path::PathBuf {
     let file_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
     let target_dir = target_dir();
