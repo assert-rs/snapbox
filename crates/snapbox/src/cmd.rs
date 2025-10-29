@@ -845,7 +845,8 @@ fn wait(
     child.wait()
 }
 
-pub use snapbox_macros::cargo_bin;
+#[doc(inline)]
+pub use crate::cargo_bin;
 
 /// Look up the path to a cargo-built binary within an integration test.
 ///
