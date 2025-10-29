@@ -1,6 +1,6 @@
 [package]
 name = "snapbox-macros"
-version = "0.3.10"
+version = "0.4.0"
 description = "Snapshot testing toolbox"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
