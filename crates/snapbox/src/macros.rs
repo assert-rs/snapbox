@@ -128,6 +128,9 @@ macro_rules! fn_path {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! cargo_bin {
+    () => {
+        $crate::cmd::cargo_bin!(env!("CARGO_PKG_NAME"))
+    };
     ($bin_target_name:expr) => {
         ::std::path::Path::new(env!(concat!("CARGO_BIN_EXE_", $bin_target_name)))
     };
