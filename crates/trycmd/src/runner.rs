@@ -20,13 +20,22 @@ use snapbox::IntoData;
 #[derive(Debug)]
 pub(crate) struct Runner {
     cases: Vec<Case>,
+    fail_unknown_bins: bool,
 }
 
 impl Runner {
     pub(crate) fn new() -> Self {
         Self {
             cases: Default::default(),
+            fail_unknown_bins: false,
         }
+    }
+
+    /// Set the rule value for `fail_unknown_bins`
+    pub(crate) fn fail_unknown_bins(mut self, fail: bool) -> Self {
+        self.fail_unknown_bins = fail;
+
+        self
     }
 
     pub(crate) fn case(&mut self, case: Case) {
@@ -49,7 +58,7 @@ impl Runner {
                 .cases
                 .par_iter()
                 .flat_map(|c| {
-                    let results = c.run(mode, bins, substitutions);
+                    let results = c.run(mode, bins, substitutions, self.fail_unknown_bins);
 
                     let stderr = stderr();
                     let mut stderr = stderr.lock();
@@ -159,6 +168,7 @@ impl Case {
         mode: &Mode,
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Redactions,
+        fail_unknown_bins: bool,
     ) -> Vec<Result<Output, Output>> {
         if self.expected == Some(crate::schema::CommandStatus::Skipped) {
             let output = Output::sequence(self.path.clone());
@@ -235,7 +245,13 @@ impl Case {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
-            let step_status = self.run_step(step, cwd.as_deref(), bins, &substitutions);
+            let step_status = self.run_step(
+                step,
+                cwd.as_deref(),
+                bins,
+                &substitutions,
+                fail_unknown_bins,
+            );
             if fs_context.is_mutable() && step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
@@ -324,6 +340,7 @@ impl Case {
         cwd: Option<&std::path::Path>,
         bins: &crate::BinRegistry,
         substitutions: &snapbox::Redactions,
+        fail_unknown_bins: bool,
     ) -> Result<Output, Output> {
         let output = if let Some(id) = step.id.clone() {
             Output::step(self.path.clone(), id)
@@ -355,10 +372,14 @@ impl Case {
 
         match &step.bin {
             Some(crate::schema::Bin::Path(_)) => {}
-            Some(crate::schema::Bin::Name(_name)) => {
+            Some(crate::schema::Bin::Name(name)) => {
                 // Unhandled by resolve
-                snapbox::debug!("bin={:?} not found", _name);
+                snapbox::debug!("bin={:?} not found", name);
                 assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+
+                if fail_unknown_bins {
+                    return Err(output.error(format!("bin={name:?} not found").into()));
+                }
                 return Ok(output);
             }
             Some(crate::schema::Bin::Error(_)) => {}
@@ -367,6 +388,9 @@ impl Case {
             Some(crate::schema::Bin::Ignore) => {
                 // Unhandled by resolve
                 assert_eq!(output.spawn.status, SpawnStatus::Skipped);
+                if fail_unknown_bins {
+                    return Err(output.error("bin not found".into()));
+                }
                 return Ok(output);
             }
         }
