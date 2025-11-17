@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.15.11] - 2025-11-17
+
 ### Fixes
 
 - Ignore `test.out/` validation when all steps are skipped
@@ -467,7 +469,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.10...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.11...HEAD
+[0.15.11]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.10...trycmd-v0.15.11
 [0.15.10]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.9...trycmd-v0.15.10
 [0.15.9]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.8...trycmd-v0.15.9
 [0.15.8]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.7...trycmd-v0.15.8

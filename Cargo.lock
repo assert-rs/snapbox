@@ -954,7 +954,7 @@ checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
 
 [[package]]
 name = "trycmd"
-version = "0.15.10"
+version = "0.15.11"
 dependencies = [
  "anstream 0.6.20",
  "automod",
