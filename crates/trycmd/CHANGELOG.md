@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Ignore `test.out/` validation when all steps are skipped
+
 ## [0.15.10] - 2025-07-10
 
 ### Compatibility
