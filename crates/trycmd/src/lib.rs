@@ -225,7 +225,7 @@
 //! [assert_cmd]: https://crates.io/crates/assert_cmd
 //! [commandspec]: https://crates.io/crates/commandspec
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(clippy::print_stderr)]
 #![warn(clippy::print_stdout)]
 
