@@ -48,6 +48,14 @@ macro_rules! assert_data_eq {
 }
 
 /// Find the directory for your source file
+///
+/// By default, a heuristic is used.
+///
+/// To override the heuristic, add to `$WORKSPACE_ROOT/.cargo/config.toml`:
+/// ```toml
+/// [env]
+/// CARGO_RUSTC_CURRENT_DIR = { value = "", relative = true }
+/// ```
 #[doc(hidden)] // forced to be visible in intended location
 #[macro_export]
 macro_rules! current_dir {
@@ -60,6 +68,14 @@ macro_rules! current_dir {
 }
 
 /// Find the directory for your source file
+///
+/// By default, a heuristic is used.
+///
+/// To override the heuristic, add to `$WORKSPACE_ROOT/.cargo/config.toml`:
+/// ```toml
+/// [env]
+/// CARGO_RUSTC_CURRENT_DIR = { value = "", relative = true }
+/// ```
 #[doc(hidden)] // forced to be visible in intended location
 #[macro_export]
 macro_rules! current_rs {
@@ -72,6 +88,14 @@ macro_rules! current_rs {
 }
 
 /// Find the base directory for [`std::file!`]
+///
+/// By default, a heuristic is used.
+///
+/// To override the heuristic, add to `$WORKSPACE_ROOT/.cargo/config.toml`:
+/// ```toml
+/// [env]
+/// CARGO_RUSTC_CURRENT_DIR = { value = "", relative = true }
+/// ```
 #[doc(hidden)] // forced to be visible in intended location
 #[macro_export]
 macro_rules! cargo_rustc_current_dir {
