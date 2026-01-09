@@ -290,6 +290,7 @@ impl Command {
     ///     .stdout_eq("42");
     /// ```
     #[track_caller]
+    #[must_use]
     pub fn assert(self) -> OutputAssert {
         let config = self.config.clone();
         match self.output() {
