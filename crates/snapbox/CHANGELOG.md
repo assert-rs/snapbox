@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Fixes
+
+- Update `fn cargo_bin()` to use the upcoming runtime `CARGO_BIN_EXE_*`
+- Add `#[must_use]` to `Command::assert` to ensure assertions are ade
+
 ## [0.6.23] - 2025-10-29
 
 ## [0.6.22] - 2025-10-15
