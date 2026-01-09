@@ -1,13 +1,14 @@
 pub const DEFAULT_ACTION_ENV: &str = "SNAPSHOTS";
 
 /// Test action, see [`Assert`][crate::Assert]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
 pub enum Action {
     /// Do not run the test
     Skip,
     /// Ignore test failures
     Ignore,
     /// Fail on mismatch
+    #[default]
     Verify,
     /// Overwrite on mismatch
     Overwrite,
@@ -29,11 +30,5 @@ impl Action {
             "overwrite" => Some(Action::Overwrite),
             _ => None,
         }
-    }
-}
-
-impl Default for Action {
-    fn default() -> Self {
-        Self::Verify
     }
 }

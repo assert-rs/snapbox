@@ -290,6 +290,7 @@ impl Command {
     ///     .stdout_eq("42");
     /// ```
     #[track_caller]
+    #[must_use]
     pub fn assert(self) -> OutputAssert {
         let config = self.config.clone();
         match self.output() {
@@ -856,9 +857,10 @@ pub use crate::cargo_bin;
     note = "incompatible with a custom cargo build-dir, see instead `cmd::cargo_bin!`"
 )]
 pub fn cargo_bin(name: &str) -> std::path::PathBuf {
-    let file_name = format!("{}{}", name, std::env::consts::EXE_SUFFIX);
-    let target_dir = target_dir();
-    target_dir.join(file_name)
+    let env_var = format!("CARGO_BIN_EXE_{name}");
+    std::env::var_os(env_var)
+        .map(|p| p.into())
+        .unwrap_or_else(|| target_dir().join(format!("{}{}", name, std::env::consts::EXE_SUFFIX)))
 }
 
 // Adapted from

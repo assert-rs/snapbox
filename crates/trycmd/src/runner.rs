@@ -230,12 +230,20 @@ impl Case {
 
         let mut outputs = Vec::with_capacity(sequence.steps.len());
         let mut prior_step_failed = false;
+        let mut steps_run = false;
         for step in &mut sequence.steps {
             if prior_step_failed {
                 step.expected_status = Some(crate::schema::CommandStatus::Skipped);
             }
 
             let step_status = self.run_step(step, cwd.as_deref(), bins, &substitutions);
+            if step_status
+                .as_ref()
+                .map(|s| s.spawn.status == SpawnStatus::Ok)
+                .unwrap_or(true)
+            {
+                steps_run = true;
+            }
             if fs_context.is_mutable() && step_status.is_err() && *mode == Mode::Fail {
                 prior_step_failed = true;
             }
@@ -285,27 +293,33 @@ impl Case {
             let mut ok = true;
             let mut output = Output::step(self.path.clone(), "teardown".into());
 
-            output.fs = match self.validate_fs(
-                fs_context.path().expect("sandbox must be filled"),
-                output.fs,
-                mode,
-                &substitutions,
-            ) {
-                Ok(fs) => fs,
-                Err(fs) => {
+            if steps_run {
+                output.fs = match self.validate_fs(
+                    fs_context.path().expect("sandbox must be filled"),
+                    output.fs,
+                    mode,
+                    &substitutions,
+                ) {
+                    Ok(fs) => fs,
+                    Err(fs) => {
+                        ok = false;
+                        fs
+                    }
+                };
+                if let Err(err) = fs_context.close() {
                     ok = false;
-                    fs
+                    output.fs.context.push(FileStatus::Failure(
+                        format!("Failed to cleanup sandbox: {err}").into(),
+                    ));
                 }
-            };
-            if let Err(err) = fs_context.close() {
-                ok = false;
-                output.fs.context.push(FileStatus::Failure(
-                    format!("Failed to cleanup sandbox: {err}").into(),
-                ));
             }
 
             let output = if ok {
-                output.spawn.status = SpawnStatus::Ok;
+                output.spawn.status = if steps_run {
+                    SpawnStatus::Ok
+                } else {
+                    SpawnStatus::Skipped
+                };
                 Ok(output)
             } else {
                 output.spawn.status = SpawnStatus::Failure("Files left in unexpected state".into());
