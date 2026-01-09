@@ -43,7 +43,7 @@ required-features = ["schema"]
 
 [dependencies]
 automod = "1.0.15"
-snapbox = { path = "../snapbox", version = "0.6.23", default-features = false, features = ["cmd"] }
+snapbox = { path = "../snapbox", version = "0.6.24", default-features = false, features = ["cmd"] }
 anstream = { version = "0.6.20", optional = true }
 
 glob = "0.3.3"

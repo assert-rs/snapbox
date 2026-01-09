@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [0.6.24] - 2026-01-09
+
 ### Fixes
 
 - Update `fn cargo_bin()` to use the upcoming runtime `CARGO_BIN_EXE_*`
@@ -531,7 +533,8 @@ Other
 ## [0.1.0] - 2021-12-28
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.23...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.24...HEAD
+[0.6.24]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.23...snapbox-v0.6.24
 [0.6.23]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.22...snapbox-v0.6.23
 [0.6.22]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.21...snapbox-v0.6.22
 [0.6.21]: https://github.com/assert-rs/trycmd/compare/snapbox-v0.6.20...snapbox-v0.6.21
