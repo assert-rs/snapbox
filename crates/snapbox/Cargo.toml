@@ -1,6 +1,6 @@
 [package]
 name = "snapbox"
-version = "0.6.24"
+version = "1.0.0"
 description = "Snapshot testing toolbox"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
@@ -65,7 +65,7 @@ name = "snap-fixture"  # For `snapbox`s tests only
 
 [dependencies]
 normalize-line-endings = "0.3.0"
-snapbox-macros = { path = "../snapbox-macros", version = "0.4.0" }
+snapbox-macros = { path = "../snapbox-macros", version = "1.0.0" }
 
 content_inspector = { version = "0.2.4", optional = true }
 
