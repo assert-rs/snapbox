@@ -33,7 +33,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca84f3628370c59db74ee214b3263d58f9aadd9b4fe7e711fd87dc452b7f163"
 dependencies = [
  "anstyle",
- "anstyle-parse",
+ "anstyle-parse 0.2.7",
  "anstyle-query",
  "anstyle-wincon 1.0.2",
  "colorchoice",
@@ -43,12 +43,12 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.20"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae563653d1938f79b1ab1b5e668c87c76a9930414574a6583a7b7e11a8e6192"
+checksum = "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
 dependencies = [
  "anstyle",
- "anstyle-parse",
+ "anstyle-parse 1.0.0",
  "anstyle-query",
  "anstyle-wincon 3.0.10",
  "colorchoice",
@@ -81,6 +81,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstyle-parse"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
+dependencies = [
+ "utf8parse",
+]
+
+[[package]]
 name = "anstyle-query"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -97,7 +106,7 @@ checksum = "26b9ec8c976eada1b0f9747a3d7cc4eae3bef10613e443746e7487f26c872fde"
 dependencies = [
  "anstyle",
  "anstyle-lossy",
- "anstyle-parse",
+ "anstyle-parse 0.2.7",
  "html-escape",
  "unicode-width",
 ]
@@ -825,7 +834,7 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 name = "snapbox"
 version = "1.0.0"
 dependencies = [
- "anstream 0.6.20",
+ "anstream 1.0.0",
  "anstyle",
  "anstyle-svg",
  "automod",
@@ -853,7 +862,7 @@ dependencies = [
 name = "snapbox-macros"
 version = "1.0.0"
 dependencies = [
- "anstream 0.6.20",
+ "anstream 1.0.0",
 ]
 
 [[package]]
@@ -956,7 +965,7 @@ checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
 name = "trycmd"
 version = "1.0.0"
 dependencies = [
- "anstream 0.6.20",
+ "anstream 1.0.0",
  "automod",
  "escargot",
  "glob",
