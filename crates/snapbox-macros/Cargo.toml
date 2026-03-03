@@ -22,7 +22,7 @@ color = ["dep:anstream"]
 debug = []
 
 [dependencies]
-anstream = { version = "0.6.21", optional = true }
+anstream = { version = "1.0.0", optional = true }
 
 [lints]
 workspace = true

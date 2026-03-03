@@ -33,7 +33,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca84f3628370c59db74ee214b3263d58f9aadd9b4fe7e711fd87dc452b7f163"
 dependencies = [
  "anstyle",
- "anstyle-parse",
+ "anstyle-parse 0.2.7",
  "anstyle-query",
  "anstyle-wincon 1.0.2",
  "colorchoice",
@@ -43,12 +43,12 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.21"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d5b281e737544384e969a5ccad3f1cdd24b48086a0fc1b2a5262a26b8f4f4a"
+checksum = "824a212faf96e9acacdbd09febd34438f8f711fb84e09a8916013cd7815ca28d"
 dependencies = [
  "anstyle",
- "anstyle-parse",
+ "anstyle-parse 1.0.0",
  "anstyle-query",
  "anstyle-wincon 3.0.11",
  "colorchoice",
@@ -81,6 +81,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anstyle-parse"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52ce7f38b242319f7cabaa6813055467063ecdc9d355bbb4ce0c68908cd8130e"
+dependencies = [
+ "utf8parse",
+]
+
+[[package]]
 name = "anstyle-query"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -91,13 +100,13 @@ dependencies = [
 
 [[package]]
 name = "anstyle-svg"
-version = "0.1.12"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e22d9f3dea8bbda97c75bd0f0203e23f1e190d6d6f27a40e10063946dc4d4362"
+checksum = "2cf4c73d20df989165d5a9a34f06c2d5102f1728ae395021c6835a25e03416a2"
 dependencies = [
  "anstyle",
  "anstyle-lossy",
- "anstyle-parse",
+ "anstyle-parse 1.0.0",
  "html-escape",
  "unicode-width",
 ]
@@ -831,7 +840,7 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 name = "snapbox"
 version = "1.0.0"
 dependencies = [
- "anstream 0.6.21",
+ "anstream 1.0.0",
  "anstyle",
  "anstyle-svg",
  "automod",
@@ -859,7 +868,7 @@ dependencies = [
 name = "snapbox-macros"
 version = "1.0.0"
 dependencies = [
- "anstream 0.6.21",
+ "anstream 1.0.0",
 ]
 
 [[package]]
@@ -962,7 +971,7 @@ checksum = "fcc842091f2def52017664b53082ecbbeb5c7731092bad69d2c63050401dfd64"
 name = "trycmd"
 version = "1.0.0"
 dependencies = [
- "anstream 0.6.21",
+ "anstream 1.0.0",
  "automod",
  "escargot",
  "glob",
