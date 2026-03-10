@@ -849,33 +849,90 @@ fn wait(
 #[doc(inline)]
 pub use crate::cargo_bin;
 
-/// Look up the path to a cargo-built binary within an integration test.
+/// Look up the path to a cargo-built binary within an integration test
 ///
-/// **NOTE:** Prefer [`cargo_bin!`] as this makes assumptions about cargo
-#[deprecated(
-    since = "0.6.23",
-    note = "incompatible with a custom cargo build-dir, see instead `cmd::cargo_bin!`"
-)]
+/// Cargo support:
+/// - `>1.94`: works
+/// - `>=1.91,<=1.93`: works with default `build-dir`
+/// - `<=1.92`: works
+///
+/// # Panic
+///
+/// Panics if no binary is found
 pub fn cargo_bin(name: &str) -> std::path::PathBuf {
-    let env_var = format!("CARGO_BIN_EXE_{name}");
+    cargo_bin_opt(name).unwrap_or_else(|| missing_cargo_bin(name))
+}
+
+/// Look up the path to a cargo-built binary within an integration test
+///
+/// Returns `None` if the binary doesn't exist
+///
+/// Cargo support:
+/// - `>1.94`: works
+/// - `>=1.91,<=1.93`: works with default `build-dir`
+/// - `<=1.92`: works
+pub fn cargo_bin_opt(name: &str) -> Option<std::path::PathBuf> {
+    let env_var = format!("{CARGO_BIN_EXE_}{name}");
     std::env::var_os(env_var)
         .map(|p| p.into())
-        .unwrap_or_else(|| target_dir().join(format!("{}{}", name, std::env::consts::EXE_SUFFIX)))
+        .or_else(|| legacy_cargo_bin(name))
+}
+
+/// Return all the name and path for all binaries built by Cargo
+///
+/// Cargo support:
+/// - `>1.94`: works
+pub fn cargo_bins() -> impl Iterator<Item = (String, std::path::PathBuf)> {
+    std::env::vars_os()
+        .filter_map(|(k, v)| {
+            k.into_string()
+                .ok()
+                .map(|k| (k, std::path::PathBuf::from(v)))
+        })
+        .filter_map(|(k, v)| k.strip_prefix(CARGO_BIN_EXE_).map(|s| (s.to_owned(), v)))
+}
+
+const CARGO_BIN_EXE_: &str = "CARGO_BIN_EXE_";
+
+fn missing_cargo_bin(name: &str) -> ! {
+    let possible_names: Vec<_> = cargo_bins().map(|(k, _)| k).collect();
+    if possible_names.is_empty() {
+        panic!("`CARGO_BIN_EXE_{name}` is unset
+help: if this is running within a unit test, move it to an integration test to gain access to `CARGO_BIN_EXE_{name}`")
+    } else {
+        let mut names = String::new();
+        for (i, name) in possible_names.iter().enumerate() {
+            use std::fmt::Write as _;
+            if i != 0 {
+                let _ = write!(&mut names, ", ");
+            }
+            let _ = write!(&mut names, "\"{name}\"");
+        }
+        panic!(
+            "`CARGO_BIN_EXE_{name}` is unset
+help: available binary names are {names}"
+        )
+    }
+}
+
+fn legacy_cargo_bin(name: &str) -> Option<std::path::PathBuf> {
+    let target_dir = target_dir()?;
+    let bin_path = target_dir.join(format!("{}{}", name, std::env::consts::EXE_SUFFIX));
+    if !bin_path.exists() {
+        return None;
+    }
+    Some(bin_path)
 }
 
 // Adapted from
 // https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
-fn target_dir() -> std::path::PathBuf {
-    std::env::current_exe()
-        .ok()
-        .map(|mut path| {
-            path.pop();
-            if path.ends_with("deps") {
-                path.pop();
-            }
-            path
-        })
-        .unwrap()
+fn target_dir() -> Option<std::path::PathBuf> {
+    let mut path = std::env::current_exe().ok()?;
+    let _test_bin_name = path.pop();
+    if path.ends_with("deps") {
+        let _deps = path.pop();
+    }
+    Some(path)
 }
 
 #[cfg(feature = "examples")]
@@ -1012,4 +1069,11 @@ pub(crate) mod examples {
     fn is_example_target(target: &escargot::format::Target<'_>) -> bool {
         target.crate_types == ["bin"] && target.kind == ["example"]
     }
+}
+
+#[test]
+#[should_panic = "`CARGO_BIN_EXE_non-existent` is unset
+help: if this is running within a unit test, move it to an integration test to gain access to `CARGO_BIN_EXE_non-existent`"]
+fn cargo_bin_in_unit_test() {
+    cargo_bin("non-existent");
 }
