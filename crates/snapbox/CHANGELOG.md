@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Compatibility
+
+- Change `cmd::cargo_bin` bad paths to panics
+
+### Features
+
+- Add `cmd::cargo_bins`
+- Add `cmd::cargo_bin_opt`
+
 ## [1.0.2] - 2026-03-10
 
 ### Fixes
