@@ -878,13 +878,24 @@ pub fn cargo_bin_opt(name: &str) -> Option<std::path::PathBuf> {
         .or_else(|| legacy_cargo_bin(name))
 }
 
+/// Return all the name and path for all binaries built by Cargo
+///
+/// Cargo support:
+/// - `>1.94`: works
+pub fn cargo_bins() -> impl Iterator<Item = (String, std::path::PathBuf)> {
+    std::env::vars_os()
+        .filter_map(|(k, v)| {
+            k.into_string()
+                .ok()
+                .map(|k| (k, std::path::PathBuf::from(v)))
+        })
+        .filter_map(|(k, v)| k.strip_prefix(CARGO_BIN_EXE_).map(|s| (s.to_owned(), v)))
+}
+
 const CARGO_BIN_EXE_: &str = "CARGO_BIN_EXE_";
 
 fn missing_cargo_bin(name: &str) -> ! {
-    let possible_names: Vec<_> = std::env::vars_os()
-        .filter_map(|(k, _)| k.into_string().ok())
-        .filter_map(|k| k.strip_prefix(CARGO_BIN_EXE_).map(|s| s.to_owned()))
-        .collect();
+    let possible_names: Vec<_> = cargo_bins().map(|(k, _)| k).collect();
     if possible_names.is_empty() {
         panic!("`CARGO_BIN_EXE_{name}` is unset
 help: if this is running within a unit test, move it to an integration test to gain access to `CARGO_BIN_EXE_{name}`")
