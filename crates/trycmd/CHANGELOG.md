@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.1.0] - 2026-03-10
+
 ### Compatibility
 
 - Change `cmd::cargo_bin` bad paths to panics
@@ -492,7 +494,8 @@ Config
 ## [0.1.0] - 2021-11-05
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/trycmd-v1.0.2...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/trycmd-v1.1.0...HEAD
+[1.1.0]: https://github.com/assert-rs/trycmd/compare/trycmd-v1.0.2...trycmd-v1.1.0
 [1.0.2]: https://github.com/assert-rs/trycmd/compare/trycmd-v1.0.1...trycmd-v1.0.2
 [1.0.1]: https://github.com/assert-rs/trycmd/compare/trycmd-v1.0.0...trycmd-v1.0.1
 [1.0.0]: https://github.com/assert-rs/trycmd/compare/trycmd-v0.15.11...trycmd-v1.0.0
