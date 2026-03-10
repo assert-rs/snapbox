@@ -2,6 +2,8 @@
 
 #[doc(inline)]
 pub use snapbox::cmd::cargo_bin;
+#[doc(inline)]
+pub use snapbox::cmd::cargo_bin_opt;
 
 /// Prepare an example for testing
 ///

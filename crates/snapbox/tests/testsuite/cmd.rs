@@ -33,3 +33,11 @@ fn large_stdout_single() {
         .assert()
         .success();
 }
+
+#[test]
+#[cfg(feature = "cmd")]
+#[should_panic = "`CARGO_BIN_EXE_non-existent` is unset
+help: available binary names are \"snap-fixture\""]
+fn cargo_bin_non_existent() {
+    let _ = snapbox::cmd::cargo_bin("non-existent");
+}
