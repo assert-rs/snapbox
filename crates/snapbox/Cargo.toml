@@ -1,6 +1,6 @@
 [package]
 name = "snapbox"
-version = "1.0.1"
+version = "1.0.2"
 description = "Snapshot testing toolbox"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command"]
