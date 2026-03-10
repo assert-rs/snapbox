@@ -852,10 +852,6 @@ pub use crate::cargo_bin;
 /// Look up the path to a cargo-built binary within an integration test.
 ///
 /// **NOTE:** Prefer [`cargo_bin!`] as this makes assumptions about cargo
-#[deprecated(
-    since = "0.6.23",
-    note = "incompatible with a custom cargo build-dir, see instead `cmd::cargo_bin!`"
-)]
 pub fn cargo_bin(name: &str) -> std::path::PathBuf {
     let env_var = format!("CARGO_BIN_EXE_{name}");
     std::env::var_os(env_var)
