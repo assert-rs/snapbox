@@ -1,6 +1,6 @@
 [package]
 name = "trycmd"
-version = "1.1.0"
+version = "1.1.1"
 description = "Snapshot testing for a herd of CLI tests"
 categories = ["development-tools::testing"]
 keywords = ["cli", "test", "assert", "command", "duct"]
