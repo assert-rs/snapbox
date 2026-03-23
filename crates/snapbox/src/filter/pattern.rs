@@ -78,9 +78,9 @@ impl Default for NormalizeToExpected<'_> {
 }
 
 fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
-    let source = actual.source;
-    let filters = actual.filters;
-    let inner = match (actual.value, &expected.value) {
+    let source = actual.inner.source;
+    let filters = actual.inner.filters;
+    let inner = match (actual.inner.value, &expected.inner.value) {
         (DataValue::Error(err), _) => DataValue::Error(err),
         (DataValue::Binary(bin), _) => DataValue::Binary(bin),
         (DataValue::Text(text), _) => {
@@ -120,9 +120,11 @@ fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
         (inner, _) => inner,
     };
     Data {
-        value: inner,
-        source,
-        filters,
+        inner: Box::new(crate::data::DataInner {
+            value: inner,
+            source,
+            filters,
+        }),
     }
 }
 
@@ -208,9 +210,9 @@ fn normalize_data_to_unordered_redactions(
     expected: &Data,
     substitutions: &Redactions,
 ) -> Data {
-    let source = actual.source;
-    let filters = actual.filters;
-    let inner = match (actual.value, &expected.value) {
+    let source = actual.inner.source;
+    let filters = actual.inner.filters;
+    let inner = match (actual.inner.value, &expected.inner.value) {
         (DataValue::Error(err), _) => DataValue::Error(err),
         (DataValue::Binary(bin), _) => DataValue::Binary(bin),
         (DataValue::Text(text), _) => {
@@ -250,9 +252,11 @@ fn normalize_data_to_unordered_redactions(
         (inner, _) => inner,
     };
     Data {
-        value: inner,
-        source,
-        filters,
+        inner: Box::new(crate::data::DataInner {
+            value: inner,
+            source,
+            filters,
+        }),
     }
 }
 
@@ -389,9 +393,9 @@ fn normalize_str_to_unordered_redactions(
 }
 
 fn normalize_data_to_redactions(actual: Data, expected: &Data, substitutions: &Redactions) -> Data {
-    let source = actual.source;
-    let filters = actual.filters;
-    let inner = match (actual.value, &expected.value) {
+    let source = actual.inner.source;
+    let filters = actual.inner.filters;
+    let inner = match (actual.inner.value, &expected.inner.value) {
         (DataValue::Error(err), _) => DataValue::Error(err),
         (DataValue::Binary(bin), _) => DataValue::Binary(bin),
         (DataValue::Text(text), _) => {
@@ -431,9 +435,11 @@ fn normalize_data_to_redactions(actual: Data, expected: &Data, substitutions: &R
         (inner, _) => inner,
     };
     Data {
-        value: inner,
-        source,
-        filters,
+        inner: Box::new(crate::data::DataInner {
+            value: inner,
+            source,
+            filters,
+        }),
     }
 }
 

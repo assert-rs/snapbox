@@ -379,6 +379,11 @@ macro_rules! str {
 /// This provides conveniences for tracking the intended format (binary vs text).
 #[derive(Clone, Debug)]
 pub struct Data {
+    pub(crate) inner: Box<DataInner>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DataInner {
     pub(crate) value: DataValue,
     pub(crate) source: Option<DataSource>,
     pub(crate) filters: FilterSet,
@@ -451,13 +456,13 @@ impl Data {
 
     /// Remove default [`filters`][crate::filter] from this `expected` result
     pub fn raw(mut self) -> Self {
-        self.filters = FilterSet::empty().newlines();
+        self.inner.filters = FilterSet::empty().newlines();
         self
     }
 
     /// Treat lines and json arrays as unordered
     pub fn unordered(mut self) -> Self {
-        self.filters = self.filters.unordered();
+        self.inner.filters = self.inner.filters.unordered();
         self
     }
 }
@@ -468,14 +473,16 @@ impl Data {
 impl Data {
     pub(crate) fn with_value(value: DataValue) -> Self {
         Self {
-            value,
-            source: None,
-            filters: FilterSet::new(),
+            inner: Box::new(DataInner {
+                value,
+                source: None,
+                filters: FilterSet::new(),
+            }),
         }
     }
 
     fn with_source(mut self, source: impl Into<DataSource>) -> Self {
-        self.source = Some(source.into());
+        self.inner.source = Some(source.into());
         self
     }
 
@@ -536,7 +543,7 @@ impl Data {
     ///
     /// Note: this will not inspect binary data for being a valid `String`.
     pub fn render(&self) -> Option<String> {
-        match &self.value {
+        match &self.inner.value {
             DataValue::Error(_) => None,
             DataValue::Binary(_) => None,
             DataValue::Text(data) => Some(data.to_owned()),
@@ -550,7 +557,7 @@ impl Data {
     }
 
     pub fn to_bytes(&self) -> crate::assert::Result<Vec<u8>> {
-        match &self.value {
+        match &self.inner.value {
             DataValue::Error(err) => Err(err.error.clone()),
             DataValue::Binary(data) => Ok(data.clone()),
             DataValue::Text(data) => Ok(data.clone().into_bytes()),
@@ -567,8 +574,8 @@ impl Data {
     ///
     /// This is generally used for `expected` data
     pub fn is(self, format: DataFormat) -> Self {
-        let filters = self.filters;
-        let source = self.source.clone();
+        let filters = self.inner.filters;
+        let source = self.inner.source.clone();
         match self.try_is(format) {
             Ok(new) => new,
             Err(err) => {
@@ -577,9 +584,11 @@ impl Data {
                     intended: format,
                 });
                 Self {
-                    value,
-                    source,
-                    filters,
+                    inner: Box::new(DataInner {
+                        value,
+                        source,
+                        filters,
+                    }),
                 }
             }
         }
@@ -587,9 +596,9 @@ impl Data {
 
     fn try_is(self, format: DataFormat) -> crate::assert::Result<Self> {
         let original = self.format();
-        let source = self.source;
-        let filters = self.filters;
-        let value = match (self.value, format) {
+        let source = self.inner.source;
+        let filters = self.inner.filters;
+        let value = match (self.inner.value, format) {
             (DataValue::Error(inner), _) => DataValue::Error(inner),
             (DataValue::Binary(inner), DataFormat::Binary) => DataValue::Binary(inner),
             (DataValue::Text(inner), DataFormat::Text) => DataValue::Text(inner),
@@ -601,7 +610,7 @@ impl Data {
             (DataValue::TermSvg(inner), DataFormat::TermSvg) => DataValue::TermSvg(inner),
             (DataValue::Binary(inner), _) => {
                 let value = String::from_utf8(inner).map_err(|_err| "invalid UTF-8".to_owned())?;
-                Self::text(value).try_is(format)?.value
+                Self::text(value).try_is(format)?.inner.value
             }
             #[cfg(feature = "json")]
             (DataValue::Text(inner), DataFormat::Json) => {
@@ -632,9 +641,11 @@ impl Data {
             (_, _) => return Err(format!("cannot convert {original:?} to {format:?}").into()),
         };
         Ok(Self {
-            value,
-            source,
-            filters,
+            inner: Box::new(DataInner {
+                value,
+                source,
+                filters,
+            }),
         })
     }
 
@@ -657,7 +668,7 @@ impl Data {
     /// # }
     /// ```
     fn against(mut self, format: DataFormat) -> Data {
-        self.filters = self.filters.against(format);
+        self.inner.filters = self.inner.filters.against(format);
         self
     }
 
@@ -665,9 +676,9 @@ impl Data {
     ///
     /// This is generally used on `actual` data to make it match `expected`
     pub fn coerce_to(self, format: DataFormat) -> Self {
-        let source = self.source;
-        let filters = self.filters;
-        let value = match (self.value, format) {
+        let source = self.inner.source;
+        let filters = self.inner.filters;
+        let value = match (self.inner.value, format) {
             (DataValue::Error(inner), _) => DataValue::Error(inner),
             (value, DataFormat::Error) => value,
             (DataValue::Binary(inner), DataFormat::Binary) => DataValue::Binary(inner),
@@ -696,7 +707,7 @@ impl Data {
                             } else {
                                 coerced
                             };
-                            coerced.value
+                            coerced.inner.value
                         }
                         Err(err) => {
                             let bin = err.into_bytes();
@@ -736,7 +747,7 @@ impl Data {
                 if let Some(str) = remake.render() {
                     DataValue::Text(str)
                 } else {
-                    remake.value
+                    remake.inner.value
                 }
             }
             // reachable if more than one structured data format is enabled
@@ -753,20 +764,22 @@ impl Data {
             (value, DataFormat::TermSvg) => value,
         };
         Self {
-            value,
-            source,
-            filters,
+            inner: Box::new(DataInner {
+                value,
+                source,
+                filters,
+            }),
         }
     }
 
     /// Location the data came from
     pub fn source(&self) -> Option<&DataSource> {
-        self.source.as_ref()
+        self.inner.source.as_ref()
     }
 
     /// Outputs the current `DataFormat` of the underlying data
     pub fn format(&self) -> DataFormat {
-        match &self.value {
+        match &self.inner.value {
             DataValue::Error(_) => DataFormat::Error,
             DataValue::Binary(_) => DataFormat::Binary,
             DataValue::Text(_) => DataFormat::Text,
@@ -780,7 +793,7 @@ impl Data {
     }
 
     pub(crate) fn intended_format(&self) -> DataFormat {
-        match &self.value {
+        match &self.inner.value {
             DataValue::Error(DataError { intended, .. }) => *intended,
             DataValue::Binary(_) => DataFormat::Binary,
             DataValue::Text(_) => DataFormat::Text,
@@ -794,13 +807,14 @@ impl Data {
     }
 
     pub(crate) fn against_format(&self) -> DataFormat {
-        self.filters
+        self.inner
+            .filters
             .get_against()
             .unwrap_or_else(|| self.intended_format())
     }
 
     pub(crate) fn relevant(&self) -> Option<&str> {
-        match &self.value {
+        match &self.inner.value {
             DataValue::Error(_) => None,
             DataValue::Binary(_) => None,
             DataValue::Text(_) => None,
@@ -816,7 +830,7 @@ impl Data {
 
 impl std::fmt::Display for Data {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.value {
+        match &self.inner.value {
             DataValue::Error(data) => data.fmt(f),
             DataValue::Binary(data) => String::from_utf8_lossy(data).fmt(f),
             DataValue::Text(data) => data.fmt(f),
@@ -838,7 +852,7 @@ impl std::fmt::Display for Data {
 
 impl PartialEq for Data {
     fn eq(&self, other: &Data) -> bool {
-        match (&self.value, &other.value) {
+        match (&self.inner.value, &other.inner.value) {
             (DataValue::Error(left), DataValue::Error(right)) => left == right,
             (DataValue::Binary(left), DataValue::Binary(right)) => left == right,
             (DataValue::Text(left), DataValue::Text(right)) => left == right,

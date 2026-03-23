@@ -27,9 +27,9 @@ pub trait Filter {
 pub struct FilterNewlines;
 impl Filter for FilterNewlines {
     fn filter(&self, data: Data) -> Data {
-        let source = data.source;
-        let filters = data.filters;
-        let inner = match data.value {
+        let source = data.inner.source;
+        let filters = data.inner.filters;
+        let inner = match data.inner.value {
             DataValue::Error(err) => DataValue::Error(err),
             DataValue::Binary(bin) => DataValue::Binary(bin),
             DataValue::Text(text) => {
@@ -55,9 +55,11 @@ impl Filter for FilterNewlines {
             }
         };
         Data {
-            value: inner,
-            source,
-            filters,
+            inner: Box::new(crate::data::DataInner {
+                value: inner,
+                source,
+                filters,
+            }),
         }
     }
 }
@@ -74,9 +76,9 @@ fn normalize_lines_chars(data: impl Iterator<Item = char>) -> impl Iterator<Item
 pub struct FilterPaths;
 impl Filter for FilterPaths {
     fn filter(&self, data: Data) -> Data {
-        let source = data.source;
-        let filters = data.filters;
-        let inner = match data.value {
+        let source = data.inner.source;
+        let filters = data.inner.filters;
+        let inner = match data.inner.value {
             DataValue::Error(err) => DataValue::Error(err),
             DataValue::Binary(bin) => DataValue::Binary(bin),
             DataValue::Text(text) => {
@@ -102,9 +104,11 @@ impl Filter for FilterPaths {
             }
         };
         Data {
-            value: inner,
-            source,
-            filters,
+            inner: Box::new(crate::data::DataInner {
+                value: inner,
+                source,
+                filters,
+            }),
         }
     }
 }
@@ -128,9 +132,9 @@ struct NormalizeRedactions<'r> {
 }
 impl Filter for NormalizeRedactions<'_> {
     fn filter(&self, data: Data) -> Data {
-        let source = data.source;
-        let filters = data.filters;
-        let inner = match data.value {
+        let source = data.inner.source;
+        let filters = data.inner.filters;
+        let inner = match data.inner.value {
             DataValue::Error(err) => DataValue::Error(err),
             DataValue::Binary(bin) => DataValue::Binary(bin),
             DataValue::Text(text) => {
@@ -156,9 +160,11 @@ impl Filter for NormalizeRedactions<'_> {
             }
         };
         Data {
-            value: inner,
-            source,
-            filters,
+            inner: Box::new(crate::data::DataInner {
+                value: inner,
+                source,
+                filters,
+            }),
         }
     }
 }
