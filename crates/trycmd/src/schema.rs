@@ -380,7 +380,7 @@ fn overwrite_toml_status(
     if let Some(code) = status.code() {
         if status.success() {
             match doc.get("status") {
-                Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+                Some(toml_edit::Item::Value(toml_edit::Value::String(expected)))
                     if expected.value() == "success" => {}
                 Some(
                     toml_edit::Item::Value(toml_edit::Value::InlineTable(_))
@@ -388,7 +388,7 @@ fn overwrite_toml_status(
                 ) => {
                     if !matches!(
                         doc["status"].get("code"),
-                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(expected)))
                             if expected.value() == &0)
                     {
                         // Remove `status` to use the default value (success)
@@ -403,7 +403,7 @@ fn overwrite_toml_status(
         } else {
             let code = code as i64;
             match doc.get("status") {
-                Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected))) => {
+                Some(toml_edit::Item::Value(toml_edit::Value::String(expected))) => {
                     if expected.value() != "failed" {
                         doc["status"] = toml_edit::value("failed");
                     }
@@ -414,7 +414,7 @@ fn overwrite_toml_status(
                 ) => {
                     if !matches!(
                         doc["status"].get("code"),
-                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(ref expected)))
+                        Some(toml_edit::Item::Value(toml_edit::Value::Integer(expected)))
                             if expected.value() == &code)
                     {
                         doc["status"]["code"] = toml_edit::value(code);
@@ -430,7 +430,7 @@ fn overwrite_toml_status(
         }
     } else if !matches!(
         doc.get("status"),
-        Some(toml_edit::Item::Value(toml_edit::Value::String(ref expected)))
+        Some(toml_edit::Item::Value(toml_edit::Value::String(expected)))
             if expected.value() == "interrupted")
     {
         doc["status"] = toml_edit::value("interrupted");
