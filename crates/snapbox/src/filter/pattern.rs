@@ -1,6 +1,6 @@
 use super::{Filter, NormalizeRedactions, Redactions};
-use crate::data::DataInner;
 use crate::Data;
+use crate::data::DataValue;
 
 /// Adjust `actual` based on `expected`
 pub struct NormalizeToExpected<'a> {
@@ -78,41 +78,41 @@ impl Default for NormalizeToExpected<'_> {
 }
 
 fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
-    let source = actual.source;
-    let filters = actual.filters;
-    let inner = match (actual.inner, &expected.inner) {
-        (DataInner::Error(err), _) => DataInner::Error(err),
-        (DataInner::Binary(bin), _) => DataInner::Binary(bin),
-        (DataInner::Text(text), _) => {
+    let source = actual.inner.source;
+    let filters = actual.inner.filters;
+    let inner = match (actual.inner.value, &expected.inner.value) {
+        (DataValue::Error(err), _) => DataValue::Error(err),
+        (DataValue::Binary(bin), _) => DataValue::Binary(bin),
+        (DataValue::Text(text), _) => {
             if let Some(pattern) = expected.render() {
                 let lines = normalize_str_to_unordered(&text, &pattern);
-                DataInner::Text(lines)
+                DataValue::Text(lines)
             } else {
-                DataInner::Text(text)
+                DataValue::Text(text)
             }
         }
         #[cfg(feature = "json")]
-        (DataInner::Json(value), DataInner::Json(exp)) => {
+        (DataValue::Json(value), DataValue::Json(exp)) => {
             let mut value = value;
             normalize_value_to_unordered(&mut value, exp);
-            DataInner::Json(value)
+            DataValue::Json(value)
         }
         #[cfg(feature = "json")]
-        (DataInner::JsonLines(value), DataInner::JsonLines(exp)) => {
+        (DataValue::JsonLines(value), DataValue::JsonLines(exp)) => {
             let mut value = value;
             normalize_value_to_unordered(&mut value, exp);
-            DataInner::JsonLines(value)
+            DataValue::JsonLines(value)
         }
         #[cfg(feature = "term-svg")]
-        (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
+        (DataValue::TermSvg(text), DataValue::TermSvg(exp)) => {
             if let (Some((header, body, footer)), Some((_, exp, _))) = (
                 crate::data::split_term_svg(&text),
                 crate::data::split_term_svg(exp),
             ) {
                 let lines = normalize_str_to_unordered(body, exp);
-                DataInner::TermSvg(format!("{header}{lines}{footer}"))
+                DataValue::TermSvg(format!("{header}{lines}{footer}"))
             } else {
-                DataInner::TermSvg(text)
+                DataValue::TermSvg(text)
             }
         }
         // reachable if more than one structured data format is enabled
@@ -120,9 +120,11 @@ fn normalize_data_to_unordered(actual: Data, expected: &Data) -> Data {
         (inner, _) => inner,
     };
     Data {
-        inner,
-        source,
-        filters,
+        inner: Box::new(crate::data::DataInner {
+            value: inner,
+            source,
+            filters,
+        }),
     }
 }
 
@@ -208,41 +210,41 @@ fn normalize_data_to_unordered_redactions(
     expected: &Data,
     substitutions: &Redactions,
 ) -> Data {
-    let source = actual.source;
-    let filters = actual.filters;
-    let inner = match (actual.inner, &expected.inner) {
-        (DataInner::Error(err), _) => DataInner::Error(err),
-        (DataInner::Binary(bin), _) => DataInner::Binary(bin),
-        (DataInner::Text(text), _) => {
+    let source = actual.inner.source;
+    let filters = actual.inner.filters;
+    let inner = match (actual.inner.value, &expected.inner.value) {
+        (DataValue::Error(err), _) => DataValue::Error(err),
+        (DataValue::Binary(bin), _) => DataValue::Binary(bin),
+        (DataValue::Text(text), _) => {
             if let Some(pattern) = expected.render() {
                 let lines = normalize_str_to_unordered_redactions(&text, &pattern, substitutions);
-                DataInner::Text(lines)
+                DataValue::Text(lines)
             } else {
-                DataInner::Text(text)
+                DataValue::Text(text)
             }
         }
         #[cfg(feature = "json")]
-        (DataInner::Json(value), DataInner::Json(exp)) => {
+        (DataValue::Json(value), DataValue::Json(exp)) => {
             let mut value = value;
             normalize_value_to_unordered_redactions(&mut value, exp, substitutions);
-            DataInner::Json(value)
+            DataValue::Json(value)
         }
         #[cfg(feature = "json")]
-        (DataInner::JsonLines(value), DataInner::JsonLines(exp)) => {
+        (DataValue::JsonLines(value), DataValue::JsonLines(exp)) => {
             let mut value = value;
             normalize_value_to_unordered_redactions(&mut value, exp, substitutions);
-            DataInner::JsonLines(value)
+            DataValue::JsonLines(value)
         }
         #[cfg(feature = "term-svg")]
-        (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
+        (DataValue::TermSvg(text), DataValue::TermSvg(exp)) => {
             if let (Some((header, body, footer)), Some((_, exp, _))) = (
                 crate::data::split_term_svg(&text),
                 crate::data::split_term_svg(exp),
             ) {
                 let lines = normalize_str_to_unordered_redactions(body, exp, substitutions);
-                DataInner::TermSvg(format!("{header}{lines}{footer}"))
+                DataValue::TermSvg(format!("{header}{lines}{footer}"))
             } else {
-                DataInner::TermSvg(text)
+                DataValue::TermSvg(text)
             }
         }
         // reachable if more than one structured data format is enabled
@@ -250,9 +252,11 @@ fn normalize_data_to_unordered_redactions(
         (inner, _) => inner,
     };
     Data {
-        inner,
-        source,
-        filters,
+        inner: Box::new(crate::data::DataInner {
+            value: inner,
+            source,
+            filters,
+        }),
     }
 }
 
@@ -389,41 +393,41 @@ fn normalize_str_to_unordered_redactions(
 }
 
 fn normalize_data_to_redactions(actual: Data, expected: &Data, substitutions: &Redactions) -> Data {
-    let source = actual.source;
-    let filters = actual.filters;
-    let inner = match (actual.inner, &expected.inner) {
-        (DataInner::Error(err), _) => DataInner::Error(err),
-        (DataInner::Binary(bin), _) => DataInner::Binary(bin),
-        (DataInner::Text(text), _) => {
+    let source = actual.inner.source;
+    let filters = actual.inner.filters;
+    let inner = match (actual.inner.value, &expected.inner.value) {
+        (DataValue::Error(err), _) => DataValue::Error(err),
+        (DataValue::Binary(bin), _) => DataValue::Binary(bin),
+        (DataValue::Text(text), _) => {
             if let Some(pattern) = expected.render() {
                 let lines = normalize_str_to_redactions(&text, &pattern, substitutions);
-                DataInner::Text(lines)
+                DataValue::Text(lines)
             } else {
-                DataInner::Text(text)
+                DataValue::Text(text)
             }
         }
         #[cfg(feature = "json")]
-        (DataInner::Json(value), DataInner::Json(exp)) => {
+        (DataValue::Json(value), DataValue::Json(exp)) => {
             let mut value = value;
             normalize_value_to_redactions(&mut value, exp, substitutions);
-            DataInner::Json(value)
+            DataValue::Json(value)
         }
         #[cfg(feature = "json")]
-        (DataInner::JsonLines(value), DataInner::JsonLines(exp)) => {
+        (DataValue::JsonLines(value), DataValue::JsonLines(exp)) => {
             let mut value = value;
             normalize_value_to_redactions(&mut value, exp, substitutions);
-            DataInner::JsonLines(value)
+            DataValue::JsonLines(value)
         }
         #[cfg(feature = "term-svg")]
-        (DataInner::TermSvg(text), DataInner::TermSvg(exp)) => {
+        (DataValue::TermSvg(text), DataValue::TermSvg(exp)) => {
             if let (Some((header, body, footer)), Some((_, exp, _))) = (
                 crate::data::split_term_svg(&text),
                 crate::data::split_term_svg(exp),
             ) {
                 let lines = normalize_str_to_redactions(body, exp, substitutions);
-                DataInner::TermSvg(format!("{header}{lines}{footer}"))
+                DataValue::TermSvg(format!("{header}{lines}{footer}"))
             } else {
-                DataInner::TermSvg(text)
+                DataValue::TermSvg(text)
             }
         }
         // reachable if more than one structured data format is enabled
@@ -431,9 +435,11 @@ fn normalize_data_to_redactions(actual: Data, expected: &Data, substitutions: &R
         (inner, _) => inner,
     };
     Data {
-        inner,
-        source,
-        filters,
+        inner: Box::new(crate::data::DataInner {
+            value: inner,
+            source,
+            filters,
+        }),
     }
 }
 

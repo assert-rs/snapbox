@@ -104,8 +104,7 @@ impl Patchwork {
                 if entry.get().1 == patch {
                     return Ok(());
                 } else {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
+                    return Err(std::io::Error::other(
                         "cannot update as it was already modified",
                     ));
                 }

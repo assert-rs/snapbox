@@ -8,8 +8,8 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
 use crate::IntoData;
+use crate::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
 
 pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
@@ -113,7 +113,7 @@ impl Assert {
         mut actual: crate::Data,
         mut expected: crate::Data,
     ) -> (crate::Data, crate::Data) {
-        if expected.filters.is_newlines_set() {
+        if expected.inner.filters.is_newlines_set() {
             expected = FilterNewlines.filter(expected);
         }
 
@@ -121,18 +121,18 @@ impl Assert {
         actual = actual.coerce_to(expected.against_format());
         actual = actual.coerce_to(expected.intended_format());
 
-        if self.normalize_paths && expected.filters.is_paths_set() {
+        if self.normalize_paths && expected.inner.filters.is_paths_set() {
             actual = FilterPaths.filter(actual);
         }
-        if expected.filters.is_newlines_set() {
+        if expected.inner.filters.is_newlines_set() {
             actual = FilterNewlines.filter(actual);
         }
 
         let mut normalize = NormalizeToExpected::new();
-        if expected.filters.is_redaction_set() {
+        if expected.inner.filters.is_redaction_set() {
             normalize = normalize.redact_with(&self.substitutions);
         }
-        if expected.filters.is_unordered_set() {
+        if expected.inner.filters.is_unordered_set() {
             normalize = normalize.unordered();
         }
         actual = normalize.normalize(actual, &expected);

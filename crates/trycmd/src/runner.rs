@@ -12,10 +12,10 @@ use std::eprintln;
 use std::io::stderr;
 
 use rayon::prelude::*;
+use snapbox::IntoData;
 use snapbox::data::DataFormat;
 use snapbox::dir::FileType;
 use snapbox::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
-use snapbox::IntoData;
 
 #[derive(Debug)]
 pub(crate) struct Runner {
@@ -567,11 +567,7 @@ impl Case {
             }
         }
 
-        if ok {
-            Ok(fs)
-        } else {
-            Err(fs)
-        }
+        if ok { Ok(fs) } else { Err(fs) }
     }
 }
 

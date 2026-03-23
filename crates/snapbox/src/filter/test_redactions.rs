@@ -250,7 +250,8 @@ fn json_normalize_glob_for_string() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_eq!(exp, act);
     }
 }
@@ -271,7 +272,8 @@ fn json_normalize_glob_for_array() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_eq!(exp, act);
     }
 }
@@ -290,7 +292,8 @@ fn json_normalize_glob_for_obj() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_eq!(exp, act);
     }
 }
@@ -327,7 +330,8 @@ fn json_normalize_glob_array_start() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_eq!(exp, act);
     }
 }
@@ -365,7 +369,8 @@ fn json_normalize_glob_for_array_start_end() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_eq!(exp, act);
     }
 }
@@ -411,7 +416,8 @@ fn json_normalize_glob_for_array_middle_end() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_eq!(exp, act);
     }
 }
@@ -453,7 +459,7 @@ fn json_normalize_glob_for_array_mismatch() {
     let actual_normalized = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual.clone()), &expected);
-    if let DataInner::Json(act) = actual_normalized.inner {
+    if let DataValue::Json(act) = actual_normalized.inner.value {
         assert_eq!(act, actual);
     }
 }
@@ -471,7 +477,8 @@ fn json_normalize_bad_order() {
     let actual = NormalizeToExpected::new()
         .redact()
         .normalize(Data::json(actual), &expected);
-    if let (DataInner::Json(exp), DataInner::Json(act)) = (expected.inner, actual.inner) {
+    if let (DataValue::Json(exp), DataValue::Json(act)) = (expected.inner.value, actual.inner.value)
+    {
         assert_ne!(exp, act);
     }
 }
