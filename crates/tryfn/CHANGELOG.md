@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+## [1.1.0] - 2026-03-23
+
 ### Compatibility
 
 - Update MSRV to 1.85
@@ -44,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.1.0] - 2024-05-17
 
 <!-- next-url -->
-[Unreleased]: https://github.com/assert-rs/trycmd/compare/tryfn-v1.0.1...HEAD
+[Unreleased]: https://github.com/assert-rs/trycmd/compare/tryfn-v1.1.0...HEAD
+[1.1.0]: https://github.com/assert-rs/trycmd/compare/tryfn-v1.0.1...tryfn-v1.1.0
 [1.0.1]: https://github.com/assert-rs/trycmd/compare/tryfn-v1.0.0...tryfn-v1.0.1
 [1.0.0]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.3...tryfn-v1.0.0
 [0.2.3]: https://github.com/assert-rs/trycmd/compare/tryfn-v0.2.2...tryfn-v0.2.3

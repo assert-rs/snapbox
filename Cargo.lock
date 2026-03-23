@@ -806,7 +806,7 @@ checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "snapbox"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -834,7 +834,7 @@ dependencies = [
 
 [[package]]
 name = "snapbox-macros"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "anstream",
 ]
@@ -910,7 +910,7 @@ checksum = "d282ade6016312faf3e41e57ebbba0c073e4056dab1232ab1cb624199648f8ed"
 
 [[package]]
 name = "trycmd"
-version = "1.1.1"
+version = "1.2.0"
 dependencies = [
  "anstream",
  "automod",
@@ -929,7 +929,7 @@ dependencies = [
 
 [[package]]
 name = "tryfn"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
  "ignore",
  "libtest-mimic",
