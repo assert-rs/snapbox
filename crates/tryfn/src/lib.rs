@@ -45,8 +45,8 @@
 
 use libtest_mimic::Trial;
 
-pub use snapbox::data::DataFormat;
 pub use snapbox::Data;
+pub use snapbox::data::DataFormat;
 
 /// [`Harness`] for discovering test inputs and asserting against snapshot files
 pub struct Harness<S, T, I, E> {

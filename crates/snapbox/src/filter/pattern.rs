@@ -1,6 +1,6 @@
 use super::{Filter, NormalizeRedactions, Redactions};
-use crate::data::DataInner;
 use crate::Data;
+use crate::data::DataInner;
 
 /// Adjust `actual` based on `expected`
 pub struct NormalizeToExpected<'a> {

@@ -8,8 +8,8 @@ use anstream::stderr;
 #[cfg(not(feature = "color"))]
 use std::io::stderr;
 
-use crate::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
 use crate::IntoData;
+use crate::filter::{Filter as _, FilterNewlines, FilterPaths, NormalizeToExpected};
 
 pub use action::Action;
 pub use action::DEFAULT_ACTION_ENV;
