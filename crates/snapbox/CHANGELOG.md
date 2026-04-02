@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Features
+
+- Add `cmd::Command::cargo_bin`
+
 ## [1.2.0] - 2026-03-23
 
 ### Compatibility
