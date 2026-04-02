@@ -17,6 +17,20 @@ pub struct Command {
 
 /// # Builder API
 impl Command {
+    /// Look up the path to a cargo-built binary within an integration test
+    ///
+    /// Cargo support:
+    /// - `>1.94`: works
+    /// - `>=1.91,<=1.93`: works with default `build-dir`
+    /// - `<=1.92`: works
+    ///
+    /// # Panic
+    ///
+    /// Panics if no binary is found
+    pub fn cargo_bin(name: &str) -> Self {
+        Self::new(cargo_bin(name))
+    }
+
     pub fn new(program: impl AsRef<std::ffi::OsStr>) -> Self {
         Self {
             cmd: std::process::Command::new(program),
