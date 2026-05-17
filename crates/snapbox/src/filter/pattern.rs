@@ -586,30 +586,49 @@ fn is_line_elide(line: &str) -> bool {
     line == "...\n" || line == "..."
 }
 
-fn line_matches(mut actual: &str, expected: &str, redactions: &Redactions) -> bool {
+fn line_matches(actual: &str, expected: &str, redactions: &Redactions) -> bool {
     if actual == expected {
         return true;
     }
 
     let expected = redactions.clear_unused(expected);
-    let mut sections = expected.split("[..]").peekable();
-    while let Some(section) = sections.next() {
-        if let Some(remainder) = actual.strip_prefix(section) {
-            if let Some(next_section) = sections.peek() {
-                if next_section.is_empty() {
-                    actual = "";
-                } else if let Some(restart_index) = remainder.find(next_section) {
-                    actual = &remainder[restart_index..];
-                }
-            } else {
-                return remainder.is_empty();
-            }
-        } else {
-            return false;
-        }
+    if !expected.contains("[..]") {
+        return false;
     }
 
-    false
+    let parts: Vec<&str> = expected.split("[..]").collect();
+    match parts.as_slice() {
+        [] => actual.is_empty(),
+        [section] => actual == *section,
+        [prefix, suffix] => actual
+            .strip_prefix(prefix)
+            .and_then(|remainder| remainder.strip_suffix(suffix))
+            .is_some(),
+        _ => {
+            let (first, rest) = parts.split_first().unwrap();
+            let (last, middle) = rest.split_last().unwrap();
+
+            let Some(mut remainder) = actual.strip_prefix(first) else {
+                return false;
+            };
+
+            if !last.is_empty() {
+                let Some(r) = remainder.strip_suffix(last) else {
+                    return false;
+                };
+                remainder = r;
+            }
+
+            for section in middle {
+                let Some(index) = remainder.find(section) else {
+                    return false;
+                };
+                remainder = &remainder[index + section.len()..];
+            }
+
+            true
+        }
+    }
 }
 
 #[cfg(test)]
@@ -654,6 +673,11 @@ mod test {
                 false,
             ),
             ("hello world, goodbye moon", "hello [..], [..] world", false),
+            (
+                "    before_tokens: \"[\"let\", \"(\", \"_\", \",\", \"ref_count\"]\",",
+                "    before_tokens: \"[..]\",",
+                true,
+            ),
         ];
         for (line, pattern, expected) in cases {
             let actual = line_matches(line, pattern, &Redactions::new());
