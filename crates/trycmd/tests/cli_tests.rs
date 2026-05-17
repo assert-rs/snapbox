@@ -23,3 +23,13 @@ fn cli_tests() {
     t.extend_vars([("[EXAMPLE]", "example")]).unwrap();
     t.register_bin("ignored-bin", trycmd::schema::Bin::Ignore);
 }
+
+#[test]
+fn default_current_dir() {
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/cmd/default-current-dir.in");
+    trycmd::TestCases::new()
+        .case("tests/cmd/default-current-dir.toml")
+        .default_current_dir(&fixture)
+        .run();
+}

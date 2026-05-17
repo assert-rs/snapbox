@@ -5,6 +5,7 @@ pub(crate) struct RunnerSpec {
     cases: Vec<CaseSpec>,
     include: Option<Vec<String>>,
     default_bin: Option<crate::schema::Bin>,
+    default_current_dir: Option<std::path::PathBuf>,
     timeout: Option<std::time::Duration>,
     env: crate::schema::Env,
 }
@@ -15,6 +16,7 @@ impl RunnerSpec {
             cases: Default::default(),
             include: None,
             default_bin: None,
+            default_current_dir: None,
             timeout: Default::default(),
             env: Default::default(),
         }
@@ -40,6 +42,10 @@ impl RunnerSpec {
 
     pub(crate) fn default_bin(&mut self, bin: Option<crate::schema::Bin>) {
         self.default_bin = bin;
+    }
+
+    pub(crate) fn default_current_dir(&mut self, dir: Option<std::path::PathBuf>) {
+        self.default_current_dir = dir;
     }
 
     pub(crate) fn timeout(&mut self, time: Option<std::time::Duration>) {
@@ -69,6 +75,7 @@ impl RunnerSpec {
                                             path,
                                             expected: spec.expected,
                                             default_bin: self.default_bin.clone(),
+                                            default_current_dir: self.default_current_dir.clone(),
                                             timeout: self.timeout,
                                             env: self.env.clone(),
                                             error: None,
@@ -99,6 +106,7 @@ impl RunnerSpec {
                         path: path.into(),
                         expected: spec.expected,
                         default_bin: self.default_bin.clone(),
+                        default_current_dir: self.default_current_dir.clone(),
                         timeout: self.timeout,
                         env: self.env.clone(),
                         error: None,

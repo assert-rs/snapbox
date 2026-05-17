@@ -79,6 +79,9 @@ impl TryCmd {
             return Err("No extension".into());
         };
 
+        let cwd_specified = sequence.fs.cwd.is_some();
+        let base_specified = sequence.fs.base.is_some();
+
         sequence.fs.base = sequence.fs.base.take().map(|base| {
             path.parent()
                 .unwrap_or_else(|| std::path::Path::new("."))
@@ -117,6 +120,9 @@ impl TryCmd {
             .take()
             .map(|p| snapbox::dir::resolve_dir(p).map_err(|e| e.to_string()))
             .transpose()?;
+
+        sequence.fs.cwd_specified = cwd_specified;
+        sequence.fs.base_specified = base_specified;
 
         Ok(sequence)
     }
@@ -760,11 +766,29 @@ pub struct Filesystem {
     /// Sandbox base
     pub(crate) base: Option<std::path::PathBuf>,
     pub(crate) sandbox: Option<bool>,
+    #[serde(skip, default)]
+    pub(crate) cwd_specified: bool,
+    #[serde(skip, default)]
+    pub(crate) base_specified: bool,
 }
 
 impl Filesystem {
     pub(crate) fn sandbox(&self) -> bool {
         self.sandbox.unwrap_or_default()
+    }
+
+    pub(crate) fn apply_default_current_dir(
+        &mut self,
+        dir: impl AsRef<std::path::Path>,
+    ) -> Result<(), crate::Error> {
+        if self.cwd_specified || self.base_specified {
+            return Ok(());
+        }
+        let dir = snapbox::dir::resolve_dir(dir.as_ref().to_path_buf())
+            .map_err(|e| crate::Error::new(e.to_string()))?;
+        self.cwd = Some(dir.clone());
+        self.base = Some(dir);
+        Ok(())
     }
 
     pub(crate) fn rel_cwd(&self) -> Result<&std::path::Path, crate::Error> {

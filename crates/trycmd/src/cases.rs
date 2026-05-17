@@ -71,6 +71,20 @@ impl TestCases {
         self
     }
 
+    /// Set the default working directory for test cases that do not set `fs.cwd` or `fs.base`.
+    ///
+    /// This is useful when preparing the filesystem outside of trycmd (for example custom
+    /// timestamps or git repos) and running a group of tests from that directory without
+    /// calling `std::env::set_current_dir` in each test.
+    ///
+    /// Per-test `fs.cwd` / `fs.base` in TOML take precedence.
+    pub fn default_current_dir(&self, path: impl AsRef<std::path::Path>) -> &Self {
+        self.runner
+            .borrow_mut()
+            .default_current_dir(Some(path.as_ref().to_owned()));
+        self
+    }
+
     /// Set default timeout for commands
     pub fn timeout(&self, time: std::time::Duration) -> &Self {
         self.runner.borrow_mut().timeout(Some(time));

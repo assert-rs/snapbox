@@ -138,6 +138,7 @@ pub(crate) struct Case {
     pub(crate) expected: Option<crate::schema::CommandStatus>,
     pub(crate) timeout: Option<std::time::Duration>,
     pub(crate) default_bin: Option<crate::schema::Bin>,
+    pub(crate) default_current_dir: Option<std::path::PathBuf>,
     pub(crate) env: crate::schema::Env,
     pub(crate) error: Option<SpawnStatus>,
 }
@@ -149,6 +150,7 @@ impl Case {
             expected: None,
             timeout: None,
             default_bin: None,
+            default_current_dir: None,
             env: Default::default(),
             error: Some(SpawnStatus::Failure(error)),
         }
@@ -179,6 +181,16 @@ impl Case {
                 return vec![Err(output.error(e))];
             }
         };
+
+        if let Some(default_current_dir) = self.default_current_dir.as_deref() {
+            if let Err(e) = sequence
+                .fs
+                .apply_default_current_dir(default_current_dir)
+            {
+                let output = Output::step(self.path.clone(), "setup".into());
+                return vec![Err(output.error(e))];
+            }
+        }
 
         if sequence.steps.is_empty() {
             let output = Output::sequence(self.path.clone());
