@@ -954,11 +954,35 @@ pub use examples::{compile_example, compile_examples};
 
 #[cfg(feature = "examples")]
 pub(crate) mod examples {
+    /// Ensure `cargo` runs quietly so progress on stderr does not fill the pipe buffer
+    /// while we read JSON messages from stdout (see snapbox#435).
+    fn cargo_build_args<I, S>(args: I) -> Vec<String>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
+        let args: Vec<String> = args
+            .into_iter()
+            .map(|arg| arg.as_ref().to_owned())
+            .collect();
+        if args.iter().any(|arg| arg == "-q" || arg == "--quiet") {
+            args
+        } else {
+            let mut with_quiet = Vec::with_capacity(args.len() + 1);
+            with_quiet.push("-q".into());
+            with_quiet.extend(args);
+            with_quiet
+        }
+    }
+
     /// Prepare an example for testing
     ///
     /// Unlike `cargo_bin!`, this does not inherit all of the current compiler settings.  It
     /// will match the current target and profile but will not get feature flags.  Pass those arguments
     /// to the compiler via `args`.
+    ///
+    /// `-q` is passed to `cargo` automatically (unless already present) so progress output on
+    /// stderr does not block the build when reading compiler messages from stdout.
     ///
     /// ## Example
     ///
@@ -1016,11 +1040,12 @@ pub(crate) mod examples {
         crate::debug!("Compiling examples");
         let mut examples = std::collections::BTreeMap::new();
 
+        let args = cargo_build_args(args);
         let messages = escargot::CargoBuild::new()
             .current_target()
             .current_release()
             .examples()
-            .args(args)
+            .args(args.iter().map(|arg| arg.as_str()))
             .exec()
             .map_err(|e| crate::assert::Error::new(e.to_string()))?;
         for message in messages {
@@ -1082,6 +1107,21 @@ pub(crate) mod examples {
 
     fn is_example_target(target: &escargot::format::Target<'_>) -> bool {
         target.crate_types == ["bin"] && target.kind == ["example"]
+    }
+
+    #[test]
+    fn cargo_build_args_adds_quiet_by_default() {
+        let args = cargo_build_args::<_, &str>([]);
+        assert_eq!(args, ["-q"]);
+    }
+
+    #[test]
+    fn cargo_build_args_respects_existing_quiet() {
+        let args = cargo_build_args(["-q", "--locked"]);
+        assert_eq!(args, ["-q", "--locked"]);
+
+        let args = cargo_build_args(["--quiet"]);
+        assert_eq!(args, ["--quiet"]);
     }
 }
 
