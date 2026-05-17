@@ -1,6 +1,13 @@
 use super::*;
 
 #[test]
+fn display_relpath_normalizes_parent_dir() {
+    let path = std::path::Path::new("tests/integration/../integration/snapshots/out.txt");
+    let rendered = display_relpath(path);
+    assert_eq!(rendered, "tests/integration/snapshots/out.txt");
+}
+
+#[test]
 fn strips_trailing_slash() {
     let path = std::path::Path::new("/foo/bar/");
     let rendered = path.display().to_string();

@@ -217,14 +217,15 @@ pub(crate) fn normalize_path(path: &std::path::Path) -> std::path::PathBuf {
 }
 
 pub(crate) fn display_relpath(path: impl AsRef<std::path::Path>) -> String {
-    let path = path.as_ref();
+    let path = normalize_path(path.as_ref());
     let relpath = if let Ok(cwd) = std::env::current_dir() {
-        match path.strip_prefix(cwd) {
+        let cwd = normalize_path(&cwd);
+        match path.strip_prefix(&cwd) {
             Ok(path) => path,
-            Err(_) => path,
+            Err(_) => path.as_path(),
         }
     } else {
-        path
+        path.as_path()
     };
     relpath.display().to_string()
 }
