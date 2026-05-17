@@ -189,6 +189,31 @@
 //!
 //! Note: This implies `fs.sandbox = true`.
 //!
+//! ### Filesystem (`fs.*` in `*.toml`)
+//!
+//! TOML cases can set `fs.cwd`, `fs.base`, and `fs.sandbox` to control where commands run.
+//! Paths in `fs.cwd` and `fs.base` are relative to the `.toml` file's directory.
+//!
+//! **Working directory without sandbox**
+//!
+//! - If `*.in/` exists next to the case, it becomes `fs.base` and `fs.cwd` (see above).
+//! - Otherwise, if the case sets `fs.cwd` / `fs.base`, those paths are used.
+//! - Otherwise, the command inherits the test process's current working directory (typically
+//!   the package manifest directory when run via `cargo test`).
+//!
+//! **`fs.sandbox`**
+//!
+//! When `fs.sandbox = true`, trycmd creates a fresh temporary directory for the case. If
+//! `fs.base` (or `*.in/`) is set, its contents are copied into that directory as a template.
+//! The command's working directory is `fs.cwd` within that tree (defaulting to the sandbox root).
+//! This does not use OS-level sandboxing; it only isolates files on disk.
+//!
+//! When `fs.sandbox` is not set, it defaults to `true` if `*.out/` exists next to the case
+//! (because output verification needs an isolated tree). Otherwise it defaults to `false`.
+//!
+//! Set `fs.sandbox = true` when the command writes files you do not want to compare via
+//! `*.out/`, so stray output stays in the temp directory instead of the inherited CWD.
+//!
 //! ## Examples
 //!
 //! - Simple cargo binary: [trycmd's integration tests](https://github.com/assert-rs/snapbox/blob/main/crates/trycmd/tests/cli_tests.rs)
