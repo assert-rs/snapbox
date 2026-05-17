@@ -103,12 +103,21 @@ macro_rules! cargo_rustc_current_dir {
         if let Some(rustc_root) = ::std::option_env!("CARGO_RUSTC_CURRENT_DIR") {
             ::std::path::Path::new(rustc_root)
         } else {
-            let manifest_dir = ::std::path::Path::new(::std::env!("CARGO_MANIFEST_DIR"));
-            manifest_dir
-                .ancestors()
-                .filter(|it| it.join("Cargo.toml").exists())
-                .last()
-                .unwrap()
+            let manifest_dir =
+                ::std::path::Path::new(::std::env!("CARGO_MANIFEST_DIR"));
+            let file = ::std::path::Path::new(::std::file!());
+            // Prefer the package manifest dir when `file!` is relative to it (typical
+            // packages and nested workspaces, see https://github.com/assert-rs/snapbox/issues/415).
+            // Fall back to the outermost workspace root when `file!` is relative to that instead.
+            if manifest_dir.join(file).exists() {
+                manifest_dir
+            } else {
+                manifest_dir
+                    .ancestors()
+                    .filter(|it| it.join("Cargo.toml").exists())
+                    .last()
+                    .unwrap()
+            }
         }
     }};
 }
@@ -181,5 +190,27 @@ mod test {
             assert_eq!(fn_path!(), "snapbox::macros::test::nested_fn_path::nested");
         }
         nested();
+    }
+
+    #[test]
+    fn current_rs_points_at_this_file() {
+        let path = crate::current_rs!();
+        assert!(
+            path.exists(),
+            "current_rs!() should resolve to this source file: {path:?}"
+        );
+    }
+
+    #[test]
+    fn package_manifest_joins_file_relative_to_crate() {
+        let manifest =
+            ::std::path::Path::new("/snapbox-bug/sub-ws/foo");
+        let file = ::std::path::Path::new("src/main.rs");
+        let path = manifest.join(file);
+
+        assert_eq!(
+            path,
+            ::std::path::Path::new("/snapbox-bug/sub-ws/foo/src/main.rs")
+        );
     }
 }
