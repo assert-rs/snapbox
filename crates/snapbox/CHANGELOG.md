@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
 
+### Performance
+
+- Default to the old `tempfile` behavior for faster builds
+
 ## [1.2.1] - 2026-04-02
 
 ### Features
