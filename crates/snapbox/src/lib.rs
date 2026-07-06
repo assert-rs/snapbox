@@ -41,8 +41,6 @@
 //! You can also build your own version of these with the lower-level building blocks these are
 //! made of.
 //!
-#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
-//!
 //! # Examples
 //!
 //! [`assert_data_eq!`]
@@ -57,6 +55,10 @@
 //!     .action_env("SNAPSHOTS")
 //!     .eq(actual, snapbox::file!["help_output_is_clean.txt"]);
 //! ```
+//!
+//! # Feature flags
+//!
+#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
 //! [trycmd]: https://docs.rs/trycmd
 
