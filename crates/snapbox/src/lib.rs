@@ -28,6 +28,9 @@
 //!
 //! Testing Functions:
 //! - [`assert_data_eq!`] for quick and dirty snapshotting
+//!   - [`IntoJson`]: adapt serde types to be asserted against
+//!   - [`std::string::ToString`]: adapt displayable types to be asserted against
+//!   - [`ToDebug`]: adapt `#[derive(Debug)]` types to be asserted against
 //!
 //! Testing Commands:
 //! - [`cmd::Command`]: Process spawning for testing of non-interactive commands
