@@ -26,7 +26,9 @@ pub use error::Result;
 /// # use snapbox::Assert;
 /// # use snapbox::file;
 /// let actual = "something";
-/// Assert::new().eq(actual, file!["output.txt"]);
+/// Assert::new()
+///   .action_env("SNAPSHOTS")
+///   .eq(actual, file!["output.txt"]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Assert {
@@ -62,7 +64,9 @@ impl Assert {
     /// # use snapbox::Assert;
     /// let actual = "something";
     /// let expected = "so[..]g";
-    /// Assert::new().eq(actual, expected);
+    /// Assert::new()
+    ///   .action_env("SNAPSHOTS")
+    ///   .eq(actual, expected);
     /// ```
     ///
     /// Can combine this with [`file!`][crate::file]
@@ -70,7 +74,9 @@ impl Assert {
     /// # use snapbox::Assert;
     /// # use snapbox::file;
     /// let actual = "something";
-    /// Assert::new().eq(actual, file!["output.txt"]);
+    /// Assert::new()
+    ///   .action_env("SNAPSHOTS")
+    ///   .eq(actual, file!["output.txt"]);
     /// ```
     #[track_caller]
     pub fn eq(&self, actual: impl IntoData, expected: impl IntoData) {

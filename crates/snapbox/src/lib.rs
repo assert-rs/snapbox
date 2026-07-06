@@ -28,6 +28,9 @@
 //!
 //! Testing Functions:
 //! - [`assert_data_eq!`] for quick and dirty snapshotting
+//!   - [`IntoJson`]: adapt serde types to be asserted against
+//!   - [`std::string::ToString`]: adapt displayable types to be asserted against
+//!   - [`ToDebug`]: adapt `#[derive(Debug)]` types to be asserted against
 //!
 //! Testing Commands:
 //! - [`cmd::Command`]: Process spawning for testing of non-interactive commands
@@ -38,25 +41,28 @@
 //! - [`dir::DirRoot`]: Working directory for tests
 //! - [`Assert`]: Diff a directory against files present in a pattern directory
 //!
+//! Snapshots:
+//! - [`str!`]: In-source snapshots
+//! - [`file!`]: External snapshots
+//!
 //! You can also build your own version of these with the lower-level building blocks these are
 //! made of.
-//!
-#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
 //! # Examples
 //!
 //! [`assert_data_eq!`]
 //! ```rust
-//! snapbox::assert_data_eq!("Hello many people!", "Hello [..] people!");
+//! # use snapbox::str;
+//! let actual = // ...
+//! # "Hello many people!";
+//! snapbox::assert_data_eq!(actual, str![["Hello [..] people!"]]);
 //! ```
 //!
-//! [`Assert`]
-//! ```rust,no_run
-//! let actual = "...";
-//! snapbox::Assert::new()
-//!     .action_env("SNAPSHOTS")
-//!     .eq(actual, snapbox::file!["help_output_is_clean.txt"]);
-//! ```
+//! To update the snapshot, run the tests with `SNAPSHOTS=overwrite` set.
+//!
+//! # Feature flags
+//!
+#![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
 //!
 //! [trycmd]: https://docs.rs/trycmd
 
