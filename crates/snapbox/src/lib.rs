@@ -51,6 +51,8 @@
 //! snapbox::assert_data_eq!(actual, str![["Hello [..] people!"]]);
 //! ```
 //!
+//! To update the snapshot, run the tests with `SNAPSHOTS=overwrite` set.
+//!
 //! # Feature flags
 //!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
