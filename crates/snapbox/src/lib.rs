@@ -38,6 +38,10 @@
 //! - [`dir::DirRoot`]: Working directory for tests
 //! - [`Assert`]: Diff a directory against files present in a pattern directory
 //!
+//! Snapshots:
+//! - [`str!`]: In-source snapshots
+//! - [`file!`]: External snapshots
+//!
 //! You can also build your own version of these with the lower-level building blocks these are
 //! made of.
 //!
