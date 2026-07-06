@@ -20,9 +20,9 @@ impl Command {
     /// Look up the path to a cargo-built binary within an integration test
     ///
     /// Cargo support:
-    /// - `>1.94`: works
+    /// - `>=1.94`: works
     /// - `>=1.91,<=1.93`: works with default `build-dir`
-    /// - `<=1.92`: works
+    /// - `<=1.90`: works
     ///
     /// # Panic
     ///
@@ -866,9 +866,9 @@ pub use crate::cargo_bin;
 /// Look up the path to a cargo-built binary within an integration test
 ///
 /// Cargo support:
-/// - `>1.94`: works
+/// - `>=1.94`: works
 /// - `>=1.91,<=1.93`: works with default `build-dir`
-/// - `<=1.92`: works
+/// - `<=1.90`: works
 ///
 /// # Panic
 ///
@@ -882,9 +882,9 @@ pub fn cargo_bin(name: &str) -> std::path::PathBuf {
 /// Returns `None` if the binary doesn't exist
 ///
 /// Cargo support:
-/// - `>1.94`: works
+/// - `>=1.94`: works
 /// - `>=1.91,<=1.93`: works with default `build-dir`
-/// - `<=1.92`: works
+/// - `<=1.90`: works
 pub fn cargo_bin_opt(name: &str) -> Option<std::path::PathBuf> {
     let env_var = format!("{CARGO_BIN_EXE_}{name}");
     std::env::var_os(env_var)
@@ -895,7 +895,7 @@ pub fn cargo_bin_opt(name: &str) -> Option<std::path::PathBuf> {
 /// Return all the name and path for all binaries built by Cargo
 ///
 /// Cargo support:
-/// - `>1.94`: works
+/// - `>=1.94`: works
 pub fn cargo_bins() -> impl Iterator<Item = (String, std::path::PathBuf)> {
     std::env::vars_os()
         .filter_map(|(k, v)| {
