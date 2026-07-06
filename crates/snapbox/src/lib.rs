@@ -51,15 +51,6 @@
 //! snapbox::assert_data_eq!(actual, str![["Hello [..] people!"]]);
 //! ```
 //!
-//! [`Assert`]
-//! ```rust,no_run
-//! let actual = // ...
-//! # "Hello many people!";
-//! snapbox::Assert::new()
-//!     .action_env("SNAPSHOTS")
-//!     .eq(actual, snapbox::file!["help_output_is_clean.txt"]);
-//! ```
-//!
 //! # Feature flags
 //!
 #![cfg_attr(feature = "document-features", doc = document_features::document_features!())]
