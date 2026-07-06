@@ -45,12 +45,15 @@
 //!
 //! [`assert_data_eq!`]
 //! ```rust
-//! snapbox::assert_data_eq!("Hello many people!", "Hello [..] people!");
+//! let actual = // ...
+//! # "Hello many people!";
+//! snapbox::assert_data_eq!(actual, "Hello [..] people!");
 //! ```
 //!
 //! [`Assert`]
 //! ```rust,no_run
-//! let actual = "...";
+//! let actual = // ...
+//! # "Hello many people!";
 //! snapbox::Assert::new()
 //!     .action_env("SNAPSHOTS")
 //!     .eq(actual, snapbox::file!["help_output_is_clean.txt"]);
