@@ -45,9 +45,10 @@
 //!
 //! [`assert_data_eq!`]
 //! ```rust
+//! # use snapbox::str;
 //! let actual = // ...
 //! # "Hello many people!";
-//! snapbox::assert_data_eq!(actual, "Hello [..] people!");
+//! snapbox::assert_data_eq!(actual, str![["Hello [..] people!"]]);
 //! ```
 //!
 //! [`Assert`]
