@@ -77,7 +77,7 @@ impl Runner {
                                     let _ = writeln!(stderr);
                                     if !status.is_ok() {
                                         // Assuming `status` will print the newline
-                                        let _ = write!(stderr, "{}", &status);
+                                        let _ = write!(stderr, "{status}");
                                     }
                                     None
                                 }
@@ -98,7 +98,7 @@ impl Runner {
                                     }
                                     let _ = writeln!(stderr);
                                     // Assuming `status` will print the newline
-                                    let _ = write!(stderr, "{}", &status);
+                                    let _ = write!(stderr, "{status}");
                                     Some(status)
                                 }
                             }
