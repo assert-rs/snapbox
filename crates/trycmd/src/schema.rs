@@ -713,7 +713,7 @@ impl JoinedArgs {
 
     #[allow(clippy::inherent_to_string_shadow_display)]
     fn to_string(&self) -> String {
-        shlex::join(self.inner.iter().map(|s| s.as_str()))
+        shlex::try_join(self.inner.iter().map(|s| s.as_str())).unwrap()
     }
 }
 
