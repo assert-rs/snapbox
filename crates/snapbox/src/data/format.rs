@@ -48,11 +48,11 @@ impl From<&std::path::Path> for DataFormat {
             match ext {
                 #[cfg(feature = "json")]
                 "json" => {
-                    return DataFormat::Json;
+                    return Self::Json;
                 }
                 #[cfg(feature = "json")]
                 "jsonl" => {
-                    return DataFormat::JsonLines;
+                    return Self::JsonLines;
                 }
                 #[cfg(feature = "term-svg")]
                 "term.svg" => {
@@ -61,7 +61,7 @@ impl From<&std::path::Path> for DataFormat {
                 _ => {}
             }
         }
-        DataFormat::Text
+        Self::Text
     }
 }
 

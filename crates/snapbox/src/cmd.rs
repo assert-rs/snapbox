@@ -758,6 +758,10 @@ pub fn display_exit_status(status: std::process::ExitStatus) -> String {
         use std::os::unix::process::ExitStatusExt;
 
         let signal = status.signal()?;
+        #[allow(
+            trivial_numeric_casts,
+            reason = "typedef could change between platforms"
+        )]
         let name = match signal as libc::c_int {
             libc::SIGABRT => ", SIGABRT: process abort signal",
             libc::SIGALRM => ", SIGALRM: alarm clock",
