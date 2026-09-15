@@ -921,13 +921,13 @@ impl FileStatus {
 impl From<snapbox::dir::PathDiff> for FileStatus {
     fn from(other: snapbox::dir::PathDiff) -> Self {
         match other {
-            snapbox::dir::PathDiff::Failure(err) => FileStatus::Failure(err),
+            snapbox::dir::PathDiff::Failure(err) => Self::Failure(err),
             snapbox::dir::PathDiff::TypeMismatch {
                 expected_path,
                 actual_path,
                 expected_type,
                 actual_type,
-            } => FileStatus::TypeMismatch {
+            } => Self::TypeMismatch {
                 actual_path,
                 expected_path,
                 actual_type,
@@ -938,7 +938,7 @@ impl From<snapbox::dir::PathDiff> for FileStatus {
                 actual_path,
                 expected_target,
                 actual_target,
-            } => FileStatus::LinkMismatch {
+            } => Self::LinkMismatch {
                 actual_path,
                 expected_path,
                 actual_target,
@@ -949,7 +949,7 @@ impl From<snapbox::dir::PathDiff> for FileStatus {
                 actual_path,
                 expected_content,
                 actual_content,
-            } => FileStatus::ContentMismatch {
+            } => Self::ContentMismatch {
                 actual_path,
                 expected_path,
                 actual_content,

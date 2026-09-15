@@ -4,7 +4,7 @@ pub struct LinesWithTerminator<'a> {
 }
 
 impl<'a> LinesWithTerminator<'a> {
-    pub fn new(data: &'a str) -> LinesWithTerminator<'a> {
+    pub fn new(data: &'a str) -> Self {
         LinesWithTerminator { data }
     }
 }

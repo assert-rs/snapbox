@@ -63,11 +63,11 @@ struct SourceFileRuntime {
 }
 
 impl SourceFileRuntime {
-    fn new(inline: &Inline) -> std::io::Result<SourceFileRuntime> {
+    fn new(inline: &Inline) -> std::io::Result<Self> {
         let path = inline.position.file.clone();
         let original_text = std::fs::read_to_string(&path)?;
         let patchwork = Patchwork::new(original_text.clone());
-        Ok(SourceFileRuntime {
+        Ok(Self {
             path,
             original_text,
             patchwork,
@@ -88,8 +88,8 @@ struct Patchwork {
 }
 
 impl Patchwork {
-    fn new(text: String) -> Patchwork {
-        Patchwork {
+    fn new(text: String) -> Self {
+        Self {
             text,
             indels: BTreeMap::new(),
         }
@@ -116,7 +116,7 @@ impl Patchwork {
             .iter()
             .take_while(|(delete, _)| delete.start < range.start)
             .map(|(delete, (insert, _))| (delete.end - delete.start, insert))
-            .fold((0usize, 0usize), |(x1, y1), (x2, y2)| (x1 + x2, y1 + y2));
+            .fold((0_usize, 0_usize), |(x1, y1), (x2, y2)| (x1 + x2, y1 + y2));
 
         for pos in &mut [&mut range.start, &mut range.end] {
             **pos -= delete;
@@ -191,7 +191,7 @@ struct Span {
 }
 
 impl Span {
-    fn from_pos(pos: &Position, file: &str) -> Span {
+    fn from_pos(pos: &Position, file: &str) -> Self {
         let mut target_line = None;
         let mut line_start = 0;
         for (i, line) in crate::utils::LinesWithTerminator::new(file).enumerate() {
@@ -233,7 +233,7 @@ impl Span {
         let literal_len =
             locate_end(lit_to_eof_trimmed).expect("Couldn't find closing delimiter for `expect!`.");
         let literal_range = literal_start..literal_start + literal_len;
-        Span { literal_range }
+        Self { literal_range }
     }
 }
 

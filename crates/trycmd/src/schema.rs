@@ -708,7 +708,7 @@ pub(crate) struct JoinedArgs {
 impl JoinedArgs {
     #[cfg(test)]
     pub(crate) fn from_vec(inner: Vec<String>) -> Self {
-        JoinedArgs { inner }
+        Self { inner }
     }
 
     #[allow(clippy::inherent_to_string_shadow_display)]
@@ -853,7 +853,7 @@ impl<'a> From<&'a std::path::Path> for Bin {
 
 impl<P, E> From<Result<P, E>> for Bin
 where
-    P: Into<Bin>,
+    P: Into<Self>,
     E: std::fmt::Display,
 {
     fn from(other: Result<P, E>) -> Self {
@@ -861,7 +861,7 @@ where
             Ok(path) => path.into(),
             Err(err) => {
                 let err = crate::Error::new(err.to_string());
-                Bin::Error(err)
+                Self::Error(err)
             }
         }
     }

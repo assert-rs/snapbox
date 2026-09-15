@@ -667,7 +667,7 @@ impl Data {
     ///     .against(snapbox::data::DataFormat::JsonLines);
     /// # }
     /// ```
-    fn against(mut self, format: DataFormat) -> Data {
+    fn against(mut self, format: DataFormat) -> Self {
         self.inner.filters = self.inner.filters.against(format);
         self
     }
@@ -851,7 +851,7 @@ impl std::fmt::Display for Data {
 }
 
 impl PartialEq for Data {
-    fn eq(&self, other: &Data) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         match (&self.inner.value, &other.inner.value) {
             (DataValue::Error(left), DataValue::Error(right)) => left == right,
             (DataValue::Binary(left), DataValue::Binary(right)) => left == right,
@@ -934,8 +934,8 @@ impl Default for Data {
     }
 }
 
-impl<'d> From<&'d Data> for Data {
-    fn from(other: &'d Data) -> Self {
+impl<'d> From<&'d Self> for Data {
+    fn from(other: &'d Self) -> Self {
         other.into_data()
     }
 }
