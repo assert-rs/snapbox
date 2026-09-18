@@ -2,7 +2,7 @@
 
 > Treat your tests like cattle, instead of [pets](https://docs.rs/snapbox)
 
-[![Documentation](https://img.shields.io/badge/docs-master-blue.svg)][Documentation]
+[![Documentation](https://img.shields.io/badge/docs-main-blue.svg)][Documentation]
 ![License](https://img.shields.io/crates/l/trycmd.svg)
 [![Crates Status](https://img.shields.io/crates/v/trycmd.svg)][Crates.io]
 

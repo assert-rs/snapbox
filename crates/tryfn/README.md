@@ -2,7 +2,7 @@
 
 > File-driven snapshot testing for a function
 
-[![Documentation](https://img.shields.io/badge/docs-master-blue.svg)][Documentation]
+[![Documentation](https://img.shields.io/badge/docs-main-blue.svg)][Documentation]
 ![License](https://img.shields.io/crates/l/tryfn.svg)
 [![Crates Status](https://img.shields.io/crates/v/tryfn.svg)][Crates.io]
 
