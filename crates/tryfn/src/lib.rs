@@ -149,7 +149,7 @@ where
                 Trial::test(case.name.clone(), move || {
                     let actual = test.run(&case.fixture)?;
                     let actual = actual.to_string();
-                    let actual = snapbox::Data::text(actual);
+                    let actual = Data::text(actual);
                     config.try_eq(Some(&case.name), actual, case.expected.clone())?;
                     Ok(())
                 })

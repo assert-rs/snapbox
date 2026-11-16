@@ -33,3 +33,6 @@ color-auto = ["snapbox/color-auto"]
 snapbox = { path = "../snapbox", version = "1.2.2", default-features = false }
 libtest-mimic = "0.8.2"
 ignore = "0.4.25"
+
+[lints]
+workspace = true
